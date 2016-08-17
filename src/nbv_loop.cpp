@@ -30,6 +30,7 @@
 #include <pcl/registration/icp.h>
 
 #include <class_ViewGenerator.hpp>
+#include <class_ViewSelecter.hpp>
 
 /*
 #include <octomap/octomap.h>
@@ -146,7 +147,8 @@ geometry_msgs::PoseStamped setpoint;
 
 
 // == Viewpoint variables
-ViewGenerator_Base* viewgen;
+ViewGenerator_Base* viewGen;
+ViewSelecter_Base* viewSel;
 
 
 // == Publishers
@@ -173,6 +175,7 @@ void termination_check();
 void generate_viewpoints();
 void evaluate_viewpoints();
 void set_waypoint(double x, double y, double z, double yaw);
+void set_waypoint(geometry_msgs::Pose p);
 void move_vehicle();
 void takeoff();
 
@@ -226,7 +229,7 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     state = NBV_STATE_INITIALIZING;
     
-    std::cout << cc_red << "BEGIN NBV LOOP\n" << cc_reset;
+    std::cout << cc_red << "[nbv_loop] BEGIN NBV LOOP\n" << cc_reset;
 
     ros::init(argc, argv, "nbv_loop");
     ros::NodeHandle ros_node;
@@ -249,11 +252,17 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>
     // Set up viewpoint generator
     // >>>>>>>>>>>>>>>>
-    viewgen = new ViewGenerator_Frontier();
+    //viewGen = new ViewGenerator_Frontier();
+    viewGen = new ViewGenerator_NN();
+    viewGen->setResolution(1.0, 1.0, 1.0, M_PI_4);
+
+    viewSel = new ViewSelecter_Base();
+    viewSel->setViewGenerator(viewGen);
 
     // >>>>>>>>>>>>>>>>>
     // Start the FSM
     // >>>>>>>>>>>>>>>>>
+    std::cout << cc_red << "[nbv_loop] Ready to take off. Waiting for current position information.\n" << cc_reset;
     state = NBV_STATE_TAKING_OFF;
     
     ros::Rate loop_rate(10);
@@ -362,8 +371,9 @@ void generate_viewpoints(){
         std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
     }
     
-    viewgen->setCloud(globalCloudPtr);
-    viewgen->generate();
+    viewGen->setCloud(globalCloudPtr);
+    viewGen->setCurrentPose(mobile_base_pose);
+    viewGen->generate();
     
     state = NBV_STATE_DONE_VIEWPOINT_GENERATION;
 }
@@ -378,14 +388,10 @@ void evaluate_viewpoints(){
         std::cout << cc_green << "Evaluating viewpoints\n" << cc_reset;
     }
     
+    viewSel->evaluate();
+    geometry_msgs::Pose p = viewSel->getTargetPose();
     
-    double yaw = randomDouble(M_PI-M_PI_4, M_PI+M_PI_4);
-    set_waypoint(
-        5,      //x
-        mobile_base_pose.position.y + 1, //y
-        4,      //z
-        yaw     //yaw
-    );
+    set_waypoint(p);
     
     state = NBV_STATE_DONE_VIEWPOINT_EVALUATION;
 }
@@ -409,6 +415,11 @@ void set_waypoint(double x, double y, double z, double yaw){
     
     // Transform to setpoint frame
     transformGlobal2Setpoint(setpoint_world, setpoint.pose);
+}
+
+void set_waypoint(geometry_msgs::Pose p){
+    // Transform to setpoint frame
+    transformGlobal2Setpoint(p, setpoint.pose);
 }
 
 void move_vehicle(){
