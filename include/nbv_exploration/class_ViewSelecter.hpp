@@ -7,7 +7,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-#include <class_ViewGenerator.hpp>
+#include <nbv_exploration/class_ViewGenerator.hpp>
 
 //typedef pcl::PointXYZRGBA PointT;
 typedef geometry_msgs::Pose Pose;
@@ -17,6 +17,9 @@ class ViewSelecter_Base
 {
 protected:
 	ViewGenerator_Base* _viewGen;
+	Pose _currentPose;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloudPtr;
+	
 public:
     ViewSelecter_Base(){}
     ~ViewSelecter_Base(){}
@@ -28,12 +31,15 @@ public:
 		return selectedPose;
 	}
     void setViewGenerator(ViewGenerator_Base* v){
-		_viewGen = v;
+		_viewGen     = v;
+		_cloudPtr    = v->cloudPtr;
+		_currentPose = v->currentPose;
 	}
 
-	double calculateIG();
-	double calculateDistance(Pose p);
 	void evaluate();
+	double calculateIG(Pose p);
+	double calculateDistance(Pose p);
+	double calculateAngularDistance(Pose p);
 	
-	virtual double calculateUtility(){};
+	virtual double calculateUtility(Pose p);
 };

@@ -53,10 +53,19 @@ add_definitions(${PCL_DEFINITIONS})
 
 add_library(class_ViewGenerator src/class_ViewGenerator.cpp)
 add_library(class_ViewSelecter src/class_ViewSelecter.cpp)
+add_library(frustum_culling   src/culling/frustum_culling.cpp)
+add_library(occlusion_culling src/culling/occlusion_culling.cpp)
+add_library(vox_grid_occ_est  src/culling/voxel_grid_occlusion_estimation)
 
 add_executable(nbv_loop src/nbv_loop.cpp)
 add_dependencies(nbv_loop ${catkin_EXPORTED_TARGETS})
-target_link_libraries(nbv_loop class_ViewGenerator class_ViewSelecter ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
+target_link_libraries(nbv_loop
+    class_ViewGenerator
+    class_ViewSelecter
+    frustum_culling
+    occlusion_culling
+    vox_grid_occ_est
+    ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
 
 
 add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)

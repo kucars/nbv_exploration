@@ -7,8 +7,39 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <tf_conversions/tf_eigen.h>
+
 //typedef pcl::PointXYZRGBA PointT;
 typedef geometry_msgs::Pose Pose;
+
+
+
+double getYawFromQuaternion(geometry_msgs::Quaternion gm_q){
+    double roll, pitch, yaw;
+
+    tf::Quaternion quat (gm_q.x, gm_q.y, gm_q.z, gm_q.w);
+      
+	tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+    
+    return yaw;
+}
+
+geometry_msgs::Quaternion getQuaternionFromYaw(double yaw){
+    geometry_msgs::Quaternion quat;
+    
+    tf::Quaternion tf_q;
+    tf_q = tf::createQuaternionFromYaw(yaw); //Rotate 22.5 deg
+    
+    quat.x = tf_q.getX();
+    quat.y = tf_q.getY();
+    quat.z = tf_q.getZ();
+    quat.w = tf_q.getW();
+    
+    return quat;
+}
+
+
+
 
 class ViewGenerator_Base
 {

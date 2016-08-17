@@ -1,32 +1,5 @@
 #include <iostream>
-#include <class_ViewGenerator.hpp>
-
-#include <tf_conversions/tf_eigen.h>
-
-
-double getYawFromQuaternion(geometry_msgs::Quaternion gm_q){
-    double roll, pitch, yaw;
-
-    tf::Quaternion quat (gm_q.x, gm_q.y, gm_q.z, gm_q.w);
-      
-	tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
-    
-    return yaw;
-}
-
-geometry_msgs::Quaternion getQuaternionFromYaw(double yaw){
-    geometry_msgs::Quaternion quat;
-    
-    tf::Quaternion tf_q;
-    tf_q = tf::createQuaternionFromYaw(yaw); //Rotate 22.5 deg
-    
-    quat.x = tf_q.getX();
-    quat.y = tf_q.getY();
-    quat.z = tf_q.getZ();
-    quat.w = tf_q.getW();
-    
-    return quat;
-}
+#include <nbv_exploration/class_ViewGenerator.hpp>
 
 
 // ==============
@@ -39,6 +12,8 @@ void ViewGenerator_NN::generate(){
     double currY = currentPose.position.y;
     double currZ = currentPose.position.z;
     double currYaw = getYawFromQuaternion(currentPose.orientation);
+    
+    //@TODO: Must check if viewpoints area reachable
     
     if (cloudPtr->points.size() < 0){
         std::cout << "[ViewpointGen::NN] No points in map. Rotating" << std::endl;

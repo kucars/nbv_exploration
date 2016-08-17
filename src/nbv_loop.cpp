@@ -29,8 +29,8 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
-#include <class_ViewGenerator.hpp>
-#include <class_ViewSelecter.hpp>
+#include <nbv_exploration/class_ViewGenerator.hpp>
+#include <nbv_exploration/class_ViewSelecter.hpp>
 
 /*
 #include <octomap/octomap.h>
