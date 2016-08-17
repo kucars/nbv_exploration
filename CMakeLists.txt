@@ -40,6 +40,7 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
     ${Eigen_INCLUDE_DIRS}
     ${OCTOMAP_INCLUDE_DIRS}
+    include #Adds my own custom class headers
 )
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -50,6 +51,13 @@ add_definitions(${PCL_DEFINITIONS})
 #add_dependencies(wall_follower ${catkin_EXPORTED_TARGETS})
 #target_link_libraries(wall_follower ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
+add_library(class_viewGen src/class_ViewGenerator.cpp)
+
 add_executable(nbv_loop src/nbv_loop.cpp)
 add_dependencies(nbv_loop ${catkin_EXPORTED_TARGETS})
-target_link_libraries(nbv_loop ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
+target_link_libraries(nbv_loop class_viewGen ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
+
+
+add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)
+add_dependencies(sensing_and_mapping ${catkin_EXPORTED_TARGETS})
+target_link_libraries(sensing_and_mapping ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})

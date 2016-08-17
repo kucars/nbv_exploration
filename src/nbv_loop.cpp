@@ -11,14 +11,14 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <gazebo_msgs/ModelStates.h> //Used for absolute positioning
+//#include <gazebo_msgs/ModelStates.h> //Used for absolute positioning
 
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 
-#include <tf/transform_datatypes.h>
+//#include <tf/transform_datatypes.h>
 #include <tf_conversions/tf_eigen.h>
-#include <tf/transform_listener.h>
+//#include <tf/transform_listener.h>
 
 //PCL
 //#include <pcl/filters.hpp>
@@ -29,9 +29,15 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
+#include <class_ViewGenerator.hpp>
 
+/*
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
+
+// Create octree
+octomap::OcTree tree (grid_res); // create empty tree with resolution 0.1
+*/
 
 /*
 #include <pcl/point_types.h>
@@ -65,10 +71,6 @@
 #include <message_filters/subscriber.h>
 
 #include <nav_msgs/Odometry.h>
-
-#include <tf/tf.h>
-#include <tf/transform_listener.h>
-#include <tf/message_filter.h>
 
 
 #include <visualization_msgs/Marker.h>
@@ -125,8 +127,9 @@ bool isDebugStates = true;
 bool isDebugContinuousStates = !true;
 
 // == Consts
-std::string depth_topic   = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
+std::string depth_topic    = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
 std::string position_topic = "/iris/ground_truth/pose";
+std::string map_topic      = "/global_cloud";
 
 // == Termination variables
 bool isTerminating = false;
@@ -141,23 +144,21 @@ geometry_msgs::Pose mobile_base_pose;
 //geometry_msgs::Pose mobile_base_pose_prev;
 geometry_msgs::PoseStamped setpoint;
 
+
+// == Viewpoint variables
+ViewGenerator_Base* viewgen;
+
+
 // == Publishers
 ros::Publisher pub_global_cloud;
 ros::Publisher pub_setpoint;
-
-// == Subsctiptions
-tf::TransformListener *listener;
 
 
 // == Point clouds
 float grid_res = 0.1f; //Voxel grid resolution
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_sensed(new pcl::PointCloud<pcl::PointXYZRGB>);
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr globalCloudPtr;
 //pcl::VoxelGrid<pcl::PointXYZRGB> occGrid;
-
-// Create octree
-octomap::OcTree tree (grid_res); // create empty tree with resolution 0.1
 
 
 
@@ -165,7 +166,7 @@ octomap::OcTree tree (grid_res); // create empty tree with resolution 0.1
 // Function prototypes (@todo: move to header file)
 // ======================
 
-void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
 void positionCallback(const geometry_msgs::PoseStamped& pose_msg);
 void addToGlobalCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_in);
 void termination_check();
@@ -235,21 +236,20 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     
     // Sensor data
-    ros::Subscriber sub_kinect = ros_node.subscribe(depth_topic, 1, depthCallback);
+    ros::Subscriber sub_map = ros_node.subscribe(map_topic, 1, mapCallback);
     ros::Subscriber sub_pose = ros_node.subscribe(position_topic, 1, positionCallback);
-    
-    listener = new tf::TransformListener();
     
     // >>>>>>>>>>>>>>>>>
     // Publishers
     // >>>>>>>>>>>>>>>>>
     
-    pub_global_cloud = ros_node.advertise<sensor_msgs::PointCloud2>("/global_cloud", 10);
-    //pub = ros_node.advertise<sensor_msgs::PointCloud2> ("/voxgrid", 1);
-    //pub_pose = ros_node.advertise<geometry_msgs::PoseStamped> ("/voxgrid/pose", 1);
-
     // Drone setpoints
     pub_setpoint = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
+
+    // >>>>>>>>>>>>>>>>
+    // Set up viewpoint generator
+    // >>>>>>>>>>>>>>>>
+    viewgen = new ViewGenerator_Frontier();
 
     // >>>>>>>>>>>>>>>>>
     // Start the FSM
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
         switch(state){
             case NBV_STATE_TAKING_OFF:
                 // Wait till we have current location to properly set waypoint for takeoff
-                if(mobile_base_pose.orientation.x == 0 &&
+                if( mobile_base_pose.orientation.x == 0 &&
                     mobile_base_pose.orientation.y == 0 &&
                     mobile_base_pose.orientation.z == 0 &&
                     mobile_base_pose.orientation.w == 0){
@@ -319,135 +319,20 @@ void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
     
     // Save UGV pose
     mobile_base_pose = pose_msg.pose;
-    
-    /*
-    // Save UGV pose
-    mobile_base_pose_prev = mobile_base_pose;
-    mobile_base_pose = pose_msg.pose[index];
-
-    // Publish
-    geometry_msgs::PoseStamped ps;
-    ps.pose = mobile_base_pose;
-    ps.header.frame_id = "base_link";
-    ps.header.stamp = ros::Time::now();
-
-    pub_pose.publish(ps);
-    */
 }
 
-void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
     if (isDebug && isDebugContinuousStates){
         std::cout << cc_green << "SENSING\n" << cc_reset;
     }
     
-    
     pcl::PointCloud<pcl::PointXYZRGB> cloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr;
 
     // == Convert to pcl pointcloud
     pcl::fromROSMsg (*cloud_msg, cloud);
-    cloud_ptr = cloud.makeShared();
-
-    //std::cout << cc_blue << "Number of points detected: " << cloud_ptr->points.size() << "\n" << cc_reset;
-    
-    // == Remove NAN points
-    std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(*cloud_ptr,*cloud_ptr, indices);
-    //std::cout << cc_blue << "Number of points remaining: " << cloud_ptr->points.size() << "\n" << cc_reset;
-    
-    
-    
-    // == Perform voxelgrid filtering
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-    sor.setInputCloud (cloud_ptr);
-    sor.setLeafSize (grid_res, grid_res, grid_res);
-    sor.filter (*cloud_filtered);
-    
-    //std::cout << cc_blue << "Number of points remaining: " << cloud_filtered->points.size() << "\n" << cc_reset;
-    
-    // == Transform
-    try{
-        // Listen for transform
-        tf::StampedTransform transform;
-        listener->lookupTransform("world", "iris/xtion_sensor/camera_depth_optical_frame", ros::Time(0), transform);
-        
-        // == Convert tf:Transform to Eigen::Matrix4d
-        Eigen::Matrix4d tf_eigen;
-        
-        Eigen::Vector3d T1(
-            transform.getOrigin().x(),
-            transform.getOrigin().y(),
-            transform.getOrigin().z()
-        );
-        
-        Eigen::Matrix3d R;
-        tf::Quaternion qt = transform.getRotation();
-        tf::Matrix3x3 R1(qt);
-        tf::matrixTFToEigen(R1,R);
-        
-        // Set
-        tf_eigen.setZero ();
-        tf_eigen.block (0, 0, 3, 3) = R;
-        tf_eigen.block (0, 3, 3, 1) = T1;
-        tf_eigen (3, 3) = 1;
-        
-        // == Transform point cloud
-        pcl::transformPointCloud(*cloud_filtered, *cloud_filtered, tf_eigen);
-        
-        // == Add filtered to global
-        addToGlobalCloud(cloud_filtered);
-    }
-    catch (tf::TransformException ex){
-        ROS_ERROR("%s",ex.what());
-        ros::Duration(1.0).sleep();
-    }
+    globalCloudPtr = cloud.makeShared();
 }
-
-
-void addToGlobalCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_in) {
-    if (isDebug && isDebugContinuousStates){
-        std::cout << cc_green << "MAPPING\n" << cc_reset;
-    }
-    
-    // Initialize global cloud if not already done so
-    if (!globalCloudPtr){
-        globalCloudPtr = cloud_in;
-        return;
-    }
-
-    *globalCloudPtr += *cloud_in;
-    
-    
-
-    // Perform voxelgrid filtering
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-    sor.setInputCloud (globalCloudPtr);
-    sor.setLeafSize (grid_res, grid_res, grid_res);
-    sor.filter (*cloud_filtered);
-
-    globalCloudPtr = cloud_filtered;
-    
-    if (isDebug && isDebugContinuousStates){
-        std::cout << cc_blue << "Number of points in global map: " << globalCloudPtr->points.size() << "\n" << cc_reset;
-    }
-    
-    
-    // Publish
-    sensor_msgs::PointCloud2 cloud_msg;
-    
-    pcl::toROSMsg(*globalCloudPtr, cloud_msg); 	//cloud of original (white) using original cloud
-    cloud_msg.header.frame_id = "world";
-    cloud_msg.header.stamp = ros::Time::now();
-    
-    pub_global_cloud.publish(cloud_msg);
-}
-
 
 void termination_check(){
     if (state != NBV_STATE_TERMINATION_CHECK){
@@ -477,6 +362,9 @@ void generate_viewpoints(){
         std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
     }
     
+    viewgen->setCloud(globalCloudPtr);
+    viewgen->generate();
+    
     state = NBV_STATE_DONE_VIEWPOINT_GENERATION;
 }
 
@@ -496,9 +384,8 @@ void evaluate_viewpoints(){
         5,      //x
         mobile_base_pose.position.y + 1, //y
         4,      //z
-        yaw    //yaw
+        yaw     //yaw
     );
-    
     
     state = NBV_STATE_DONE_VIEWPOINT_EVALUATION;
 }
