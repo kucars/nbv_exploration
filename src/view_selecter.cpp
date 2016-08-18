@@ -19,7 +19,8 @@
 // =======
 double ViewSelecterBase::calculateIG(Pose p)
 {
-  OcclusionCulling occlusionCulling(_cloudPtr);
+  OcclusionCulling occlusionCulling(cloud_ptr_);
+  
   pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud <pcl::PointXYZ>);
   *tempCloud = occlusionCulling.extractVisibleSurface(p);
   
@@ -28,14 +29,14 @@ double ViewSelecterBase::calculateIG(Pose p)
 
 double ViewSelecterBase::calculateDistance(Pose p)
 {
-  return sqrt( (p.position.x-_currentPose.position.x)*(p.position.x-_currentPose.position.x) + 
-         (p.position.y-_currentPose.position.y)*(p.position.y-_currentPose.position.y) +
-         (p.position.z-_currentPose.position.z)*(p.position.z-_currentPose.position.z) );
+  return sqrt( (p.position.x-current_pose_.position.x)*(p.position.x-current_pose_.position.x) + 
+         (p.position.y-current_pose_.position.y)*(p.position.y-current_pose_.position.y) +
+         (p.position.z-current_pose_.position.z)*(p.position.z-current_pose_.position.z) );
 }
 
 double ViewSelecterBase::calculateAngularDistance(Pose p)
 {
-  double yaw1 = getYawFromQuaternion(_currentPose.orientation);
+  double yaw1 = getYawFromQuaternion(current_pose_.orientation);
   double yaw2 = getYawFromQuaternion(p.orientation);
   
   // Set difference from -pi to pi
@@ -63,15 +64,15 @@ double ViewSelecterBase::calculateUtility(Pose p)
 void ViewSelecterBase::evaluate()
 {
   // Update curernt pose and map
-  _cloudPtr    = _viewGen->cloudPtr;
-  _currentPose = _viewGen->currentPose;
+  cloud_ptr_    = view_gen_->cloud_ptr_;
+  current_pose_ = view_gen_->current_pose_;
   
   double maxUtility = -1/.0; //-inf
   
   
-  for (int i=0; i<_viewGen->generated_poses.size(); i++)
+  for (int i=0; i<view_gen_->generated_poses.size(); i++)
   {
-    Pose p = _viewGen->generated_poses[i];
+    Pose p = view_gen_->generated_poses[i];
     
     double utility = calculateUtility(p);
     std::cout << "[ViewSelecterBase::evaluate()] Utility of pose[" << i << "]: " << utility << "\n";
@@ -80,7 +81,7 @@ void ViewSelecterBase::evaluate()
     {
       
       maxUtility = utility;
-      selected_pose = p;
+      selected_pose_ = p;
     }
     
     //std::cout << "[ViewSelecterBase::evaluate] Looking at pose[" << i << "]:\nx = " << p.position.x << "\ty = "  << p.position.y << "\tz = "  << p.position.z << "\n";

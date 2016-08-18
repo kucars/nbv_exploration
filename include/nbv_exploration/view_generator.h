@@ -47,28 +47,30 @@ geometry_msgs::Quaternion getQuaternionFromYaw(double yaw)
 class ViewGeneratorBase
 {
 protected:
-  double res_x;
-  double res_y;
-  double res_z;
-  double res_yaw = M_PI_4;
+  double res_x_;
+  double res_y_;
+  double res_z_;
+  double res_yaw_ = M_PI_4;
   
 public:
   ViewGeneratorBase(){}
   ~ViewGeneratorBase(){}
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloudPtr;
-  Pose currentPose;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_free_ptr_;
+  
+  Pose current_pose_;
   std::vector<Pose, Eigen::aligned_allocator<Pose> > generated_poses;
   
 
   void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_cloud)
   {
-    cloudPtr = in_cloud;
+    cloud_ptr_ = in_cloud;
   }
   
   void setCurrentPose(Pose p)
   {
-    currentPose = p;
+    current_pose_ = p;
   }
   
   virtual void generateViews()
@@ -79,10 +81,10 @@ public:
   // Not used by all derived classes
   virtual void setResolution(double x, double y, double z, double yaw)
   {
-    res_x = x;
-    res_y = y;
-    res_z = z;
-    res_yaw = yaw;
+    res_x_   = x;
+    res_y_   = y;
+    res_z_   = z;
+    res_yaw_ = yaw;
   }
 };
 

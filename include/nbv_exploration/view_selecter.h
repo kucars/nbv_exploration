@@ -17,33 +17,34 @@ typedef geometry_msgs::Pose Pose;
 class ViewSelecterBase
 {
 protected:
-  ViewGeneratorBase* _viewGen;
-  Pose _currentPose;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr _cloudPtr;
+  ViewGeneratorBase* view_gen_;
+  
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_;
+  
+  Pose current_pose_;
+  Pose selected_pose_;
   
 public:
   ViewSelecterBase(){}
   ~ViewSelecterBase(){}
   
-  Pose selected_pose;
-  
   
   Pose getTargetPose()
   {
-    return selected_pose;
+    return selected_pose_;
   }
+  
   void setViewGenerator(ViewGeneratorBase* v)
   {
-    _viewGen   = v;
-    _cloudPtr  = v->cloudPtr;
-    _currentPose = v->currentPose;
+    view_gen_     = v;
+    cloud_ptr_    = v->cloud_ptr_;
+    current_pose_ = v->current_pose_;
   }
 
   void evaluate();
   double calculateIG(Pose p);
   double calculateDistance(Pose p);
   double calculateAngularDistance(Pose p);
-  
   virtual double calculateUtility(Pose p);
 };
 

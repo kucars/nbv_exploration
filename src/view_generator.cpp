@@ -9,14 +9,14 @@ void ViewGeneratorNN::generateViews()
 {
   generated_poses.clear();
   
-  double currX = currentPose.position.x;
-  double currY = currentPose.position.y;
-  double currZ = currentPose.position.z;
-  double currYaw = getYawFromQuaternion(currentPose.orientation);
+  double currX = current_pose_.position.x;
+  double currY = current_pose_.position.y;
+  double currZ = current_pose_.position.z;
+  double currYaw = getYawFromQuaternion(current_pose_.orientation);
   
   //@TODO: Must check if viewpoints area reachable
   
-  if (cloudPtr->points.size() < 0)
+  if (cloud_ptr_->points.size() < 0)
   {
     std::cout << "[ViewpointGen::NN] No points in map. Rotating" << std::endl;
     
@@ -24,7 +24,7 @@ void ViewGeneratorNN::generateViews()
     p.position.x = std::numeric_limits<double>::quiet_NaN(); //Set to NaN
     p.position.y = std::numeric_limits<double>::quiet_NaN();;
     p.position.z = std::numeric_limits<double>::quiet_NaN();;
-    p.orientation = getQuaternionFromYaw(res_yaw); //Rotate 22.5 deg
+    p.orientation = getQuaternionFromYaw(res_yaw_); //Rotate 22.5 deg
     
     generated_poses.push_back(p);
   }
@@ -35,10 +35,10 @@ void ViewGeneratorNN::generateViews()
     for (int i=-1; i<=1; i+=2)
     {
       Pose p;
-      p.position.x = currX + res_x*i;
+      p.position.x = currX + res_x_*i;
       p.position.y = currY;
       p.position.z = currZ;
-      p.orientation = currentPose.orientation;
+      p.orientation = current_pose_.orientation;
       generated_poses.push_back(p);
     }
     
@@ -46,19 +46,9 @@ void ViewGeneratorNN::generateViews()
     {
       Pose p;
       p.position.x = currX;
-      p.position.y = currY + res_y*i;
+      p.position.y = currY + res_y_*i;
       p.position.z = currZ;
-      p.orientation = currentPose.orientation;
-      generated_poses.push_back(p);
-    }
-    
-    for (int i=-1; i<=1; i+=2)
-    {
-      Pose p;
-      p.position.x = currX;
-      p.position.y = currY;
-      p.position.z = currZ + res_z*i;
-      p.orientation = currentPose.orientation;
+      p.orientation = current_pose_.orientation;
       generated_poses.push_back(p);
     }
     
@@ -67,8 +57,18 @@ void ViewGeneratorNN::generateViews()
       Pose p;
       p.position.x = currX;
       p.position.y = currY;
+      p.position.z = currZ + res_z_*i;
+      p.orientation = current_pose_.orientation;
+      generated_poses.push_back(p);
+    }
+    
+    for (int i=-1; i<=1; i+=2)
+    {
+      Pose p;
+      p.position.x = currX;
+      p.position.y = currY;
       p.position.z = currZ;
-      p.orientation = getQuaternionFromYaw(currYaw + res_yaw*i);
+      p.orientation = getQuaternionFromYaw(currYaw + res_yaw_*i);
       generated_poses.push_back(p);
     }
     
@@ -83,7 +83,7 @@ void ViewGeneratorFrontier::generateViews()
 {
   generated_poses.clear();
   
-  if (cloudPtr->points.size() < 0)
+  if (cloud_ptr_->points.size() < 0)
   {
     std::cout << "[ViewpointGen::Frontier] No points in map. Rotating" << std::endl;
     
@@ -91,7 +91,7 @@ void ViewGeneratorFrontier::generateViews()
     p.position.x = std::numeric_limits<double>::quiet_NaN(); //Set to NaN
     p.position.y = std::numeric_limits<double>::quiet_NaN();;
     p.position.z = std::numeric_limits<double>::quiet_NaN();;
-    p.orientation = getQuaternionFromYaw(res_yaw); //Rotate 22.5 deg
+    p.orientation = getQuaternionFromYaw(res_yaw_); //Rotate 22.5 deg
     
     generated_poses.push_back(p);
   }

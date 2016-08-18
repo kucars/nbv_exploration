@@ -335,12 +335,11 @@ void evaluate_viewpoints()
     std::cout << cc_green << "Evaluating viewpoints\n" << cc_reset;
   }
   
-  /*
   viewSel->evaluate();
   geometry_msgs::Pose p = viewSel->getTargetPose();
   set_waypoint(p);
-  */
   
+  /*
   double yaw = randomDouble(M_PI-M_PI_4, M_PI+M_PI_4); 
   set_waypoint( 
     4,    //x 
@@ -348,6 +347,7 @@ void evaluate_viewpoints()
     4,      //z 
     yaw    //yaw 
   );
+  */
   
   state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
 }
