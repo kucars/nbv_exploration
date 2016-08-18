@@ -13,116 +13,39 @@ ros::Publisher ray_pub;
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr occupancyGrid(new pcl::PointCloud<pcl::PointXYZRGB>);
 std::vector<geometry_msgs::Point> lineSegments;
 
-void OcclusionCulling::initConfig(ros::NodeHandle nodeHandle = ros::NodeHandle("~")) {
+OcclusionCulling::OcclusionCulling(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_xyzrgb){
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_xyz (new pcl::PointCloud<pcl::PointXYZ>);
+    
+    pcl::copyPointCloud(*cloud_xyzrgb, *cloud_xyz);
+
+    initConfig(cloud_xyz);
+}
+
+
+OcclusionCulling::OcclusionCulling(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr){
+    initConfig(cloudPtr);
+}
+
+void OcclusionCulling::initConfig(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr){
+    initConfig(cloudPtr, ros::NodeHandle("~"));
+}
+
+void OcclusionCulling::initConfig(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr, ros::NodeHandle nodeHandle = ros::NodeHandle("~")) {
     // Get config parameters
-    nodeHandle.param<float>("voxelRes", voxelRes, 1.5f );
+    nodeHandle.param<float>("voxelRes", voxelRes, 0.1f );
     nodeHandle.param<float>("sensor_vert_fov", vert_fov, 45);
     nodeHandle.param<float>("sensor_hor_fov", hor_fov, 58);
     nodeHandle.param<float>("sensor_near_plane_distance", near_dist, 0.7);
     nodeHandle.param<float>("sensor_far_plane_distance", far_dist, 6.0);
-    nodeHandle.param<std::string>("frame_id", frame_id, "map");
-}
+    nodeHandle.param<std::string>("frame_id", frame_id, "world");
 
-OcclusionCulling::OcclusionCulling(ros::NodeHandle &n, std::string modelName):
-    nh(n),
-    model(modelName),
-    fc(true)
-{
-    initConfig();
 
-    // >>>>>>>>>>>>>>>>>
-    // Create publishers
-    // >>>>>>>>>>>>>>>>>
-    fov_pub = n.advertise<visualization_msgs::MarkerArray>("fov", 10);
-    occupancy_pub = n.advertise<sensor_msgs::PointCloud2>("occupancy_grid", 100);
-    ray_pub = n.advertise<visualization_msgs::Marker>("ray_line", 10);
 
-    // >>>>>>>>>>>>>>>>>
-    // Initialize variables
-    // >>>>>>>>>>>>>>>>>
-    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+    cloud = cloudPtr;
     filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
+    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
     occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-
-    // >>>>>>>>>>>>>>>>>
-    // Load model
-    // >>>>>>>>>>>>>>>>>
-    std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
-
-    // >>>>>>>>>>>>>>>>>
-    // Create voxel grid
-    // >>>>>>>>>>>>>>>>>
-    OriginalVoxelsSize=0.0;
-    id=0.0;
-    voxelFilterOriginal.setInputCloud (cloud);
-    voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
-    voxelFilterOriginal.initializeVoxelGrid();
-    min_b1 = voxelFilterOriginal.getMinBoxCoordinates ();
-    max_b1 = voxelFilterOriginal.getMaxBoxCoordinates ();
-
-    for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
-    {
-        for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
-        {
-            for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
-            {
-                Eigen::Vector3i ijk1 (ii, jj, kk);
-                int index1 = voxelFilterOriginal.getCentroidIndexAt (ijk1);
-                if(index1!=-1)
-                {
-                    OriginalVoxelsSize++;
-                }
-
-            }
-        }
-    }
-
-    pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
-    voxelgrid.setInputCloud (cloud);
-    voxelgrid.setLeafSize (voxelRes, voxelRes, voxelRes);
-    voxelgrid.filter (*filtered_cloud);
-
-    // >>>>>>>>>>>>>>>>>
-    // Initialize camera
-    // >>>>>>>>>>>>>>>>>
-    fc.setInputCloud (cloud);
-    fc.setVerticalFOV (vert_fov);
-    fc.setHorizontalFOV (hor_fov);
-    fc.setNearPlaneDistance (near_dist);
-    fc.setFarPlaneDistance (far_dist);
-
-    // >>>>>>>>>>>>>>>>>
-    // Max accuracy calculation
-    // >>>>>>>>>>>>>>>>>
-    double max=0,min=std::numeric_limits<double>::max();
-    for(int i=0; i<cloud->points.size(); i++) {
-        double temp = cloud->at(i).z;//depth
-        if(max<temp)
-            max=temp;
-        if(min>temp)
-            min=temp;
-    }
-    maxAccuracyError = 0.0000285 * max*max;
-    minAccuracyError = 0.0000285 * min*min;
-}
-
-
-OcclusionCulling::OcclusionCulling(std::string modelName):
-    model(modelName),
-    fc(true)
-{
-    initConfig();
-
-    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-
-    //    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/"+model, *cloud);
+    
     OriginalVoxelsSize=0.0;
     id=0.0;
     voxelFilterOriginal.setInputCloud (cloud);
@@ -168,72 +91,6 @@ OcclusionCulling::OcclusionCulling(std::string modelName):
     }
     maxAccuracyError = 0.0000285 * max*max;
     minAccuracyError = 0.0000285 * min*min;
-}
-
-
-OcclusionCulling::OcclusionCulling():
-    model(NULL),
-    fc(true)
-{
-    initConfig();
-
-    cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    filtered_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    FrustumCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-
-    //    occlusionFreeCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud <pcl::PointXYZ>);
-    std::string path = ros::package::getPath("component_test");
-    pcl::io::loadPCDFile<pcl::PointXYZ> (path+"/src/pcd/scaled_desktop.pcd", *cloud);
-
-    OriginalVoxelsSize=0.0;
-    id=0.0;
-    voxelFilterOriginal.setInputCloud (cloud);
-    voxelFilterOriginal.setLeafSize (voxelRes, voxelRes, voxelRes);
-    voxelFilterOriginal.initializeVoxelGrid();
-    min_b1 = voxelFilterOriginal.getMinBoxCoordinates ();
-    max_b1 = voxelFilterOriginal.getMaxBoxCoordinates ();
-    for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
-    {
-        for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
-        {
-            for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
-            {
-                Eigen::Vector3i ijk1 (ii, jj, kk);
-                int index1 = voxelFilterOriginal.getCentroidIndexAt (ijk1);
-                if(index1!=-1)
-                {
-                    OriginalVoxelsSize++;
-                }
-
-            }
-        }
-    }
-
-    pcl::VoxelGrid<pcl::PointXYZ> voxelgrid;
-    voxelgrid.setInputCloud (cloud);
-    voxelgrid.setLeafSize (voxelRes, voxelRes, voxelRes);
-    voxelgrid.filter (*filtered_cloud);
-
-    fc.setInputCloud (cloud);
-    fc.setVerticalFOV (vert_fov);
-    fc.setHorizontalFOV (hor_fov);
-    fc.setNearPlaneDistance (near_dist);
-    fc.setFarPlaneDistance (far_dist);
-
-    //max accuracy calculation
-    double max=0,min=std::numeric_limits<double>::max();
-    for(int i=0; i<cloud->points.size(); i++) {
-        double temp = cloud->at(i).z;//depth
-        if(max<temp)
-            max=temp;
-        if(min>temp)
-            min=temp;
-    }
-    maxAccuracyError = 0.0000285 * max*max;
-    minAccuracyError = 0.0000285 * min*min;
-}
-OcclusionCulling::~OcclusionCulling()
-{
 }
 
 
@@ -282,8 +139,6 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
 
     //std::cout<<"\nFrustum Filter took:"<< toc.toSec() - tic.toSec();
     FrustumCloud->points= output->points;
-
-
 
     // >>>>>>>>>>>>>>>>>>>>
     // 2. Voxel grid occlusion estimation
@@ -353,7 +208,7 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
 			// ray does not intersect with the bounding box
 			continue;
 		}
-		
+        
 		// Calculate coordinate of the boundary of the voxel grid
 		Eigen::Vector4f start = output->sensor_origin_ + tmin * direction;
 		
@@ -370,7 +225,6 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
 		occlusionFreeCloud_local->points.push_back(ptest);
 		occlusionFreeCloud->points.push_back(ptest);
 		
-
 		// >>>>>>>>>>>>>>>>>>>>
 		// 2.2 Save line segment for visualization
 		// >>>>>>>>>>>>>>>>>>>>
@@ -387,6 +241,7 @@ pcl::PointCloud<pcl::PointXYZ> OcclusionCulling::extractVisibleSurface(geometry_
 
 		occupancyGrid->points.push_back(point);
     }
+    
     FreeCloud.points = occlusionFreeCloud_local->points;
 
     return FreeCloud;

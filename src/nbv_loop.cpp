@@ -29,6 +29,7 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
+// Custom classes
 #include <nbv_exploration/class_ViewGenerator.hpp>
 #include <nbv_exploration/class_ViewSelecter.hpp>
 

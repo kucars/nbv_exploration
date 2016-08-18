@@ -4,6 +4,8 @@
 
 #include <tf_conversions/tf_eigen.h>
 
+#include <culling/occlusion_culling.h>
+
 
 // =======
 // Occlusion culling
@@ -17,8 +19,11 @@
 // =======
 double ViewSelecter_Base::calculateIG(Pose p)
 {
+	OcclusionCulling occlusionCulling(_cloudPtr);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud <pcl::PointXYZ>);
+	*tempCloud = occlusionCulling.extractVisibleSurface(p);
 	
-	return 1;
+	return tempCloud->points.size();
 }
 
 double ViewSelecter_Base::calculateDistance(Pose p){
@@ -44,10 +49,10 @@ double ViewSelecter_Base::calculateAngularDistance(Pose p){
 }
 
 double ViewSelecter_Base::calculateUtility(Pose p){
-	double IG = calculateIG(p);
+	double IG = -calculateIG(p);
 	double effort = calculateDistance(p) + calculateAngularDistance(p)/M_PI;
 	
-	return IG/effort;
+	return IG;// /effort;
 }
 
 void ViewSelecter_Base::evaluate(){

@@ -60,11 +60,15 @@ public:
 	// >>>>>>>>
     // Methods
     // >>>>>>>>
-    OcclusionCulling();
-    OcclusionCulling(std::string modelName);
-    OcclusionCulling(ros::NodeHandle & n, std::string modelName);
-    ~OcclusionCulling();
-    void initConfig(ros::NodeHandle nodeHandle);
+    //OcclusionCulling();
+    //OcclusionCulling(std::string modelName);
+    //OcclusionCulling(ros::NodeHandle & n, std::string modelName);
+    OcclusionCulling(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr);
+    OcclusionCulling(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloudPtr);
+    
+    ~OcclusionCulling(){};
+    void initConfig(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr);
+    void initConfig(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr, ros::NodeHandle nodeHandle);
     void visualizeRaycast(geometry_msgs::Pose location);
     
     pcl::PointCloud<pcl::PointXYZ> extractVisibleSurface(geometry_msgs::Pose location);
