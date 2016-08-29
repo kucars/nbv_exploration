@@ -4,6 +4,8 @@
 
 // catkin_make -DCATKIN_WHITELIST_PACKAGES="aircraft_inspection" && rosrun aircraft_inspection wall_follower
 
+#include <signal.h>
+
 #include <iostream>
 #include <ros/ros.h>
 #include <ros/package.h>
@@ -12,6 +14,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/LaserScan.h>
 //#include <gazebo_msgs/ModelStates.h> //Used for absolute positioning
 
 #include <Eigen/Geometry>
@@ -59,17 +62,26 @@ const std::string cc_reset("\033[0m");
 // ===================
 // === Variables  ====
 // ===================
-bool isDebug = true; //Set to true to see debug text
-bool isDebugStates = true;
-bool isDebugContinuousStates = !true;
+bool is_debug = true; //Set to true to see debug text
+bool is_debug_states = true;
+bool is_debug_continuous_states = !true;
+
+bool is_done_profiling = false;
+bool is_scan_empty = false;
+bool is_flying_up = false;
+double profile_angle = 0;
 
 // == Consts
-std::string depth_topic  = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
-std::string position_topic = "/iris/ground_truth/pose";
-std::string map_topic    = "/global_cloud";
+std::string depth_topic        = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
+std::string position_topic     = "/iris/ground_truth/pose";
+std::string map_occupied_topic = "/rtabmap/cloud_map"; //"/rtabmap/octomap_cloud";
+std::string map_free_topic     = "/rtabmap/octomap_empty_space";
+std::string laser_topic        = "/global_profile_cloud";
+std::string laser_raw_topic    = "/iris/scan";
+//std::string map_topic    = "/global_cloud";
 
 // == Termination variables
-bool isTerminating = false;
+bool is_terminating = false;
 int iteration_count = 0;
 int max_iterations = 40;
 
@@ -95,7 +107,11 @@ ros::Publisher pub_setpoint;
 // == Point clouds
 float grid_res = 0.1f; //Voxel grid resolution
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr globalCloudPtr;
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr global_occ_cloud_ptr;
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr global_free_cloud_ptr;
+
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_projected_cloud_ptr  (new pcl::PointCloud<pcl::PointXYZRGB>);
 //pcl::VoxelGrid<pcl::PointXYZRGB> occGrid;
 
 
@@ -103,16 +119,24 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr globalCloudPtr;
 // ======================
 // Function prototypes (@todo: move to header file)
 // ======================
-
-void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+// Callbacks
+//void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+void mapOccupiedCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+void mapFreeCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+void laserCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+void laserRawCallback(const sensor_msgs::LaserScan& laser_msg);
 void positionCallback(const geometry_msgs::PoseStamped& pose_msg);
-void addToGlobalCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_in);
-void termination_check();
-void generate_viewpoints();
-void evaluate_viewpoints();
-void set_waypoint(double x, double y, double z, double yaw);
-void set_waypoint(geometry_msgs::Pose p);
-void move_vehicle();
+
+// FSM functions
+void profilingProcessing();
+void profileMove(bool is_rising);
+
+void terminationCheck();
+void generateViewpoints();
+void evaluateViewpoints();
+void setWaypoint(double x, double y, double z, double yaw, bool is_relative);
+void setWaypoint(geometry_msgs::Pose p);
+void moveVehicle();
 void takeoff();
 
 double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
@@ -133,6 +157,7 @@ namespace NBVState
     INITIALIZING,
     IDLE,
     TAKING_OFF,
+    PROFILING_PROCESSING, PROFILING_DONE,
     TERMINATION_CHECK, TERMINATION_MET, TERMINATION_NOT_MET,
     VIEWPOINT_GENERATION, VIEWPOINT_GENERATION_COMPLETE, 
     VIEWPOINT_EVALUATION, VIEWPOINT_EVALUATION_COMPLETE,
@@ -151,6 +176,11 @@ double randomDouble(double min, double max)
   return ((double) random()/RAND_MAX)*(max-min) + min;
 }
 
+void sigIntHandler(int sig)
+{
+  is_terminating = true;
+}
+
 int main(int argc, char **argv)
 {
   // >>>>>>>>>>>>>>>>>
@@ -160,7 +190,11 @@ int main(int argc, char **argv)
   
   ROS_INFO("nbv_loop: BEGIN NBV LOOP");
 
-  ros::init(argc, argv, "nbv_loop");
+  /* Override SIGINT handler */
+  //ros::init(argc, argv, "nbv_loop");
+  ros::init(argc, argv, "nbv_loop", ros::init_options::NoSigintHandler);
+  signal(SIGINT, sigIntHandler);
+  
   ros::NodeHandle ros_node;
 
   // >>>>>>>>>>>>>>>>>
@@ -168,8 +202,13 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>>
   
   // Sensor data
-  ros::Subscriber sub_map = ros_node.subscribe(map_topic, 1, mapCallback);
-  ros::Subscriber sub_pose = ros_node.subscribe(position_topic, 1, positionCallback);
+  //ros::Subscriber sub_map  = ros_node.subscribe(map_topic, 1, mapCallback);
+  ros::Subscriber sub_map_free  = ros_node.subscribe(map_free_topic, 1, mapFreeCallback);
+  ros::Subscriber sub_map_occ   = ros_node.subscribe(map_occupied_topic, 1, mapOccupiedCallback);
+  ros::Subscriber sub_laser     = ros_node.subscribe(laser_topic, 1, laserCallback);
+  ros::Subscriber sub_laser_raw = ros_node.subscribe(laser_raw_topic, 1, laserRawCallback);
+  ros::Subscriber sub_pose      = ros_node.subscribe(position_topic, 1, positionCallback);
+  
   
   // >>>>>>>>>>>>>>>>>
   // Publishers
@@ -195,7 +234,7 @@ int main(int argc, char **argv)
   state = NBVState::TAKING_OFF;
   
   ros::Rate loop_rate(10);
-  while (ros::ok() && !isTerminating)
+  while (ros::ok() && !is_terminating)
   {
     switch(state)
     {
@@ -212,36 +251,50 @@ int main(int argc, char **argv)
         break;
         
       case NBVState::IDLE:
+        if (!is_done_profiling)
+        {
+          state = NBVState::PROFILING_PROCESSING;
+          profilingProcessing();
+        }
+        else
+        {
+          state = NBVState::MOVING_COMPLETE;
+        }
+        break;
+        
+      case NBVState::PROFILING_PROCESSING:
+        profilingProcessing();
+        break;
+        
       case NBVState::MOVING_COMPLETE:
         state = NBVState::TERMINATION_CHECK;
-        
+      
         iteration_count++;
         ROS_INFO("nbv_loop: Iteration %d", iteration_count);
         //ROS_INFO_STREAM("nbv_loop: " << console::COLOR_YELLOW << "Iteration " << iteration_count);
-        //ROS_INFO("nbv_loop: %s Iteration %d", cc_yellow, iteration_count);
-        
-        
-        termination_check();
+         
+        terminationCheck();
+  
         break;
         
       case NBVState::TERMINATION_MET:
-        isTerminating = true;
+        is_terminating = true;
         std::cout << cc_yellow << "Termination condition met\n" << cc_reset;
         break;
         
       case NBVState::TERMINATION_NOT_MET:
         state = NBVState::VIEWPOINT_GENERATION;
-        generate_viewpoints();
+        generateViewpoints();
         break;
         
       case NBVState::VIEWPOINT_GENERATION_COMPLETE:
         state = NBVState::VIEWPOINT_EVALUATION;
-        evaluate_viewpoints();
+        evaluateViewpoints();
         break;
       
       case NBVState::VIEWPOINT_EVALUATION_COMPLETE:
         state = NBVState::MOVING;
-        move_vehicle();
+        moveVehicle();
         break;
     }
     
@@ -256,7 +309,7 @@ int main(int argc, char **argv)
 // Update global position of UGV
 void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
 {
-  if (isDebug && isDebugContinuousStates)
+  if (is_debug && is_debug_continuous_states)
   {
     std::cout << cc_magenta << "Grabbing location\n" << cc_reset;
   }
@@ -265,28 +318,205 @@ void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
   mobile_base_pose = pose_msg.pose;
 }
 
-void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+void mapOccupiedCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
-  if (isDebug && isDebugContinuousStates)
+  if (is_debug && is_debug_continuous_states)
   {
-    std::cout << cc_green << "SENSING\n" << cc_reset;
+    std::cout << cc_green << "SENSING OCCUPIED\n" << cc_reset;
   }
   
   pcl::PointCloud<pcl::PointXYZRGB> cloud;
 
   // == Convert to pcl pointcloud
   pcl::fromROSMsg (*cloud_msg, cloud);
-  globalCloudPtr = cloud.makeShared();
+  global_occ_cloud_ptr = cloud.makeShared();
 }
 
-void termination_check()
+void mapFreeCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+{
+  if (is_debug && is_debug_continuous_states)
+  {
+    std::cout << cc_green << "SENSING FREE\n" << cc_reset;
+  }
+  
+  pcl::PointCloud<pcl::PointXYZRGB> cloud;
+
+  // == Convert to pcl pointcloud
+  pcl::fromROSMsg (*cloud_msg, cloud);
+  global_free_cloud_ptr = cloud.makeShared();
+}
+
+void laserCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+{
+  if (is_debug && is_debug_continuous_states)
+  {
+    std::cout << cc_green << "SENSING LASER\n" << cc_reset;
+  }
+  
+  pcl::PointCloud<pcl::PointXYZRGB> cloud;
+
+  // == Convert to pcl pointcloud
+  pcl::fromROSMsg (*cloud_msg, cloud);
+  profile_cloud_ptr = cloud.makeShared();
+}
+  
+void laserRawCallback(const sensor_msgs::LaserScan& laser_msg){
+  if (is_debug && is_debug_continuous_states){
+    std::cout << cc_magenta << "Scan readings\n" << cc_reset;
+  }
+  
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+  
+  int steps = (laser_msg.angle_max - laser_msg.angle_min)/laser_msg.angle_increment;
+  float step_size = (laser_msg.angle_max - laser_msg.angle_min)/steps;
+  float range_buffer = 0.5;
+  
+  
+  int discarded = 0;
+  for (int i=0; i<steps; i++)
+  {
+    float r = laser_msg.ranges[i];
+    float angle = laser_msg.angle_min + step_size*i;
+    
+    if (r > laser_msg.range_max - range_buffer  ||  r < laser_msg.range_min + range_buffer)
+    {
+      // Discard points that are too close or too far to sensor
+      discarded++;
+      continue;
+    }
+  }
+  
+  // Output whether the scan is empty or not
+  //std::cout << cc_magenta << "Discared " << discarded << "/" << steps << "\n" << cc_reset;
+  if (discarded >= steps*0.95)
+  {
+    is_scan_empty = true;
+  }
+  else
+  {
+    is_scan_empty = false;
+  }
+    
+}
+
+
+
+
+
+void profilingProcessing(){
+  if (state != NBVState::PROFILING_PROCESSING)
+  {
+    std::cout << cc_red << "ERROR: Attempt to start profiling out of order\n" << cc_reset;
+    return;
+  }
+  if (is_debug && is_debug_states)
+  {
+    std::cout << cc_green << "Processing profile\n" << cc_reset;
+  }
+  
+  double angle_inc = M_PI_4;
+  
+  profile_angle += angle_inc;
+  
+  if (profile_angle >= 2*M_PI + angle_inc){
+    state = NBVState::PROFILING_DONE;
+    std::cout << cc_green << "Profiling complete\n" << cc_reset;
+    return;
+  }
+  
+  is_flying_up = !is_flying_up;
+  if (is_flying_up)
+  {
+    profileMove(true);
+  }
+  else
+  {
+    profileMove(false);
+  }
+  
+  // Calculate centroid
+  double x, y;
+  
+  for (int i=0; i<profile_cloud_ptr->points.size(); i++)
+  {
+    x += profile_cloud_ptr->points[i].x;
+    y += profile_cloud_ptr->points[i].y;
+  }
+  x /= profile_cloud_ptr->points.size();
+  y /= profile_cloud_ptr->points.size();
+  
+  // Calculate radius
+  double r = 0;
+  
+  for (int i=0; i<profile_cloud_ptr->points.size(); i++)
+  {
+    double r_temp = (profile_cloud_ptr->points[i].x - x)*(profile_cloud_ptr->points[i].x - x)
+                  + (profile_cloud_ptr->points[i].y - y)*(profile_cloud_ptr->points[i].y - y);
+    
+    if (r_temp > r)
+      r = r_temp;
+  }
+  
+  r = sqrt(r);
+  r += 2; // add a safety margin
+  
+  std::cout << cc_magenta << "x = " << x << "\ty = " << y << "\tr = " << r << "\n" << cc_reset;
+  
+  // Move back on the circle
+  double theta  = atan2(mobile_base_pose.position.y - y, mobile_base_pose.position.x - x);
+  double x_move = x+r*cos(theta);
+  double y_move = y+r*sin(theta);
+  double yaw_move = theta-M_PI; //towards the center of the circle
+  
+  std::cout << cc_magenta << "Moving back\n" << cc_reset;
+  setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
+  moveVehicle();
+  
+  // Move along the circle
+  theta  += angle_inc;
+  x_move = x+r*cos(theta);
+  y_move = y+r*sin(theta);
+  yaw_move = theta-M_PI; //towards the center of the circle
+  
+  std::cout << cc_magenta << "Moving along\n" << cc_reset;
+  setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
+  moveVehicle();
+  
+}
+
+void profileMove(bool is_rising)
+{
+  if (is_rising)
+  {
+    while (!is_scan_empty && !is_terminating)
+    {
+      std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
+      setWaypoint(0, 0, 0.7, 0, true);
+      moveVehicle();
+      ros::spinOnce();
+    }
+  }
+  else
+  {
+    while (mobile_base_pose.position.z > 1 && !is_terminating)
+    {
+      std::cout << cc_magenta << "Profiling move down\n" << cc_reset;
+      setWaypoint(0, 0, -0.7, 0, true);
+      moveVehicle();
+      ros::spinOnce();
+    }
+  }
+}
+
+
+void terminationCheck()
 {
   if (state != NBVState::TERMINATION_CHECK)
   {
     std::cout << cc_red << "ERROR: Attempt to check termination out of order\n" << cc_reset;
     return;
   }
-  if (isDebug && isDebugStates)
+  if (is_debug && is_debug_states)
   {
     std::cout << cc_green << "Checking termination condition\n" << cc_reset;
   }
@@ -303,19 +533,20 @@ void termination_check()
 }
 
 
-void generate_viewpoints()
+void generateViewpoints()
 {
   if (state != NBVState::VIEWPOINT_GENERATION)
   {
     std::cout << cc_red << "ERROR: Attempt to generate viewpoints out of order\n" << cc_reset;
     return;
   }
-  if (isDebug && isDebugStates)
+  if (is_debug && is_debug_states)
   {
     std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
   }
   
-  viewGen->setCloud(globalCloudPtr);
+  viewGen->setCloud(global_occ_cloud_ptr, global_free_cloud_ptr);
+  ROS_INFO("5");
   viewGen->setCurrentPose(mobile_base_pose);
   viewGen->generateViews();
   
@@ -323,70 +554,70 @@ void generate_viewpoints()
 }
 
 
-void evaluate_viewpoints()
+void evaluateViewpoints()
 {
   if (state != NBVState::VIEWPOINT_EVALUATION)
   {
     std::cout << cc_red << "ERROR: Attempt to evaluate viewpoints out of order\n" << cc_reset;
     return;
   }
-  if (isDebug && isDebugStates)
+  if (is_debug && is_debug_states)
   {
     std::cout << cc_green << "Evaluating viewpoints\n" << cc_reset;
   }
   
   viewSel->evaluate();
   geometry_msgs::Pose p = viewSel->getTargetPose();
-  set_waypoint(p);
-  
-  /*
-  double yaw = randomDouble(M_PI-M_PI_4, M_PI+M_PI_4); 
-  set_waypoint( 
-    4,    //x 
-    mobile_base_pose.position.y + 1, //y 
-    4,      //z 
-    yaw    //yaw 
-  );
-  */
+  setWaypoint(p);
   
   state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
 }
 
-void set_waypoint(double x, double y, double z, double yaw){
+void setWaypoint(double x, double y, double z, double yaw, bool is_relative=false){
   geometry_msgs::Pose setpoint_world;
   
-  // Position
-  setpoint_world.position.x = x;
-  setpoint_world.position.y = y;
-  setpoint_world.position.z = z;
-  
-  // Orientation
-  tf::Quaternion tf_q;
-  tf_q = tf::createQuaternionFromYaw(yaw);
-  
-  setpoint_world.orientation.x = tf_q.getX();
-  setpoint_world.orientation.y = tf_q.getY();
-  setpoint_world.orientation.z = tf_q.getZ();
-  setpoint_world.orientation.w = tf_q.getW();
+  if (is_relative)
+  {
+    // Position
+    setpoint_world.position.x = mobile_base_pose.position.x + x;
+    setpoint_world.position.y = mobile_base_pose.position.y + y;
+    setpoint_world.position.z = mobile_base_pose.position.z + z;
+    
+    // Orientation
+    double yaw_current = getYawFromQuaternion(mobile_base_pose.orientation);
+    setpoint_world.orientation = getQuaternionFromYaw(yaw_current + yaw);
+  }
+  else
+  {
+    // Position
+    setpoint_world.position.x = x;
+    setpoint_world.position.y = y;
+    setpoint_world.position.z = z;
+    
+    // Orientation
+    setpoint_world.orientation = getQuaternionFromYaw(yaw);
+  }
   
   // Transform to setpoint frame
   transformGlobal2Setpoint(setpoint_world, setpoint.pose);
 }
 
-void set_waypoint(geometry_msgs::Pose p)
+void setWaypoint(geometry_msgs::Pose p)
 {
   // Transform to setpoint frame
   transformGlobal2Setpoint(p, setpoint.pose);
 }
 
-void move_vehicle()
+void moveVehicle()
 {
-  if (state != NBVState::MOVING && state != NBVState::TAKING_OFF)
+  if (state != NBVState::MOVING
+      && state != NBVState::TAKING_OFF
+      && state != NBVState::PROFILING_PROCESSING)
   {
     std::cout << cc_red << "ERROR: Attempt to move vehicle out of order\n" << cc_reset;
     return;
   }
-  if (isDebug && isDebugStates)
+  if (is_debug && is_debug_states)
   {
     std::cout << cc_green << "Moving (setting waypoints)\n" << cc_reset;
   }
@@ -406,7 +637,7 @@ void move_vehicle()
   ros::Rate rate(10);
   while(ros::ok() && !isNear(setpoint_world, mobile_base_pose))
   {
-    if (isDebug && isDebugContinuousStates)
+    if (is_debug && is_debug_continuous_states)
     {
       std::cout << cc_green << "Moving to destination. " <<
         "Distance to target: " << getDistance(setpoint_world, mobile_base_pose) <<
@@ -438,7 +669,7 @@ void takeoff()
   double yaw = M_PI;
   
   // Simulate smooth takeoff at 4 meters
-  int target_height = 4;
+  int target_height = 3;
   
   if ( isNear(mobile_base_pose.position.z, target_height) )
   {
@@ -450,8 +681,8 @@ void takeoff()
     
     for (int i=1; i<=target_height; i++)
     {
-      set_waypoint(x, y, i, yaw);
-      move_vehicle();
+      setWaypoint(x, y, i, yaw);
+      moveVehicle();
     }
     
     std::cout << cc_green << "Done taking off\n" << cc_reset;

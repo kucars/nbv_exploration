@@ -19,12 +19,25 @@
 // =======
 double ViewSelecterBase::calculateIG(Pose p)
 {
-  OcclusionCulling occlusionCulling(cloud_ptr_);
+  OcclusionCulling culling_occ(cloud_occupied_ptr_);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_occupied(new pcl::PointCloud <pcl::PointXYZ>);
+  *cloud_occupied = culling_occ.extractVisibleSurface(p);
   
-  pcl::PointCloud<pcl::PointXYZ>::Ptr tempCloud(new pcl::PointCloud <pcl::PointXYZ>);
-  *tempCloud = occlusionCulling.extractVisibleSurface(p);
+  OcclusionCulling culling_free(cloud_free_ptr_);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_free(new pcl::PointCloud <pcl::PointXYZ>);
+  *cloud_free = culling_free.extractVisibleSurface(p);
   
-  return tempCloud->points.size();
+  double val;
+  if (cloud_occupied->points.size() == 0)
+  {
+		val = 1/.0; //inf
+	}
+	else
+	{
+		val = cloud_occupied->points.size() + cloud_free->points.size();
+	}
+  
+  return val;
 }
 
 double ViewSelecterBase::calculateDistance(Pose p)
@@ -64,7 +77,9 @@ double ViewSelecterBase::calculateUtility(Pose p)
 void ViewSelecterBase::evaluate()
 {
   // Update curernt pose and map
-  cloud_ptr_    = view_gen_->cloud_ptr_;
+  cloud_occupied_ptr_ = view_gen_->cloud_occupied_ptr_;
+  cloud_free_ptr_     = view_gen_->cloud_free_ptr_;
+  cloud_combined_ptr_ = view_gen_->cloud_combined_ptr_;
   current_pose_ = view_gen_->current_pose_;
   
   double maxUtility = -1/.0; //-inf

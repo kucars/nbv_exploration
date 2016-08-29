@@ -56,16 +56,26 @@ public:
   ViewGeneratorBase(){}
   ~ViewGeneratorBase(){}
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_free_ptr_;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_combined_ptr_;
   
   Pose current_pose_;
   std::vector<Pose, Eigen::aligned_allocator<Pose> > generated_poses;
   
 
-  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_cloud)
+  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud,
+                pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_free_cloud)
   {
-    cloud_ptr_ = in_cloud;
+    cloud_occupied_ptr_ = in_occ_cloud;
+    cloud_free_ptr_     = in_free_cloud;
+    
+    // Create combined cloud (@todo: check if input clouds are null or not. Null indicates that rtabmap returned no map to us yet)
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_combined_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+    *cloud_combined_ptr  = *in_occ_cloud;
+    *cloud_combined_ptr += *in_free_cloud;
+  
+    cloud_combined_ptr_ = cloud_combined_ptr;
   }
   
   void setCurrentPose(Pose p)

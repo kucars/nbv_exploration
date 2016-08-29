@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf_conversions
   eigen_conversions
+  keyboard
 )
 
 find_package(PCL REQUIRED)
@@ -71,3 +72,7 @@ target_link_libraries(nbv_loop
 add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)
 add_dependencies(sensing_and_mapping ${catkin_EXPORTED_TARGETS})
 target_link_libraries(sensing_and_mapping ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
+
+add_executable(teleop_uav src/keyboard_teleop.cpp)
+add_dependencies(teleop_uav ${catkin_EXPORTED_TARGETS})
+target_link_libraries(teleop_uav ${catkin_LIBRARIES} )

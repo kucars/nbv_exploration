@@ -57,7 +57,7 @@ public:
     pcl::FrustumCullingTT fc;
     double maxAccuracyError, minAccuracyError;
 
-	// >>>>>>>>
+    // >>>>>>>>
     // Methods
     // >>>>>>>>
     //OcclusionCulling();
