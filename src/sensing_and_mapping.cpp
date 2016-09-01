@@ -29,6 +29,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 
 // =========================
 // Colors for console window
@@ -61,7 +62,7 @@ bool isDebugContinuousStates = !true;
 // == Consts
 std::string depth_topic    = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
 std::string position_topic = "/iris/ground_truth/pose";
-std::string scan_in_topic  = "/iris/scan";
+std::string scan_in_topic  = "scan_in";
 
 std::string map_topic      = "/global_cloud";
 std::string scan_out_topic = "/global_scan_cloud";
@@ -275,6 +276,15 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg){
       // == Add to global
       addToGlobalCloud(scan_ptr_filtered, profile_cloud_ptr);
       
+      
+      // == Filtering stage (to remove outliers)
+      pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
+      sor.setInputCloud (scan_ptr_filtered);
+      sor.setMeanK (10);
+      sor.setStddevMulThresh (0.5);
+      sor.filter (*scan_ptr_filtered);
+      
+      
       // == Publish
       sensor_msgs::PointCloud2 cloud_msg;
     
@@ -295,13 +305,7 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg){
         profile_projected_cloud_ptr->points[i].z = 0;
       }
       
-      // == Voxelgrid filtering
-      //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-      pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-      sor.setInputCloud (profile_projected_cloud_ptr);
-      sor.setLeafSize (grid_res, grid_res, grid_res);
-      sor.filter (*profile_projected_cloud_ptr);
+      
       
       // == Publish
       pcl::toROSMsg(*profile_projected_cloud_ptr, cloud_msg); 	//cloud of original (white) using original cloud

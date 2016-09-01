@@ -45,7 +45,7 @@ include_directories(
 )
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
-#link_libraries(${PROJECT_NAME} ${OCTOMAP_LIBRARIES})
+link_libraries(${OCTOMAP_LIBRARIES})
 
 
 #add_executable(wall_follower src/wall_follower.cpp)
@@ -76,3 +76,12 @@ target_link_libraries(sensing_and_mapping ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL
 add_executable(teleop_uav src/keyboard_teleop.cpp)
 add_dependencies(teleop_uav ${catkin_EXPORTED_TARGETS})
 target_link_libraries(teleop_uav ${catkin_LIBRARIES} )
+
+add_executable(correct_laser_scan src/correct_laser_scan.cpp)
+add_dependencies(correct_laser_scan ${catkin_EXPORTED_TARGETS})
+target_link_libraries(correct_laser_scan ${catkin_LIBRARIES} )
+
+add_executable(test_octomap src/test_octomap.cpp)
+add_dependencies(test_octomap ${catkin_EXPORTED_TARGETS})
+target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
+

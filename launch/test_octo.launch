@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<launch>
+    <arg name="scan_topic" default="/nbv_exploration/scan"/>
+    
+    
+    <node pkg="nbv_exploration" name="test_octomap" type="test_octomap" args="" required="true" output="screen">
+      <remap from="scan_in"  to="$(arg scan_topic)"/>
+    </node>
+</launch>

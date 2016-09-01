@@ -136,13 +136,13 @@ void generateViewpoints();
 void evaluateViewpoints();
 void setWaypoint(double x, double y, double z, double yaw, bool is_relative);
 void setWaypoint(geometry_msgs::Pose p);
-void moveVehicle();
+void moveVehicle(double threshold_sensitivity = 1);
 void takeoff();
 
 double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
 double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
-bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current);
-bool isNear(double p1, double p2);
+bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current, double threshold_sensitivity = 1);
+bool isNear(double p1, double p2, double threshold_sensitivity = 1);
 
 void transformSetpoint2Global (const geometry_msgs::Pose & p_set, geometry_msgs::Pose & p_global);
 void transformGlobal2Setpoint (const geometry_msgs::Pose & p_global, geometry_msgs::Pose & p_set);
@@ -178,7 +178,10 @@ double randomDouble(double min, double max)
 
 void sigIntHandler(int sig)
 {
-  is_terminating = true;
+  std::cout << cc_yellow << "Handling SIGINT exception\n" << cc_reset;
+  
+  // Forces ros::Rate::sleep() to end if it's stuck (for example, Gazebo isn't running)
+  ros::shutdown();
 }
 
 int main(int argc, char **argv)
@@ -191,7 +194,6 @@ int main(int argc, char **argv)
   ROS_INFO("nbv_loop: BEGIN NBV LOOP");
 
   /* Override SIGINT handler */
-  //ros::init(argc, argv, "nbv_loop");
   ros::init(argc, argv, "nbv_loop", ros::init_options::NoSigintHandler);
   signal(SIGINT, sigIntHandler);
   
@@ -234,6 +236,7 @@ int main(int argc, char **argv)
   state = NBVState::TAKING_OFF;
   
   ros::Rate loop_rate(10);
+  
   while (ros::ok() && !is_terminating)
   {
     switch(state)
@@ -244,9 +247,10 @@ int main(int argc, char **argv)
           mobile_base_pose.orientation.y == 0 &&
           mobile_base_pose.orientation.z == 0 &&
           mobile_base_pose.orientation.w == 0)
-          {
-            break;
-          }
+        {
+          break;
+        }
+          
         takeoff();
         break;
         
@@ -302,6 +306,8 @@ int main(int argc, char **argv)
     loop_rate.sleep();
   }
 
+  std::cout << cc_yellow << "Shutting down\n" << cc_reset;
+  ros::shutdown();
   return 0;
 }
 
@@ -413,8 +419,8 @@ void profilingProcessing(){
   {
     std::cout << cc_green << "Processing profile\n" << cc_reset;
   }
-  
-  double angle_inc = M_PI_4;
+    
+  double angle_inc = (2*M_PI)/5;
   
   profile_angle += angle_inc;
   
@@ -435,6 +441,11 @@ void profilingProcessing(){
   }
   
   // Calculate centroid
+  if (profile_cloud_ptr->points.size() == 0){
+    std::cout << cc_red << "Error: No points detected in profile cloud. Make sure mapping node is running\n" << cc_reset;
+    return;
+  }
+  
   double x, y;
   
   for (int i=0; i<profile_cloud_ptr->points.size(); i++)
@@ -445,8 +456,9 @@ void profilingProcessing(){
   x /= profile_cloud_ptr->points.size();
   y /= profile_cloud_ptr->points.size();
   
-  // Calculate radius
+  // Calculate radius (top n point to remove outliers)
   double r = 0;
+    
   
   for (int i=0; i<profile_cloud_ptr->points.size(); i++)
   {
@@ -473,14 +485,36 @@ void profilingProcessing(){
   moveVehicle();
   
   // Move along the circle
-  theta  += angle_inc;
-  x_move = x+r*cos(theta);
-  y_move = y+r*sin(theta);
-  yaw_move = theta-M_PI; //towards the center of the circle
+  double arc_length = r * angle_inc;
+  double step_length = 10.0;
+  int steps = arc_length/step_length;
   
-  std::cout << cc_magenta << "Moving along\n" << cc_reset;
-  setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
-  moveVehicle();
+  if (steps < 2)
+  {
+    theta  += angle_inc;
+    x_move = x+r*cos(theta);
+    y_move = y+r*sin(theta);
+    yaw_move = theta-M_PI; //towards the center of the circle
+    
+    std::cout << cc_magenta << "Moving along\n" << cc_reset;
+    setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
+    moveVehicle(1.5);
+  }
+  else
+  {
+    double step_angle = angle_inc / steps;
+    for (int i=0; i<steps; i++)
+    {
+      theta  += step_angle;
+      x_move = x+r*cos(theta);
+      y_move = y+r*sin(theta);
+      yaw_move = theta-M_PI; //towards the center of the circle
+      
+      std::cout << cc_magenta << "Moving along\n" << cc_reset;
+      setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
+      moveVehicle(1.5);
+    }
+  }
   
 }
 
@@ -488,9 +522,10 @@ void profileMove(bool is_rising)
 {
   if (is_rising)
   {
-    while (!is_scan_empty && !is_terminating)
+    std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
+    
+    while (ros::ok() && !is_scan_empty)
     {
-      std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
       setWaypoint(0, 0, 0.7, 0, true);
       moveVehicle();
       ros::spinOnce();
@@ -498,9 +533,10 @@ void profileMove(bool is_rising)
   }
   else
   {
-    while (mobile_base_pose.position.z > 1 && !is_terminating)
+    std::cout << cc_magenta << "Profiling move down\n" << cc_reset;
+    
+    while (ros::ok() && mobile_base_pose.position.z > 1)
     {
-      std::cout << cc_magenta << "Profiling move down\n" << cc_reset;
       setWaypoint(0, 0, -0.7, 0, true);
       moveVehicle();
       ros::spinOnce();
@@ -608,7 +644,7 @@ void setWaypoint(geometry_msgs::Pose p)
   transformGlobal2Setpoint(p, setpoint.pose);
 }
 
-void moveVehicle()
+void moveVehicle(double threshold_sensitivity)
 {
   if (state != NBVState::MOVING
       && state != NBVState::TAKING_OFF
@@ -635,7 +671,7 @@ void moveVehicle()
   
   // Wait till we've reached the waypoint
   ros::Rate rate(10);
-  while(ros::ok() && !isNear(setpoint_world, mobile_base_pose))
+  while(ros::ok() && !isNear(setpoint_world, mobile_base_pose, threshold_sensitivity))
   {
     if (is_debug && is_debug_continuous_states)
     {
@@ -664,36 +700,32 @@ void takeoff()
     return;
   }
   
-  double x = mobile_base_pose.position.x;
-  double y = mobile_base_pose.position.y;
-  double yaw = M_PI;
+  std::cout << cc_green << "Taking off\n" << cc_reset;
   
   // Simulate smooth takeoff at 4 meters
-  int target_height = 3;
-  
-  if ( isNear(mobile_base_pose.position.z, target_height) )
+  float target_height = 3;
+  while ( ros::ok() && !isNear(mobile_base_pose.position.z, target_height) )
   {
-    std::cout << cc_green << "Skipping takeoff\n" << cc_reset;
-  }
-  else
-  {
-    std::cout << cc_green << "Taking off\n" << cc_reset;
-    
-    for (int i=1; i<=target_height; i++)
+    if (mobile_base_pose.position.z < target_height)
     {
-      setWaypoint(x, y, i, yaw);
-      moveVehicle();
+      setWaypoint(0, 0, 1, 0, true);
+    }
+    else
+    {
+      setWaypoint(0, 0, -1, 0, true);
     }
     
-    std::cout << cc_green << "Done taking off\n" << cc_reset;
+    moveVehicle();
   }
+  
+  std::cout << cc_green << "Done taking off\n" << cc_reset;
   
   state = NBVState::IDLE;
 }
 
-bool isNear(double p1, double p2)
+bool isNear(double p1, double p2, double threshold_sensitivity )
 {
-  if (fabs(p1-p2)< distance_threshold)
+  if (fabs(p1-p2)< distance_threshold*threshold_sensitivity)
   {
     return true;
   }
@@ -701,10 +733,10 @@ bool isNear(double p1, double p2)
   return false;
 }
 
-bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current){
+bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current, double threshold_sensitivity){
   if (
-    getDistance(p_target, p_current) < distance_threshold &&
-    fabs(getAngularDistance(p_target, p_current)) < angular_threshold)
+    getDistance(p_target, p_current) < distance_threshold*threshold_sensitivity &&
+    fabs(getAngularDistance(p_target, p_current)) < angular_threshold*threshold_sensitivity )
     {
     return true;
   }
