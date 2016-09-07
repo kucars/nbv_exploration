@@ -11,6 +11,7 @@
 #include <ros/package.h>
 #include <ros/console.h>
 
+#include <std_msgs/Bool.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -67,12 +68,17 @@ bool is_debug = true; //Set to true to see debug text
 bool is_debug_states = true;
 bool is_debug_continuous_states = !true;
 
+bool isScanning = false;
+std::vector<octomap::point3d> pose_vec;
+std::vector<octomap::Pointcloud> scan_vec;
+double max_range;
 
 geometry_msgs::Pose mobile_base_pose;
 octomap::OcTree tree(0.3);
 
 // == Consts
 std::string scan_topic = "scan_in";
+std::string scan_command_topic = "/nbv_exploration/scan_command";
 std::string tree_topic = "output_tree";
 std::string position_topic = "/iris/ground_truth/pose";
 
@@ -80,6 +86,7 @@ std::string position_topic = "/iris/ground_truth/pose";
 // == Publishers
 ros::Subscriber sub_pose;
 ros::Subscriber sub_scan;
+ros::Subscriber sub_scan_command;
 
 ros::Publisher pub_tree;
 
@@ -92,6 +99,9 @@ tf::TransformListener *tf_listener;
 // Function prototypes
 // ======================
 void scanCallback(const sensor_msgs::LaserScan& laser_msg);
+void scanCommandCallback(const std_msgs::Bool& msg);
+
+void processScans();
 
 void print_query_info(octomap::point3d query, octomap::OcTreeNode* node) {
   if (node != NULL) {
@@ -146,7 +156,8 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>>
   // Topic handlers
   // >>>>>>>>>>>>>>>>>
-  sub_scan = ros_node.subscribe(scan_topic, 1, scanCallback);
+  sub_scan         = ros_node.subscribe(scan_topic, 1, scanCallback);
+  sub_scan_command = ros_node.subscribe(scan_command_topic, 1, scanCommandCallback);
   
   pub_tree = ros_node.advertise<octomap_msgs::Octomap>(tree_topic, 10);
   
@@ -162,80 +173,58 @@ int main(int argc, char **argv)
   std::cout << "\t" << scan_topic << "\n";
   std::cout << "\t" << position_topic << "\n";
   std::cout << "\n";
-  
-  
-  /*
-  //octomap::OcTree tree (0.1);  // create empty tree with resolution 0.1
-  // insert some measurements of occupied cells
 
-  for (int x=-30; x<30; x++) {
-    for (int y=-30; y<30; y++) {
-      for (int z=-30; z<30; z++) {
-        octomap::point3d endpoint ((float) x*0.5f, (float) y*0.5f, (float) z*0.5f);
-        tree.updateNode(endpoint, octomap::logodds(1.0f)); // integrate 'occupied' measurement
-      }
-    }
-  }
-
-  // insert some measurements of free cells
-
-  for (int x=-15; x<15; x++) {
-    for (int y=-15; y<15; y++) {
-      for (int z=-15; z<15; z++) {
-        octomap::point3d endpoint ((float) x*1.0f, (float) y*1.0f, (float) z*1.0f);
-        tree.updateNode(endpoint, false);  // integrate 'free' measurement
-      }
-    }
-  }
-  
-  
-  // insert some random cell
-
-  for (int i=1; i<100; i++) {
-    octomap::point3d endpoint (randomDouble(-10,10)*0.1f, randomDouble(-10,10)*0.1f, randomDouble(-10,10)*0.1f);
-    tree.updateNode(endpoint, octomap::logodds(randomDouble(0,1)) );
-  }
-  
-  std::cout << std::endl;
-  std::cout << "performing some queries:" << std::endl;
-  
-  octomap::point3d query (0., 0., 0.);
-  octomap::OcTreeNode* result = tree.search (query);
-  print_query_info(query, result);
-  //std::cout << result->getOccupancy() << "\n";
-
-  query = octomap::point3d(-1.,-1.,-1.);
-  result = tree.search (query);
-  print_query_info(query, result);
-  //std::cout << result->getOccupancy() << "\n";
-
-  query = octomap::point3d(1.,1.,1.);
-  result = tree.search (query);
-  print_query_info(query, result);
-  //std::cout << result->getOccupancy() << "\n";
-
-  std::cout << std::endl;
-  tree.writeBinary("simple_tree.bt");
-  std::cout << "wrote example file simple_tree.bt" << std::endl << std::endl;
-  std::cout << "now you can use octovis to visualize: octovis simple_tree.bt"  << std::endl;
-  std::cout << "Hint: hit 'F'-key in viewer to see the freespace" << std::endl << std::endl;  
-  */
-  
-  
-  
-  
-  
-  
-  
   ros::spin();
   return 0;
 }
 
+void scanCommandCallback(const std_msgs::Bool& msg)
+{
+  isScanning = msg.data;
+  
+  if (isScanning)
+    std::cout << cc_green << "Starting scan\n" << cc_reset;
+  else
+  {
+    std::cout << cc_green << "Processing " << scan_vec.size() << " scans\n" << cc_reset;
+    processScans();
+  }
+}
+
 void scanCallback(const sensor_msgs::LaserScan& laser_msg)
 {
-  std::cout << cc_green << "Got scan\n" << cc_reset;
+  if (!isScanning)
+    return;
+    
+  //std::cout << cc_green << "Got scan\n" << cc_reset;
   
+  // == Get transform
+  tf::StampedTransform transform;
+  try{
+    // Listen for transform
+    tf_listener->lookupTransform("world", "/iris/hokuyo_laser_link", ros::Time(0), transform);
+  }
+  catch (tf::TransformException ex){
+    ROS_ERROR("%s",ex.what());
+    //ros::Duration(1.0).sleep();
+    return;
+  }
   
+  // == Reject scan if it's too close to the last one
+  if (pose_vec.size() > 0)
+  {
+    double z_prev = pose_vec[pose_vec.size()-1].z();
+    double z_curr = transform.getOrigin().z();
+    
+    if ( fabs(z_prev - z_curr) < 0.03)
+      return;
+  }
+  
+  max_range = laser_msg.range_max;
+  //if (max_range > 25)
+  //  max_range = 25;
+  
+  // == Build point cloud from scan
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   
   int steps = (laser_msg.angle_max - laser_msg.angle_min)/laser_msg.angle_increment;
@@ -270,11 +259,7 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg)
   }
   
   // == Transform
-  try{
-    // Listen for transform
-    tf::StampedTransform transform;
-    tf_listener->lookupTransform("world", "/iris/hokuyo_laser_link", ros::Time(0), transform);
-    
+  {
     // == Convert tf:Transform to Eigen::Matrix4d
     Eigen::Matrix4d tf_eigen = convertStampedTransform2Matrix4d(transform);
     
@@ -298,164 +283,44 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg)
       }
     }
     
-   
-    
-    // == Add to tree
+    // Add to vectors for later processing
     octomap::point3d sensor_origin (transform.getOrigin().x(),
                                     transform.getOrigin().y(),
                                     transform.getOrigin().z());
+                                    
+    pose_vec.push_back(sensor_origin);
+    scan_vec.push_back(ocCloud);
+  }
+}
+
+void processScans()
+{
+  double t_start, t_end;
+  t_start = ros::Time::now().toSec();
+  
+  int count =0;
+  for (int i=scan_vec.size()-1; i>0; i--)
+  {
+    octomap::point3d sensor_origin = pose_vec[i];
+    octomap::Pointcloud ocCloud = scan_vec[i];
     
-    double max_range = laser_msg.range_max;
-    //if (max_range > 25)
-    //  max_range = 25;
-      
     tree.insertPointCloud(ocCloud, sensor_origin, max_range);
-    
     //addToTree(scan_ptr_filtered);
     
-    // == Publish
-    octomap_msgs::Octomap msg;
-    octomap_msgs::fullMapToMsg (tree, msg);
-    
-    msg.header.frame_id = "world";
-    msg.header.stamp = ros::Time::now();
-    pub_tree.publish(msg);
+    pose_vec.pop_back();
+    scan_vec.pop_back();
+    count++;
   }
-  catch (tf::TransformException ex){
-    ROS_ERROR("%s",ex.what());
-    ros::Duration(1.0).sleep();
-  }
+  
+  // == Publish
+  octomap_msgs::Octomap msg;
+  octomap_msgs::fullMapToMsg (tree, msg);
+  
+  msg.header.frame_id = "world";
+  msg.header.stamp = ros::Time::now();
+  pub_tree.publish(msg);
+  
+  t_end = ros::Time::now().toSec();
+  std::cout << cc_green << "Done processing.\n" << cc_reset;
+  std::cout << "   Total time: " << t_end-t_start << " sec\tTotal scan: " << count << "\t(" << (t_end-t_start)/count << " sec/scan)\n";
 }
-
-
-
-/*
-bool isNear(double p1, double p2)
-{
-  if (fabs(p1-p2)< distance_threshold)
-  {
-    return true;
-  }
-    
-  return false;
-}
-
-bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current){
-  if (
-    getDistance(p_target, p_current) < distance_threshold &&
-    fabs(getAngularDistance(p_target, p_current)) < angular_threshold)
-    {
-    return true;
-  }
-    
-  return false;
-}
-
-double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
-{
-  return sqrt(
-    (p1.position.x-p2.position.x)*(p1.position.x-p2.position.x) +
-    (p1.position.y-p2.position.y)*(p1.position.y-p2.position.y) +
-    (p1.position.z-p2.position.z)*(p1.position.z-p2.position.z) );
-}
-
-double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
-{
-  double roll1, pitch1, yaw1;
-  double roll2, pitch2, yaw2;
-  
-  tf::Quaternion q1 (
-    p1.orientation.x,
-    p1.orientation.y,
-    p1.orientation.z,
-    p1.orientation.w
-    );
-    
-  tf::Quaternion q2 (
-    p2.orientation.x,
-    p2.orientation.y,
-    p2.orientation.z,
-    p2.orientation.w
-    );
-  
-  tf::Matrix3x3(q1).getRPY(roll1, pitch1, yaw1);
-  tf::Matrix3x3(q2).getRPY(roll2, pitch2, yaw2);
-  
-  // Set differnce from -pi to pi
-  double yaw_diff = fmod(yaw1 - yaw2, 2*M_PI);
-  if (yaw_diff > M_PI)
-  {
-    //std::cout << cc_green << "Decreased by 360: \n";
-    yaw_diff = yaw_diff - 2*M_PI;
-  }
-  else if (yaw_diff < -M_PI)
-  {
-    //std::cout << cc_green << "Increased by 360: \n";
-    yaw_diff = yaw_diff + 2*M_PI;
-  }
-    
-  //std::cout << cc_green << "Yaw1: " << yaw1*180/M_PI << "\tYaw2: " << yaw2*180/M_PI << "\n" << cc_reset;
-  //std::cout << cc_green << "Yaw difference: " << yaw_diff*180/M_PI << "\n" << cc_reset;
-  
-  return yaw_diff;
-}
-
-void transformSetpoint2Global (const geometry_msgs::Pose & p_set, geometry_msgs::Pose& p_global)
-{
-  // Apply a 90 degree clockwise rotation on the z-axis
-  p_global.position.x = p_set.position.y;
-  p_global.position.y =-p_set.position.x;
-  p_global.position.z = p_set.position.z;
-  
-  
-  
-  double roll, pitch, yaw;
-  
-  tf::Quaternion q1 (
-    p_set.orientation.x,
-    p_set.orientation.y,
-    p_set.orientation.z,
-    p_set.orientation.w
-    );
-    
-  tf::Matrix3x3(q1).getRPY(roll, pitch, yaw);
-  
-  yaw -= M_PI_2; //Rotate
-  
-  tf::Quaternion qt = tf::createQuaternionFromRPY(roll,pitch,yaw);
-  
-  p_global.orientation.x = qt.getX();
-  p_global.orientation.y = qt.getY();
-  p_global.orientation.z = qt.getZ();
-  p_global.orientation.w = qt.getW();
-}
-
-void transformGlobal2Setpoint (const geometry_msgs::Pose & p_global, geometry_msgs::Pose& p_set)
-{
-  // Apply a 90 degree anti-clockwise rotation on the z-axis
-  p_set.position.x =-p_global.position.y;
-  p_set.position.y = p_global.position.x;
-  p_set.position.z = p_global.position.z;
-  
-  
-  double roll, pitch, yaw;
-  
-  tf::Quaternion q1 (
-    p_global.orientation.x,
-    p_global.orientation.y,
-    p_global.orientation.z,
-    p_global.orientation.w
-    );
-    
-  tf::Matrix3x3(q1).getRPY(roll, pitch, yaw);
-  
-  yaw += M_PI_2; //Rotate
-  
-  tf::Quaternion qt = tf::createQuaternionFromRPY(roll,pitch,yaw);
-  
-  p_set.orientation.x = qt.getX();
-  p_set.orientation.y = qt.getY();
-  p_set.orientation.z = qt.getZ();
-  p_set.orientation.w = qt.getW();
-}
-*/

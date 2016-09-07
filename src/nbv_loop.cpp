@@ -15,6 +15,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
+#include <std_msgs/Bool.h>
 //#include <gazebo_msgs/ModelStates.h> //Used for absolute positioning
 
 #include <Eigen/Geometry>
@@ -102,6 +103,7 @@ ViewSelecterBase* viewSel;
 // == Publishers
 ros::Publisher pub_global_cloud;
 ros::Publisher pub_setpoint;
+ros::Publisher pub_scan_command;
 
 
 // == Point clouds
@@ -217,8 +219,9 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>>
   
   // Drone setpoints
-  pub_setpoint = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
-
+  pub_setpoint          = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
+  pub_scan_command = ros_node.advertise<std_msgs::Bool>("/nbv_exploration/scan_command", 10);
+  
   // >>>>>>>>>>>>>>>>
   // Set up viewpoint generator
   // >>>>>>>>>>>>>>>>
@@ -520,6 +523,10 @@ void profilingProcessing(){
 
 void profileMove(bool is_rising)
 {
+  std_msgs::Bool msg;
+  msg.data = true;
+  pub_scan_command.publish(msg);
+  
   if (is_rising)
   {
     std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
@@ -542,6 +549,9 @@ void profileMove(bool is_rising)
       ros::spinOnce();
     }
   }
+  
+  msg.data = false;
+  pub_scan_command.publish(msg);
 }
 
 

@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /OccupancyGrid1
       Splitter Ratio: 0.5
     Tree Height: 328
   - Class: rviz/Selection
@@ -311,13 +312,16 @@ Visualization Manager:
       Value: true
     - Class: octomap_rviz_plugin/OccupancyGrid
       Enabled: true
+      Max. Height Display: 3.40282e+38
       Max. Octree Depth: 16
+      Min. Height Display: -3.40282e+38
       Name: OccupancyGrid
       Octomap Topic: /output_tree
       Queue Size: 5
       Value: true
+      Voxel Alpha: 1
       Voxel Coloring: Cell Probability
-      Voxel Rendering: Occupied Voxels
+      Voxel Rendering: Unknown Near Occupied
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -377,5 +381,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 787
-  Y: 108
+  X: 767
+  Y: 88

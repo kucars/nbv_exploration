@@ -1,7 +1,8 @@
 <?xml version="1.0" ?>
 <launch>
     <arg name="using_full_sized_scenario" default="false"/>
-    <arg name="enable_rtab" default="true"/>
+    <arg name="enable_rtab" default="false"/>
+    <arg name="start_gazebo" default="false"/>
     
     <arg name="ns" default="iris"/>
     <arg name="rtab_ns" default="rtabmap"/>
@@ -13,7 +14,7 @@
     
     
     <!-- Start Gazebo and set up the world -->
-    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <include if="$(arg start_gazebo)" file="$(find gazebo_ros)/launch/empty_world.launch">
 	<arg name="world_name" value="$(find rotors_gazebo)/worlds/etihad_aircraft_world.world" if="$(arg using_full_sized_scenario)" /> <!-- full sized -->
 	<arg name="world_name" value="$(find rotors_gazebo)/worlds/etihad_aircraft_world_half.world" unless="$(arg using_full_sized_scenario)" /> <!-- half sized -->
 	<arg name="debug" value="false" />
