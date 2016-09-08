@@ -15,7 +15,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
-#include <std_msgs/Bool.h>
+#include <std_msgs/UInt8.h>
 //#include <gazebo_msgs/ModelStates.h> //Used for absolute positioning
 
 #include <Eigen/Geometry>
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
   
   // Drone setpoints
   pub_setpoint          = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
-  pub_scan_command = ros_node.advertise<std_msgs::Bool>("/nbv_exploration/scan_command", 10);
+  pub_scan_command = ros_node.advertise<std_msgs::UInt8>("/nbv_exploration/scan_command", 10);
   
   // >>>>>>>>>>>>>>>>
   // Set up viewpoint generator
@@ -423,13 +423,17 @@ void profilingProcessing(){
     std::cout << cc_green << "Processing profile\n" << cc_reset;
   }
     
-  double angle_inc = (2*M_PI)/5;
+  double angle_inc = (2*M_PI)/6;
   
   profile_angle += angle_inc;
   
   if (profile_angle >= 2*M_PI + angle_inc){
     state = NBVState::PROFILING_DONE;
     std::cout << cc_green << "Profiling complete\n" << cc_reset;
+    
+    std_msgs::UInt8 msg;
+    msg.data = 2;// Done
+    pub_scan_command.publish(msg);
     return;
   }
   
@@ -489,8 +493,10 @@ void profilingProcessing(){
   
   // Move along the circle
   double arc_length = r * angle_inc;
-  double step_length = 10.0;
+  double step_length = 7.0;
   int steps = arc_length/step_length;
+  
+  double z_move = mobile_base_pose.position.z;
   
   if (steps < 2)
   {
@@ -500,7 +506,7 @@ void profilingProcessing(){
     yaw_move = theta-M_PI; //towards the center of the circle
     
     std::cout << cc_magenta << "Moving along\n" << cc_reset;
-    setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
+    setWaypoint(x_move, y_move, z_move, yaw_move, false);
     moveVehicle(1.5);
   }
   else
@@ -514,8 +520,8 @@ void profilingProcessing(){
       yaw_move = theta-M_PI; //towards the center of the circle
       
       std::cout << cc_magenta << "Moving along\n" << cc_reset;
-      setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
-      moveVehicle(1.5);
+      setWaypoint(x_move, y_move, z_move, yaw_move, false);
+      moveVehicle(1.5); // Be less picky about position, just move around quickly
     }
   }
   
@@ -523,15 +529,10 @@ void profilingProcessing(){
 
 void profileMove(bool is_rising)
 {
-  std_msgs::Bool msg;
-  msg.data = true;
-  pub_scan_command.publish(msg);
-  
-  if (is_rising)
+  // Make sure we're at the right level before scanning
+  if (!is_rising)
   {
-    std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
-    
-    while (ros::ok() && !is_scan_empty)
+    while (ros::ok() && mobile_base_pose.position.z < 10)
     {
       setWaypoint(0, 0, 0.7, 0, true);
       moveVehicle();
@@ -540,9 +541,7 @@ void profileMove(bool is_rising)
   }
   else
   {
-    std::cout << cc_magenta << "Profiling move down\n" << cc_reset;
-    
-    while (ros::ok() && mobile_base_pose.position.z > 1)
+    while (ros::ok() && mobile_base_pose.position.z > 0.7)
     {
       setWaypoint(0, 0, -0.7, 0, true);
       moveVehicle();
@@ -550,7 +549,38 @@ void profileMove(bool is_rising)
     }
   }
   
-  msg.data = false;
+  
+  
+  // Start scan
+  std_msgs::UInt8 msg;
+  msg.data = 1;// Scanning
+  pub_scan_command.publish(msg);
+  
+  if (is_rising)
+  {
+    std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
+    
+    //while (ros::ok() && !is_scan_empty)
+    while (ros::ok() && mobile_base_pose.position.z < 10)
+    {
+      setWaypoint(0, 0, 0.3, 0, true);
+      moveVehicle(0.25); // Scan slowly
+      ros::spinOnce();
+    }
+  }
+  else
+  {
+    std::cout << cc_magenta << "Profiling move down\n" << cc_reset;
+    
+    while (ros::ok() && mobile_base_pose.position.z > 0.7)
+    {
+      setWaypoint(0, 0, -0.3, 0, true);
+      moveVehicle(0.25);
+      ros::spinOnce();
+    }
+  }
+  
+  msg.data = 0; //Stopped scanning
   pub_scan_command.publish(msg);
 }
 
@@ -712,6 +742,13 @@ void takeoff()
   
   std::cout << cc_green << "Taking off\n" << cc_reset;
   
+  if (mobile_base_pose.position.z < 0.5)
+  {
+    setWaypoint(0, 0, 0.5, 0, true);
+    moveVehicle();
+  }
+  
+  /*
   // Simulate smooth takeoff at 4 meters
   float target_height = 3;
   while ( ros::ok() && !isNear(mobile_base_pose.position.z, target_height) )
@@ -727,6 +764,7 @@ void takeoff()
     
     moveVehicle();
   }
+  */
   
   std::cout << cc_green << "Done taking off\n" << cc_reset;
   

@@ -11,7 +11,7 @@
 #include <ros/package.h>
 #include <ros/console.h>
 
-#include <std_msgs/Bool.h>
+#include <std_msgs/UInt8.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -99,7 +99,7 @@ tf::TransformListener *tf_listener;
 // Function prototypes
 // ======================
 void scanCallback(const sensor_msgs::LaserScan& laser_msg);
-void scanCommandCallback(const std_msgs::Bool& msg);
+void scanCommandCallback(const std_msgs::UInt8& msg);
 
 void processScans();
 
@@ -117,7 +117,36 @@ double randomDouble(double min, double max)
 }
 
 
-void addToTree(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out) {
+void addToTree(octomap::Pointcloud cloud, octomap::point3d origin, double r_max)
+{
+  /*
+  octomap::KeySet free_cells, occupied_cells;
+  tree.computeUpdate(cloud, origin, free_cells, occupied_cells, r_max);
+
+  // insert data into tree  -----------------------
+  bool lazy_eval = false;
+  
+  double bad_range = 0.2;
+  
+  for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it) {
+    octomap::point3d coord = tree.keyToCoord(*it);
+    double r = sqrt( pow(origin.x() - coord.x(), 2) + pow(origin.y() - coord.y(), 2) + pow(origin.z() - coord.z(), 2) );
+    double prob = 1/(r + bad_range);
+    prob = octomap::logodds(prob);
+    
+    tree.updateNode(*it, (float) prob, lazy_eval);
+  }
+  for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it) {
+    octomap::point3d coord = tree.keyToCoord(*it);
+    double r = sqrt( pow(origin.x() - coord.x(), 2) + pow(origin.y() - coord.y(), 2) + pow(origin.z() - coord.z(), 2) );
+    double prob = r/(r + bad_range);
+    prob = octomap::logodds(prob);
+    
+    tree.updateNode(*it, (float) prob, lazy_eval);
+  }
+    */
+    
+  //tree.insertPointCloud(ocCloud, sensor_origin, max_range);
 }
 
 Eigen::Matrix4d convertStampedTransform2Matrix4d(tf::StampedTransform t){
@@ -178,16 +207,24 @@ int main(int argc, char **argv)
   return 0;
 }
 
-void scanCommandCallback(const std_msgs::Bool& msg)
-{
-  isScanning = msg.data;
-  
-  if (isScanning)
-    std::cout << cc_green << "Starting scan\n" << cc_reset;
-  else
+void scanCommandCallback(const std_msgs::UInt8& msg)
+{  
+  switch (msg.data)
   {
-    std::cout << cc_green << "Processing " << scan_vec.size() << " scans\n" << cc_reset;
-    processScans();
+    case 0:
+      isScanning = false;
+      std::cout << cc_green << "Processing " << scan_vec.size() << " scans\n" << cc_reset;
+      processScans();
+      break;
+    case 1:
+      isScanning = true;
+      std::cout << cc_green << "Starting scan\n" << cc_reset;
+      break;
+    case 2:
+      isScanning = false;
+      std::cout << cc_green << "Done profiling\n" << cc_reset;
+      ros::shutdown();
+      break;
   }
 }
 
@@ -211,6 +248,7 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg)
   }
   
   // == Reject scan if it's too close to the last one
+  /*
   if (pose_vec.size() > 0)
   {
     double z_prev = pose_vec[pose_vec.size()-1].z();
@@ -219,6 +257,7 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg)
     if ( fabs(z_prev - z_curr) < 0.03)
       return;
   }
+  */
   
   max_range = laser_msg.range_max;
   //if (max_range > 25)
@@ -305,7 +344,7 @@ void processScans()
     octomap::Pointcloud ocCloud = scan_vec[i];
     
     tree.insertPointCloud(ocCloud, sensor_origin, max_range);
-    //addToTree(scan_ptr_filtered);
+    //addToTree(ocCloud, sensor_origin, max_range);
     
     pose_vec.pop_back();
     scan_vec.pop_back();
