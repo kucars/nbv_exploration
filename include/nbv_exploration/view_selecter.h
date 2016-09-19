@@ -8,6 +8,8 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <octomap/OcTree.h>
+
 #include <nbv_exploration/view_generator.h>
 
 //typedef pcl::PointXYZRGBA PointT;
@@ -20,8 +22,7 @@ protected:
   ViewGeneratorBase* view_gen_;
   
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_free_ptr_;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_combined_ptr_;
+  octomap::OcTree* tree_;
   
   Pose current_pose_;
   Pose selected_pose_;
@@ -40,8 +41,7 @@ public:
   {
     view_gen_           = v;
     cloud_occupied_ptr_ = v->cloud_occupied_ptr_;
-    cloud_free_ptr_     = v->cloud_free_ptr_;
-    cloud_combined_ptr_ = v->cloud_combined_ptr_;
+    tree_               = v->tree_;
     current_pose_       = v->current_pose_;
   }
 

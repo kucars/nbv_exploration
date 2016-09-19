@@ -307,7 +307,7 @@ Visualization Manager:
       Enabled: true
       Max. Octree Depth: 16
       Name: OccupancyMap
-      Octomap Binary Topic: /output_tree
+      Octomap Binary Topic: /nbv_exploration/output_tree
       Unreliable: false
       Value: true
     - Class: octomap_rviz_plugin/OccupancyGrid
@@ -316,8 +316,9 @@ Visualization Manager:
       Max. Octree Depth: 16
       Min. Height Display: -3.40282e+38
       Name: OccupancyGrid
-      Octomap Topic: /output_tree
+      Octomap Topic: /nbv_exploration/output_tree
       Queue Size: 5
+      Unknown voxel distance: 2
       Value: true
       Voxel Alpha: 1
       Voxel Coloring: Cell Probability
@@ -346,22 +347,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 46.8731
+      Distance: 46.0452
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.354524
-        Y: -1.85207
-        Z: 0.319823
+        X: -2.92407
+        Y: 2.36247
+        Z: -4.4817
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.334797
+      Pitch: 0.499797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.30728
+      Yaw: 5.31725
     Saved: ~
 Window Geometry:
   Displays:
@@ -381,5 +382,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 757
-  Y: 78
+  X: 747
+  Y: 68

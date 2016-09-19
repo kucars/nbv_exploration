@@ -136,7 +136,9 @@
       <remap from="scan_out" to="$(arg scan_topic)"/>
     </node>
     
+    <!--
     <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" args="" required="true" output="screen" >
       <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
+    -->
 </launch>

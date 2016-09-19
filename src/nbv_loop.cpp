@@ -16,6 +16,11 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
 #include <std_msgs/UInt8.h>
+#include <octomap/octomap.h>
+#include <octomap/OcTree.h>
+#include <octomap/OcTreeBase.h>
+#include <octomap/Pointcloud.h>
+#include <octomap_msgs/conversions.h>
 //#include <gazebo_msgs/ModelStates.h> //Used for absolute positioning
 
 #include <Eigen/Geometry>
@@ -75,8 +80,9 @@ double profile_angle = 0;
 // == Consts
 std::string depth_topic        = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
 std::string position_topic     = "/iris/ground_truth/pose";
-std::string map_occupied_topic = "/rtabmap/cloud_map"; //"/rtabmap/octomap_cloud";
-std::string map_free_topic     = "/rtabmap/octomap_empty_space";
+//std::string map_occupied_topic = "/rtabmap/cloud_map"; //"/rtabmap/octomap_cloud";
+//std::string map_free_topic     = "/rtabmap/octomap_empty_space";
+std::string octree_topic       = "/nbv_exploration/output_tree";
 std::string laser_topic        = "/global_profile_cloud";
 std::string laser_raw_topic    = "/iris/scan";
 //std::string map_topic    = "/global_cloud";
@@ -109,25 +115,22 @@ ros::Publisher pub_scan_command;
 // == Point clouds
 float grid_res = 0.1f; //Voxel grid resolution
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr global_occ_cloud_ptr;
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr global_free_cloud_ptr;
-
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_projected_cloud_ptr  (new pcl::PointCloud<pcl::PointXYZRGB>);
 //pcl::VoxelGrid<pcl::PointXYZRGB> occGrid;
-
-
+//octomap::OcTree* global_octomap;
+//octomap::OcTreeBase<octomap::OcTreeNode>* global_octomap;
+octomap::OcTree* global_octomap;
 
 // ======================
 // Function prototypes (@todo: move to header file)
 // ======================
 // Callbacks
 //void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-void mapOccupiedCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-void mapFreeCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
 void laserCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
 void laserRawCallback(const sensor_msgs::LaserScan& laser_msg);
 void positionCallback(const geometry_msgs::PoseStamped& pose_msg);
+void octomapCallback(const octomap_msgs::Octomap& octomap_msg);
 
 // FSM functions
 void profilingProcessing();
@@ -189,6 +192,20 @@ void sigIntHandler(int sig)
 int main(int argc, char **argv)
 {
   // >>>>>>>>>>>>>>>>>
+  // Parse Inputs
+  // >>>>>>>>>>>>>>>>>
+  for (int n = 1; n < argc; n++)
+  {
+    if (std::string(argv[n]) == "-s") //Skip profiling
+    {
+      is_done_profiling = true;
+      std::cout << "Skipping profiling\n";
+    }
+  }
+  
+  
+  
+  // >>>>>>>>>>>>>>>>>
   // Initialize ROS
   // >>>>>>>>>>>>>>>>>
   state = NBVState::INITIALIZING;
@@ -207,19 +224,17 @@ int main(int argc, char **argv)
   
   // Sensor data
   //ros::Subscriber sub_map  = ros_node.subscribe(map_topic, 1, mapCallback);
-  ros::Subscriber sub_map_free  = ros_node.subscribe(map_free_topic, 1, mapFreeCallback);
-  ros::Subscriber sub_map_occ   = ros_node.subscribe(map_occupied_topic, 1, mapOccupiedCallback);
   ros::Subscriber sub_laser     = ros_node.subscribe(laser_topic, 1, laserCallback);
   ros::Subscriber sub_laser_raw = ros_node.subscribe(laser_raw_topic, 1, laserRawCallback);
   ros::Subscriber sub_pose      = ros_node.subscribe(position_topic, 1, positionCallback);
-  
+  ros::Subscriber sub_octomap   = ros_node.subscribe(octree_topic, 1, octomapCallback);
   
   // >>>>>>>>>>>>>>>>>
   // Publishers
   // >>>>>>>>>>>>>>>>>
   
   // Drone setpoints
-  pub_setpoint          = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
+  pub_setpoint     = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
   pub_scan_command = ros_node.advertise<std_msgs::UInt8>("/nbv_exploration/scan_command", 10);
   
   // >>>>>>>>>>>>>>>>
@@ -289,6 +304,7 @@ int main(int argc, char **argv)
         std::cout << cc_yellow << "Termination condition met\n" << cc_reset;
         break;
         
+      case NBVState::PROFILING_DONE:
       case NBVState::TERMINATION_NOT_MET:
         state = NBVState::VIEWPOINT_GENERATION;
         generateViewpoints();
@@ -327,33 +343,15 @@ void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
   mobile_base_pose = pose_msg.pose;
 }
 
-void mapOccupiedCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
-{
-  if (is_debug && is_debug_continuous_states)
-  {
-    std::cout << cc_green << "SENSING OCCUPIED\n" << cc_reset;
-  }
-  
-  pcl::PointCloud<pcl::PointXYZRGB> cloud;
 
-  // == Convert to pcl pointcloud
-  pcl::fromROSMsg (*cloud_msg, cloud);
-  global_occ_cloud_ptr = cloud.makeShared();
+void octomapCallback(const octomap_msgs::Octomap& octomap_msg)
+{
+  //octomap_msgs::readTree(global_octomap, *octomap_msg);
+  //global_octomap = static_cast<octomap::OcTreeBase<octomap::OcTreeNode>* >( octomap_msgs::fullMsgToMap(octomap_msg) );
+  
+  global_octomap = static_cast<octomap::OcTree* >( octomap_msgs::fullMsgToMap(octomap_msg) );
 }
 
-void mapFreeCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
-{
-  if (is_debug && is_debug_continuous_states)
-  {
-    std::cout << cc_green << "SENSING FREE\n" << cc_reset;
-  }
-  
-  pcl::PointCloud<pcl::PointXYZRGB> cloud;
-
-  // == Convert to pcl pointcloud
-  pcl::fromROSMsg (*cloud_msg, cloud);
-  global_free_cloud_ptr = cloud.makeShared();
-}
 
 void laserCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
@@ -423,7 +421,7 @@ void profilingProcessing(){
     std::cout << cc_green << "Processing profile\n" << cc_reset;
   }
     
-  double angle_inc = (2*M_PI)/6;
+  double angle_inc = (2*M_PI)/5;
   
   profile_angle += angle_inc;
   
@@ -529,6 +527,7 @@ void profilingProcessing(){
 
 void profileMove(bool is_rising)
 {
+  /*
   // Make sure we're at the right level before scanning
   if (!is_rising)
   {
@@ -548,6 +547,7 @@ void profileMove(bool is_rising)
       ros::spinOnce();
     }
   }
+  */
   
   
   
@@ -621,8 +621,8 @@ void generateViewpoints()
     std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
   }
   
-  viewGen->setCloud(global_occ_cloud_ptr, global_free_cloud_ptr);
-  ROS_INFO("5");
+  viewGen->setCloud(profile_cloud_ptr);
+  viewGen->setMap(global_octomap);
   viewGen->setCurrentPose(mobile_base_pose);
   viewGen->generateViews();
   
@@ -744,27 +744,9 @@ void takeoff()
   
   if (mobile_base_pose.position.z < 0.5)
   {
-    setWaypoint(0, 0, 0.5, 0, true);
+    setWaypoint(0, 0, 1, 0, true);
     moveVehicle();
   }
-  
-  /*
-  // Simulate smooth takeoff at 4 meters
-  float target_height = 3;
-  while ( ros::ok() && !isNear(mobile_base_pose.position.z, target_height) )
-  {
-    if (mobile_base_pose.position.z < target_height)
-    {
-      setWaypoint(0, 0, 1, 0, true);
-    }
-    else
-    {
-      setWaypoint(0, 0, -1, 0, true);
-    }
-    
-    moveVehicle();
-  }
-  */
   
   std::cout << cc_green << "Done taking off\n" << cc_reset;
   

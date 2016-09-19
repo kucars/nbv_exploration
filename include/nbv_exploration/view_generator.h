@@ -8,9 +8,10 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <octomap/OcTree.h>
+
 #include <tf_conversions/tf_eigen.h>
 
-//typedef pcl::PointXYZRGBA PointT;
 typedef geometry_msgs::Pose Pose;
 
 
@@ -31,7 +32,7 @@ geometry_msgs::Quaternion getQuaternionFromYaw(double yaw)
   geometry_msgs::Quaternion quat;
   
   tf::Quaternion tf_q;
-  tf_q = tf::createQuaternionFromYaw(yaw); //Rotate 22.5 deg
+  tf_q = tf::createQuaternionFromYaw(yaw);
   
   quat.x = tf_q.getX();
   quat.y = tf_q.getY();
@@ -57,25 +58,20 @@ public:
   ~ViewGeneratorBase(){}
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_free_ptr_;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_combined_ptr_;
+  octomap::OcTree* tree_;
   
   Pose current_pose_;
   std::vector<Pose, Eigen::aligned_allocator<Pose> > generated_poses;
   
 
-  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud,
-                pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_free_cloud)
+  void setMap(octomap::OcTree* oct)
+  {
+    tree_ = oct;
+  }
+
+  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud)
   {
     cloud_occupied_ptr_ = in_occ_cloud;
-    cloud_free_ptr_     = in_free_cloud;
-    
-    // Create combined cloud (@todo: check if input clouds are null or not. Null indicates that rtabmap returned no map to us yet)
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_combined_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-    *cloud_combined_ptr  = *in_occ_cloud;
-    *cloud_combined_ptr += *in_free_cloud;
-  
-    cloud_combined_ptr_ = cloud_combined_ptr;
   }
   
   void setCurrentPose(Pose p)

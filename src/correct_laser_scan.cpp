@@ -76,7 +76,7 @@ void scanCallback(const sensor_msgs::LaserScan& input_msg){
    * Points near the max and min range are pushed outside the range
    * This way, they can be ignored
    */
-  float inf = 1/.0;
+  float inf = output_msg.range_max + range_adjustment_max + 1;
   int steps = (output_msg.angle_max - output_msg.angle_min)/output_msg.angle_increment;
   
   for (int i=0; i<=steps; i++)

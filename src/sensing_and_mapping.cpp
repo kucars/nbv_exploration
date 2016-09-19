@@ -70,6 +70,7 @@ bool isScanning = false;
 std::vector<octomap::point3d> pose_vec;
 std::vector< pcl::PointCloud<pcl::PointXYZRGB> > scan_vec;
 //std::vector<octomap::Pointcloud> scan_vec;
+double laser_range = -1;
 
 // == Consts
 std::string depth_topic    = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
@@ -80,14 +81,13 @@ std::string scan_command_topic = "/nbv_exploration/scan_command";
 std::string map_topic      = "/global_cloud";
 std::string scan_out_topic = "/global_scan_cloud";
 std::string profile_out_topic = "/global_profile_cloud";
-std::string tree_topic = "output_tree";
+std::string tree_topic = "/nbv_exploration/output_tree";
 
 // == Navigation variables
 geometry_msgs::Pose mobile_base_pose;
 
 // == Publishers
 ros::Publisher pub_global_cloud;
-ros::Publisher pub_setpoint;
 ros::Publisher pub_scan_cloud;
 ros::Publisher pub_profile_cloud;
 ros::Publisher pub_tree;
@@ -166,8 +166,44 @@ int main(int argc, char **argv)
     std::cout << "\t" << scan_command_topic << "\n";
     std::cout << "\n";
     
-    ros::spin();
-
+    ros::Rate rate(5);
+    while(ros::ok())
+    {
+      // == Publish
+      // Cloud
+      if (profile_cloud_ptr)
+      {
+        sensor_msgs::PointCloud2 cloud_msg;
+        pcl::toROSMsg(*profile_cloud_ptr, cloud_msg); 	//cloud of original (white) using original cloud
+        cloud_msg.header.frame_id = "world";
+        cloud_msg.header.stamp = ros::Time::now();
+        pub_scan_cloud.publish(cloud_msg);
+      }
+      
+      // 2D profile
+      if (profile_projected_cloud_ptr)
+      {
+        sensor_msgs::PointCloud2 cloud_msg;
+        pcl::toROSMsg(*profile_projected_cloud_ptr, cloud_msg); 	//cloud of original (white) using original cloud
+        cloud_msg.header.frame_id = "world";
+        cloud_msg.header.stamp = ros::Time::now();
+        pub_profile_cloud.publish(cloud_msg);
+      }
+    
+      // Octomap
+      octomap_msgs::Octomap msg;
+      octomap_msgs::fullMapToMsg (tree, msg);
+      
+      msg.header.frame_id = "world";
+      msg.header.stamp = ros::Time::now();
+      pub_tree.publish(msg);
+    
+      // Sleep
+      ros::spinOnce();
+      rate.sleep();
+    }
+    
+    //ros::spin();
     return 0;
 }
 
@@ -196,74 +232,63 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg){
   
   // == Add scan to point cloud
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_far_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
   
   int steps = (laser_msg.angle_max - laser_msg.angle_min)/laser_msg.angle_increment;
   float step_size = (laser_msg.angle_max - laser_msg.angle_min)/steps;
-  float range_buffer = 0.5;
+  
+  laser_range = laser_msg.range_max;
   
   // == Discard points outside range
-  int discarded = 0;
   for (int i=0; i<steps; i++)
   {
     float r = laser_msg.ranges[i];
     float angle = laser_msg.angle_min + step_size*i;
     
-    if (r > laser_msg.range_max - range_buffer  ||  r < laser_msg.range_min + range_buffer)
+    if (r < laser_msg.range_min)
     {
-      // Discard points that are too close or too far to sensor
-      discarded++;
+      // Discard points that are too close
       continue;
     }
+    
+    // Add scan point to temporary point cloud
+    pcl::PointXYZRGB p;
+    
+    p.x = r*cos(angle);
+    p.y = r*sin(angle);
+    p.z = 0;
+    
+    if (r > laser_msg.range_max)
+      scan_far_ptr->push_back(p);
     else
-    {
-      // Add scan point to temporary point cloud
-      pcl::PointXYZRGB p;
-      
-      p.x = r*cos(angle);
-      p.y = r*sin(angle);
-      p.z = 0;
-      
       scan_ptr->push_back(p);
-    }
   }
   
-  // Only process if we saw something
-  if (scan_ptr->points.size() > 0)
+  // == Transform scan point cloud
+  pcl::transformPointCloud(*scan_ptr, *scan_ptr, tf_eigen);
+  pcl::transformPointCloud(*scan_far_ptr, *scan_far_ptr, tf_eigen);
+  
+  // == Discard points close to the ground
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+  
+  for (int i=0; i<scan_ptr->points.size(); i++)
   {
-    // == Transform scan point cloud
-    pcl::transformPointCloud(*scan_ptr, *scan_ptr, tf_eigen);
-    
-    // == Discard points close to the ground
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-    
-    for (int i=0; i<scan_ptr->points.size(); i++)
+    if (scan_ptr->points[i].z > 0.2)
     {
-      if (scan_ptr->points[i].z > 0.5)
-      {
-        scan_ptr_filtered->push_back(scan_ptr->points[i]);
-      }
+      scan_ptr_filtered->push_back(scan_ptr->points[i]);
     }
-    
-    // == Add to global map
-    addToGlobalCloud(scan_ptr_filtered, profile_cloud_ptr, true);
-    
-    // == Add to vectors for later octomap processing
-    octomap::point3d sensor_origin (transform.getOrigin().x(),
-                                    transform.getOrigin().y(),
-                                    transform.getOrigin().z());
-                                    
-    pose_vec.push_back(sensor_origin);
-    scan_vec.push_back(*scan_ptr_filtered);
   }
   
+  // == Add to global map
+  addToGlobalCloud(scan_ptr_filtered, profile_cloud_ptr, true);
   
-  // == Publish
-  sensor_msgs::PointCloud2 cloud_msg;
-
-  pcl::toROSMsg(*profile_cloud_ptr, cloud_msg); 	//cloud of original (white) using original cloud
-  cloud_msg.header.frame_id = "world";
-  cloud_msg.header.stamp = ros::Time::now();
-  pub_scan_cloud.publish(cloud_msg);
+  // == Add to vectors for later octomap processing
+  octomap::point3d sensor_origin (transform.getOrigin().x(),
+                                  transform.getOrigin().y(),
+                                  transform.getOrigin().z());
+                                  
+  pose_vec.push_back(sensor_origin);
+  scan_vec.push_back(*scan_ptr + *scan_far_ptr);
   
   // == Get profile (remove Z coordinate)
   profile_projected_cloud_ptr = profile_cloud_ptr->makeShared();
@@ -272,14 +297,13 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg){
   {
     profile_projected_cloud_ptr->points[i].z = 0;
   }
-   
-  // == Publish
-  pcl::toROSMsg(*profile_projected_cloud_ptr, cloud_msg); 	//cloud of original (white) using original cloud
-  cloud_msg.header.frame_id = "world";
-  cloud_msg.header.stamp = ros::Time::now();
-  pub_profile_cloud.publish(cloud_msg);
 }
 
+
+void findLargestGap()
+{
+  
+}
 
 
 void scanCommandCallback(const std_msgs::UInt8& msg)
@@ -322,20 +346,41 @@ void processScans()
                         scan.points[j].z);
     }
     
-    tree.insertPointCloud(ocCloud, sensor_origin);
+    // == Insert laser scan
+    //tree.insertPointCloud(ocCloud, sensor_origin, laser_range);
     
+    octomap::KeySet free_cells, occupied_cells;
+    tree.computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, laser_range);
+
+    // insert data into tree  -----------------------
+    for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
+    {
+      tree.updateNode(*it, false);
+    }
+    for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
+    {
+      octomap::point3d p = tree.keyToCoord(*it);
+      if (p.z() <= 0.2)
+        tree.updateNode(*it, false);
+      else
+        tree.updateNode(*it, true);
+    }
+    
+    // == Pop
     pose_vec.pop_back();
     scan_vec.pop_back();
     count++;
   }
   
   // == Publish
+  /*
   octomap_msgs::Octomap msg;
   octomap_msgs::fullMapToMsg (tree, msg);
   
   msg.header.frame_id = "world";
   msg.header.stamp = ros::Time::now();
   pub_tree.publish(msg);
+  */
   
   // == Timing
   t_end = ros::Time::now().toSec();
