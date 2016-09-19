@@ -563,8 +563,8 @@ void profileMove(bool is_rising)
     //while (ros::ok() && !is_scan_empty)
     while (ros::ok() && mobile_base_pose.position.z < 10)
     {
-      setWaypoint(0, 0, 0.3, 0, true);
-      moveVehicle(0.25); // Scan slowly
+      setWaypoint(0, 0, 0.25, 0, true);
+      moveVehicle(0.33); // Scan slowly
       ros::spinOnce();
     }
   }
@@ -574,8 +574,8 @@ void profileMove(bool is_rising)
     
     while (ros::ok() && mobile_base_pose.position.z > 0.7)
     {
-      setWaypoint(0, 0, -0.3, 0, true);
-      moveVehicle(0.25);
+      setWaypoint(0, 0, -0.25, 0, true);
+      moveVehicle(0.33);
       ros::spinOnce();
     }
   }
@@ -621,6 +621,22 @@ void generateViewpoints()
     std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
   }
   
+  ros::Rate rate(10);
+  while(ros::ok() && !profile_cloud_ptr)
+  {
+    std::cout << "\t" << cc_magenta << "Waiting for profile data\n" << cc_reset;
+    
+    ros::spinOnce();
+    rate.sleep();
+  }
+  while(ros::ok() && !global_octomap)
+  {
+    std::cout << "\t" << cc_magenta << "Waiting for octomap data\n" << cc_reset;
+    
+    ros::spinOnce();
+    rate.sleep();
+  }
+  
   viewGen->setCloud(profile_cloud_ptr);
   viewGen->setMap(global_octomap);
   viewGen->setCurrentPose(mobile_base_pose);
@@ -642,7 +658,11 @@ void evaluateViewpoints()
     std::cout << cc_green << "Evaluating viewpoints\n" << cc_reset;
   }
   
+  viewSel->update();
   viewSel->evaluate();
+  
+  //return;
+  
   geometry_msgs::Pose p = viewSel->getTargetPose();
   setWaypoint(p);
   
