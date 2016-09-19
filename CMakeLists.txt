@@ -28,11 +28,21 @@ find_package(Boost REQUIRED)
 find_package(octomap REQUIRED)
 find_package(Eigen REQUIRED)
 
+add_service_files(
+  FILES
+  MappingSrv.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
 catkin_package(
   INCLUDE_DIRS #src/include
   DEPENDS Eigen
   #LIBRARIES px4
-  #CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS message_runtime
   #roscpp rospy std_msgs libmavconn
   #DEPENDS system_lib
 )
@@ -46,7 +56,6 @@ include_directories(
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 link_libraries(${OCTOMAP_LIBRARIES})
-
 
 #add_executable(wall_follower src/wall_follower.cpp)
 #add_dependencies(wall_follower ${catkin_EXPORTED_TARGETS})

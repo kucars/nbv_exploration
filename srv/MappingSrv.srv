@@ -1,0 +1,15 @@
+#request
+int8 data
+int8 START_SCANNING  =1
+int8 STOP_SCANNING   =2
+int8 START_PROFILING =3
+int8 STOP_PROFILING  =4
+int8 SAVE_MAP        =100
+int8 LOAD_MAP        =101
+---
+#response
+int8 data
+int8 ACK      =0
+int8 ERROR    =1
+int8 DONE     =2
+

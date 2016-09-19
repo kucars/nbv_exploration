@@ -8,7 +8,7 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 
-#include <std_msgs/UInt8.h>
+#include <nbv_exploration/MappingSrv.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -118,7 +118,8 @@ octomap::OcTree tree(0.3);
 void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
 void positionCallback(const geometry_msgs::PoseStamped& pose_msg);
 void scanCallback(const sensor_msgs::LaserScan& laser_msg);
-void scanCommandCallback(const std_msgs::UInt8& msg);
+bool commandCallback(nbv_exploration::MappingSrv::Request  &req, nbv_exploration::MappingSrv::Response &res);
+
 void processScans();
 
 void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter = true);
@@ -135,14 +136,15 @@ int main(int argc, char **argv)
     ros::NodeHandle ros_node;
 
     // >>>>>>>>>>>>>>>>>
-    // Subscribers
+    // Subscribers / Servers
     // >>>>>>>>>>>>>>>>>
     
     // Sensor data
     sub_kinect = ros_node.subscribe(depth_topic, 1, depthCallback);
     sub_pose   = ros_node.subscribe(position_topic, 1, positionCallback);
     sub_scan   = ros_node.subscribe(scan_in_topic, 1, scanCallback);
-    sub_scan_command = ros_node.subscribe(scan_command_topic, 1, scanCommandCallback);
+    
+    ros::ServiceServer service = ros_node.advertiseService("/nbv_exploration/mapping_command", commandCallback);
     
     tf_listener = new tf::TransformListener();
     
@@ -163,7 +165,6 @@ int main(int argc, char **argv)
     std::cout << "\t" << depth_topic << "\n";
     std::cout << "\t" << position_topic << "\n";
     std::cout << "\t" << scan_in_topic << "\n";
-    std::cout << "\t" << scan_command_topic << "\n";
     std::cout << "\n";
     
     ros::Rate rate(5);
@@ -206,6 +207,40 @@ int main(int argc, char **argv)
     //ros::spin();
     return 0;
 }
+
+
+bool commandCallback(nbv_exploration::MappingSrv::Request  &request,
+                     nbv_exploration::MappingSrv::Response &response)
+{
+  switch(request.data)
+  {
+    case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
+      isScanning = false;
+      std::cout << cc_green << "Processing " << scan_vec.size() << " scans\n" << cc_reset;
+      processScans();
+      
+      response.data = response.DONE;
+      break;
+      
+    case nbv_exploration::MappingSrv::Request::START_SCANNING:
+      isScanning = true;
+      std::cout << cc_green << "Starting scan\n" << cc_reset;
+      
+      response.data = response.ACK;
+      break;
+      
+    case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
+      isScanning = false;
+      std::cout << cc_green << "Done profiling\n" << cc_reset;
+      //ros::shutdown();
+      
+      response.data = response.ACK;
+      break;
+  }
+  
+  return true;
+}
+
 
 
 void scanCallback(const sensor_msgs::LaserScan& laser_msg){
@@ -303,28 +338,6 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg){
 void findLargestGap()
 {
   
-}
-
-
-void scanCommandCallback(const std_msgs::UInt8& msg)
-{  
-  switch (msg.data)
-  {
-    case 0:
-      isScanning = false;
-      std::cout << cc_green << "Processing " << scan_vec.size() << " scans\n" << cc_reset;
-      processScans();
-      break;
-    case 1:
-      isScanning = true;
-      std::cout << cc_green << "Starting scan\n" << cc_reset;
-      break;
-    case 2:
-      isScanning = false;
-      std::cout << cc_green << "Done profiling\n" << cc_reset;
-      //ros::shutdown();
-      break;
-  }
 }
 
 void processScans()

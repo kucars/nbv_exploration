@@ -15,12 +15,12 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
-#include <std_msgs/UInt8.h>
 #include <octomap/octomap.h>
 #include <octomap/OcTree.h>
 #include <octomap/OcTreeBase.h>
 #include <octomap/Pointcloud.h>
 #include <octomap_msgs/conversions.h>
+#include <nbv_exploration/MappingSrv.h>
 //#include <gazebo_msgs/ModelStates.h> //Used for absolute positioning
 
 #include <Eigen/Geometry>
@@ -106,10 +106,11 @@ ViewGeneratorBase* viewGen;
 ViewSelecterBase* viewSel;
 
 
-// == Publishers
+// == Publishers / Clients
 ros::Publisher pub_global_cloud;
 ros::Publisher pub_setpoint;
 ros::Publisher pub_scan_command;
+ros::ServiceClient srvclient_mapping;
 
 
 // == Point clouds
@@ -230,12 +231,13 @@ int main(int argc, char **argv)
   ros::Subscriber sub_octomap   = ros_node.subscribe(octree_topic, 1, octomapCallback);
   
   // >>>>>>>>>>>>>>>>>
-  // Publishers
+  // Publishers / Clients
   // >>>>>>>>>>>>>>>>>
   
   // Drone setpoints
-  pub_setpoint     = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
-  pub_scan_command = ros_node.advertise<std_msgs::UInt8>("/nbv_exploration/scan_command", 10);
+  pub_setpoint      = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
+
+  srvclient_mapping = ros_node.serviceClient<nbv_exploration::MappingSrv>("nbv_exploration/mapping_command");
   
   // >>>>>>>>>>>>>>>>
   // Set up viewpoint generator
@@ -429,9 +431,18 @@ void profilingProcessing(){
     state = NBVState::PROFILING_DONE;
     std::cout << cc_green << "Profiling complete\n" << cc_reset;
     
-    std_msgs::UInt8 msg;
-    msg.data = 2;// Done
-    pub_scan_command.publish(msg);
+    nbv_exploration::MappingSrv srv;
+    srv.request.data = srv.request.STOP_PROFILING;
+    
+    if (srvclient_mapping.call(srv))
+    {
+      std::cout << "Response: " << srv.response.data << "\n";
+    }
+    else
+    {
+      ROS_ERROR("Failed to call service add_two_ints");
+    }
+    
     return;
   }
   
@@ -527,35 +538,21 @@ void profilingProcessing(){
 
 void profileMove(bool is_rising)
 {
-  /*
-  // Make sure we're at the right level before scanning
-  if (!is_rising)
+  // ==Request START_SCANNING
+  nbv_exploration::MappingSrv srv;
+  srv.request.data = srv.request.START_SCANNING;
+  
+  if (srvclient_mapping.call(srv))
   {
-    while (ros::ok() && mobile_base_pose.position.z < 10)
-    {
-      setWaypoint(0, 0, 0.7, 0, true);
-      moveVehicle();
-      ros::spinOnce();
-    }
+    std::cout << "Response: " << srv.response.data << "\n";
   }
   else
   {
-    while (ros::ok() && mobile_base_pose.position.z > 0.7)
-    {
-      setWaypoint(0, 0, -0.7, 0, true);
-      moveVehicle();
-      ros::spinOnce();
-    }
+    ROS_ERROR("Failed to call service add_two_ints");
   }
-  */
   
   
-  
-  // Start scan
-  std_msgs::UInt8 msg;
-  msg.data = 1;// Scanning
-  pub_scan_command.publish(msg);
-  
+  // ==Scan
   if (is_rising)
   {
     std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
@@ -563,8 +560,8 @@ void profileMove(bool is_rising)
     //while (ros::ok() && !is_scan_empty)
     while (ros::ok() && mobile_base_pose.position.z < 10)
     {
-      setWaypoint(0, 0, 0.25, 0, true);
-      moveVehicle(0.33); // Scan slowly
+      setWaypoint(0, 0, 0.3, 0, true);
+      moveVehicle(0.25); // Scan slowly
       ros::spinOnce();
     }
   }
@@ -574,14 +571,23 @@ void profileMove(bool is_rising)
     
     while (ros::ok() && mobile_base_pose.position.z > 0.7)
     {
-      setWaypoint(0, 0, -0.25, 0, true);
-      moveVehicle(0.33);
+      setWaypoint(0, 0, -0.3, 0, true);
+      moveVehicle(0.25);
       ros::spinOnce();
     }
   }
   
-  msg.data = 0; //Stopped scanning
-  pub_scan_command.publish(msg);
+  // ==Request STOP_SCANNING
+  srv.request.data = srv.request.STOP_SCANNING;
+  
+  if (srvclient_mapping.call(srv))
+  {
+    std::cout << "Response: " << srv.response.data << "\n";
+  }
+  else
+  {
+    ROS_ERROR("Failed to call service add_two_ints");
+  }
 }
 
 
@@ -621,22 +627,6 @@ void generateViewpoints()
     std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
   }
   
-  ros::Rate rate(10);
-  while(ros::ok() && !profile_cloud_ptr)
-  {
-    std::cout << "\t" << cc_magenta << "Waiting for profile data\n" << cc_reset;
-    
-    ros::spinOnce();
-    rate.sleep();
-  }
-  while(ros::ok() && !global_octomap)
-  {
-    std::cout << "\t" << cc_magenta << "Waiting for octomap data\n" << cc_reset;
-    
-    ros::spinOnce();
-    rate.sleep();
-  }
-  
   viewGen->setCloud(profile_cloud_ptr);
   viewGen->setMap(global_octomap);
   viewGen->setCurrentPose(mobile_base_pose);
@@ -658,11 +648,7 @@ void evaluateViewpoints()
     std::cout << cc_green << "Evaluating viewpoints\n" << cc_reset;
   }
   
-  viewSel->update();
   viewSel->evaluate();
-  
-  //return;
-  
   geometry_msgs::Pose p = viewSel->getTargetPose();
   setWaypoint(p);
   
