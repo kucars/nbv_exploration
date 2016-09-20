@@ -73,15 +73,18 @@ std::vector< pcl::PointCloud<pcl::PointXYZRGB> > scan_vec;
 double laser_range = -1;
 
 // == Consts
-std::string depth_topic    = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
-std::string position_topic = "/iris/ground_truth/pose";
-std::string scan_in_topic  = "scan_in";
-std::string scan_command_topic = "/nbv_exploration/scan_command";
+std::string filename_pcl = "profile_cloud.pcd";
+std::string filename_octree = "profile_octree.ot";
 
-std::string map_topic      = "/global_cloud";
-std::string scan_out_topic = "/global_scan_cloud";
-std::string profile_out_topic = "/global_profile_cloud";
-std::string tree_topic = "/nbv_exploration/output_tree";
+std::string topic_depth        = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
+std::string topic_position     = "/iris/ground_truth/pose";
+std::string topic_scan_in      = "/nbv_exploration/scan"; //"scan_in";
+std::string topic_scan_command = "/nbv_exploration/scan_command";
+
+std::string topic_map          = "/nbv_exploration/global_map_cloud";
+std::string topic_scan_out     = "/nbv_exploration/scan_cloud";
+std::string topic_profile_out  = "/nbv_exploration/profile_cloud";
+std::string topic_tree         = "/nbv_exploration/output_tree";
 
 // == Navigation variables
 geometry_msgs::Pose mobile_base_pose;
@@ -106,19 +109,19 @@ float grid_res = 0.1f; //Voxel grid resolution
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_sensed(new pcl::PointCloud<pcl::PointXYZRGB>);
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr global_cloud_ptr;
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);;
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_projected_cloud_ptr;
 
-octomap::OcTree tree(0.3);
+octomap::OcTree* tree;
 
 // ======================
 // Function prototypes (@todo: move to header file)
 // ======================
 
-void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-void positionCallback(const geometry_msgs::PoseStamped& pose_msg);
-void scanCallback(const sensor_msgs::LaserScan& laser_msg);
-bool commandCallback(nbv_exploration::MappingSrv::Request  &req, nbv_exploration::MappingSrv::Response &res);
+void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+void callbackPosition(const geometry_msgs::PoseStamped& pose_msg);
+void callbackScan(const sensor_msgs::LaserScan& laser_msg);
+bool callbackCommand(nbv_exploration::MappingSrv::Request  &req, nbv_exploration::MappingSrv::Response &res);
 
 void processScans();
 
@@ -140,21 +143,21 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     
     // Sensor data
-    sub_kinect = ros_node.subscribe(depth_topic, 1, depthCallback);
-    sub_pose   = ros_node.subscribe(position_topic, 1, positionCallback);
-    sub_scan   = ros_node.subscribe(scan_in_topic, 1, scanCallback);
+    sub_kinect = ros_node.subscribe(topic_depth, 1, callbackDepth);
+    sub_pose   = ros_node.subscribe(topic_position, 1, callbackPosition);
+    sub_scan   = ros_node.subscribe(topic_scan_in, 1, callbackScan);
     
-    ros::ServiceServer service = ros_node.advertiseService("/nbv_exploration/mapping_command", commandCallback);
+    ros::ServiceServer service = ros_node.advertiseService("/nbv_exploration/mapping_command", callbackCommand);
     
     tf_listener = new tf::TransformListener();
     
     // >>>>>>>>>>>>>>>>>
     // Publishers
     // >>>>>>>>>>>>>>>>>
-    pub_global_cloud  = ros_node.advertise<sensor_msgs::PointCloud2>(map_topic, 10);
-    pub_scan_cloud    = ros_node.advertise<sensor_msgs::PointCloud2>(scan_out_topic, 10);
-    pub_profile_cloud = ros_node.advertise<sensor_msgs::PointCloud2>(profile_out_topic, 10);
-    pub_tree          = ros_node.advertise<octomap_msgs::Octomap>(tree_topic, 10);
+    pub_global_cloud  = ros_node.advertise<sensor_msgs::PointCloud2>(topic_map, 10);
+    pub_scan_cloud    = ros_node.advertise<sensor_msgs::PointCloud2>(topic_scan_out, 10);
+    pub_profile_cloud = ros_node.advertise<sensor_msgs::PointCloud2>(topic_profile_out, 10);
+    pub_tree          = ros_node.advertise<octomap_msgs::Octomap>(topic_tree, 10);
     
     
     // >>>>>>>>>>>>>>>>>
@@ -162,12 +165,12 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     std::cout << cc_magenta << "\nStarted\n" << cc_reset;
     std::cout << "Listening for the following topics: \n";
-    std::cout << "\t" << depth_topic << "\n";
-    std::cout << "\t" << position_topic << "\n";
-    std::cout << "\t" << scan_in_topic << "\n";
+    std::cout << "\t" << topic_depth << "\n";
+    std::cout << "\t" << topic_position << "\n";
+    std::cout << "\t" << topic_scan_in << "\n";
     std::cout << "\n";
     
-    ros::Rate rate(5);
+    ros::Rate rate(1);
     while(ros::ok())
     {
       // == Publish
@@ -192,12 +195,15 @@ int main(int argc, char **argv)
       }
     
       // Octomap
-      octomap_msgs::Octomap msg;
-      octomap_msgs::fullMapToMsg (tree, msg);
-      
-      msg.header.frame_id = "world";
-      msg.header.stamp = ros::Time::now();
-      pub_tree.publish(msg);
+      if (tree)
+      {
+        octomap_msgs::Octomap msg;
+        octomap_msgs::fullMapToMsg (*tree, msg);
+        
+        msg.header.frame_id = "world";
+        msg.header.stamp = ros::Time::now();
+        pub_tree.publish(msg);
+      }
     
       // Sleep
       ros::spinOnce();
@@ -209,25 +215,47 @@ int main(int argc, char **argv)
 }
 
 
-bool commandCallback(nbv_exploration::MappingSrv::Request  &request,
+bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
                      nbv_exploration::MappingSrv::Response &response)
 {
+  bool error = false;
+  
   switch(request.data)
   {
+    case nbv_exploration::MappingSrv::Request::START_SCANNING:
+      isScanning = true;
+      std::cout << cc_green << "Started scanning\n" << cc_reset;
+      
+      response.data = response.ACK;
+      break;
+    
+    
     case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
       isScanning = false;
-      std::cout << cc_green << "Processing " << scan_vec.size() << " scans\n" << cc_reset;
+      std::cout << cc_green << "Processing " << scan_vec.size() << " scans...\n" << cc_reset;
       processScans();
       
       response.data = response.DONE;
       break;
+       
       
-    case nbv_exploration::MappingSrv::Request::START_SCANNING:
-      isScanning = true;
-      std::cout << cc_green << "Starting scan\n" << cc_reset;
+    case nbv_exploration::MappingSrv::Request::START_PROFILING:
+      std::cout << cc_green << "Started profiling\n" << cc_reset;
+    
+      if (!tree)
+        tree = new octomap::OcTree (0.3);
+      
+      /*
+      if(!global_cloud_ptr)
+      {
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr ptr_temp(new pcl::PointCloud<pcl::PointXYZRGB>);
+        global_cloud_ptr = ptr_temp;
+      }
+      */
       
       response.data = response.ACK;
       break;
+      
       
     case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
       isScanning = false;
@@ -236,14 +264,94 @@ bool commandCallback(nbv_exploration::MappingSrv::Request  &request,
       
       response.data = response.ACK;
       break;
+      
+      
+    case nbv_exploration::MappingSrv::Request::SAVE_MAP:
+      // Point cloud
+      if (!profile_cloud_ptr)
+      {
+        response.data  = response.ERROR;
+        response.error = "No point cloud data available";
+        error = true;
+        break;
+      }
+      pcl::io::savePCDFileASCII (filename_pcl, *profile_cloud_ptr);
+      
+      // Octree
+      if (!tree)
+      {
+        response.data  = response.ERROR;
+        response.error = "No octomap data available";
+        error = true;
+        break;
+      }
+      if (!tree->write(filename_octree))
+      {
+        response.data  = response.ERROR;
+        response.error = "Failed to save octomap data to " + filename_octree;
+        error = true;
+        break;
+      }
+      
+      std::cout << cc_green << "Successfully saved map\n" << cc_reset;
+      response.data  = response.DONE;
+      break;
+      
+      
+    case nbv_exploration::MappingSrv::Request::LOAD_MAP:
+      // Point cloud
+      std::cout << "Reading " << filename_pcl << "\n";
+      if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (filename_pcl, *profile_cloud_ptr) == -1) //* load the file
+      {
+        response.data  = response.ERROR;
+        response.error = "Failed to load point cloud: Could not read file " + filename_pcl;
+        error = true;
+        break;
+      }
+      
+      // Generate 2D profile
+      profile_projected_cloud_ptr = profile_cloud_ptr->makeShared();
+      
+      for (int i=0; i<profile_projected_cloud_ptr->points.size(); i++)
+      {
+        profile_projected_cloud_ptr->points[i].z = 0;
+      }
+      
+      // Octree
+      std::cout << "Reading " << filename_octree << "\n";
+      
+      octomap::AbstractOcTree* temp_tree = octomap::AbstractOcTree::read(filename_octree);
+      if(temp_tree){ // read error returns NULL
+        tree = dynamic_cast<octomap::OcTree*>(temp_tree);
+        if (!tree){
+          response.data  = response.ERROR;
+          response.error = "Failed to load octomap: Type cast failed";
+          error = true;
+          break;
+        }
+      }
+      else
+      {
+        response.data  = response.ERROR;
+        response.error = "Failed to load octomap: Could not read file " + filename_octree;
+        error = true;
+        break;
+      }
+      
+      std::cout << cc_green << "Successfully loaded maps\n" << cc_reset;
+      response.data  = response.DONE;
+      break;
   }
+  
+  if (error)
+    ros::shutdown();
   
   return true;
 }
 
 
 
-void scanCallback(const sensor_msgs::LaserScan& laser_msg){
+void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   if (isDebug && isDebugContinuousStates){
     std::cout << cc_magenta << "Scan readings\n" << cc_reset;
   }
@@ -334,75 +442,8 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg){
   }
 }
 
-
-void findLargestGap()
-{
-  
-}
-
-void processScans()
-{
-  double t_start, t_end;
-  t_start = ros::Time::now().toSec();
-  
-  int count =0;
-  for (int i=scan_vec.size()-1; i>=0; i--)
-  {
-    octomap::point3d sensor_origin = pose_vec[i];
-    pcl::PointCloud<pcl::PointXYZRGB> scan = scan_vec[i];
-    
-    octomap::Pointcloud ocCloud;
-    for (int j=0; j<scan.points.size(); j++)
-    {
-      ocCloud.push_back(scan.points[j].x,
-                        scan.points[j].y,
-                        scan.points[j].z);
-    }
-    
-    // == Insert laser scan
-    //tree.insertPointCloud(ocCloud, sensor_origin, laser_range);
-    
-    octomap::KeySet free_cells, occupied_cells;
-    tree.computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, laser_range);
-
-    // insert data into tree  -----------------------
-    for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
-    {
-      tree.updateNode(*it, false);
-    }
-    for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
-    {
-      octomap::point3d p = tree.keyToCoord(*it);
-      if (p.z() <= 0.2)
-        tree.updateNode(*it, false);
-      else
-        tree.updateNode(*it, true);
-    }
-    
-    // == Pop
-    pose_vec.pop_back();
-    scan_vec.pop_back();
-    count++;
-  }
-  
-  // == Publish
-  /*
-  octomap_msgs::Octomap msg;
-  octomap_msgs::fullMapToMsg (tree, msg);
-  
-  msg.header.frame_id = "world";
-  msg.header.stamp = ros::Time::now();
-  pub_tree.publish(msg);
-  */
-  
-  // == Timing
-  t_end = ros::Time::now().toSec();
-  std::cout << cc_green << "Done processing.\n" << cc_reset;
-  std::cout << "   Total time: " << t_end-t_start << " sec\tTotal scan: " << count << "\t(" << (t_end-t_start)/count << " sec/scan)\n";
-}
-
 // Update global position of UGV
-void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
+void callbackPosition(const geometry_msgs::PoseStamped& pose_msg)
 {
     if (isDebug && isDebugContinuousStates){
         std::cout << cc_magenta << "Grabbing location\n" << cc_reset;
@@ -412,10 +453,10 @@ void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
     mobile_base_pose = pose_msg.pose;
 }
 
-void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
     if (isDebug && isDebugContinuousStates){
-        std::cout << cc_green << "SENSING\n" << cc_reset;
+        std::cout << cc_green << "Depth sensing\n" << cc_reset;
     }
     
     
@@ -476,6 +517,62 @@ void depthCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
         ros::Duration(1.0).sleep();
     }
 }
+
+
+
+void processScans()
+{
+  double t_start, t_end;
+  t_start = ros::Time::now().toSec();
+  
+  int count =0;
+  for (int i=scan_vec.size()-1; i>=0; i--)
+  {
+    octomap::point3d sensor_origin = pose_vec[i];
+    pcl::PointCloud<pcl::PointXYZRGB> scan = scan_vec[i];
+    
+    octomap::Pointcloud ocCloud;
+    for (int j=0; j<scan.points.size(); j++)
+    {
+      ocCloud.push_back(scan.points[j].x,
+                        scan.points[j].y,
+                        scan.points[j].z);
+    }
+    
+    // == Insert laser scan
+    //tree.insertPointCloud(ocCloud, sensor_origin, laser_range);
+    
+    octomap::KeySet free_cells, occupied_cells;
+    tree->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, laser_range);
+    
+    // insert data into tree  -----------------------
+    for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
+    {
+      tree->updateNode(*it, false);
+    }
+    for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
+    {
+      octomap::point3d p = tree->keyToCoord(*it);
+      if (p.z() <= 0.2)
+        tree->updateNode(*it, false);
+      else
+        tree->updateNode(*it, true);
+    }
+    
+    // == Pop
+    pose_vec.pop_back();
+    scan_vec.pop_back();
+    count++;
+  }
+  
+  // == Timing
+  t_end = ros::Time::now().toSec();
+  std::cout << cc_green << "Done processing.\n" << cc_reset;
+  std::cout << "   Total time: " << t_end-t_start << " sec\tTotal scan: " << count << "\t(" << (t_end-t_start)/count << " sec/scan)\n";
+}
+
+
+
 
 void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter) {
     if (isDebug && isDebugContinuousStates){

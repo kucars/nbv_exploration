@@ -322,7 +322,7 @@ Visualization Manager:
       Value: true
       Voxel Alpha: 1
       Voxel Coloring: Cell Probability
-      Voxel Rendering: Unknown Near Occupied
+      Voxel Rendering: Occupied
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -382,5 +382,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 747
-  Y: 68
+  X: 737
+  Y: 58

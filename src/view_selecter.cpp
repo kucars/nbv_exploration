@@ -149,7 +149,7 @@ double ViewSelecterBase::calculateIG(Pose p)
 	
 	t_end = ros::Time::now().toSec();
   std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_traversed << " (" << 1000*(t_end-t_start)/nodes_traversed << " ms/node)\n";
-	
+	std::cout << "\tRays: " << ray_directions_.size() << "\n";
 	return ig_total;
 }
 
@@ -191,6 +191,8 @@ double ViewSelecterBase::calculateUtility(Pose p)
 
 void ViewSelecterBase::evaluate()
 {
+	update();
+	
   // Update curernt pose and map
   cloud_occupied_ptr_ = view_gen_->cloud_occupied_ptr_;
   current_pose_ = view_gen_->current_pose_;

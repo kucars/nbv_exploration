@@ -70,7 +70,7 @@ const std::string cc_reset("\033[0m");
 // ===================
 bool is_debug = true; //Set to true to see debug text
 bool is_debug_states = true;
-bool is_debug_continuous_states = !true;
+bool is_debug_callbacks = !true;
 
 bool is_done_profiling = false;
 bool is_scan_empty = false;
@@ -78,14 +78,11 @@ bool is_flying_up = false;
 double profile_angle = 0;
 
 // == Consts
-std::string depth_topic        = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
-std::string position_topic     = "/iris/ground_truth/pose";
-//std::string map_occupied_topic = "/rtabmap/cloud_map"; //"/rtabmap/octomap_cloud";
-//std::string map_free_topic     = "/rtabmap/octomap_empty_space";
-std::string octree_topic       = "/nbv_exploration/output_tree";
-std::string laser_topic        = "/global_profile_cloud";
-std::string laser_raw_topic    = "/iris/scan";
-//std::string map_topic    = "/global_cloud";
+std::string topic_depth         = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
+std::string topic_position      = "/iris/ground_truth/pose";
+std::string topic_octree        = "/nbv_exploration/output_tree";
+std::string topic_scan_cloud    = "/nbv_exploration/scan_cloud";
+std::string topic_profile_cloud = "/nbv_exploration/profile_cloud";
 
 // == Termination variables
 bool is_terminating = false;
@@ -97,7 +94,6 @@ float distance_threshold = 0.5f;
 float angular_threshold = 10.0 * M_PI/180.0;//Degrees to radians
 
 geometry_msgs::Pose mobile_base_pose;
-//geometry_msgs::Pose mobile_base_pose_prev;
 geometry_msgs::PoseStamped setpoint;
 
 
@@ -128,10 +124,12 @@ octomap::OcTree* global_octomap;
 // ======================
 // Callbacks
 //void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-void laserCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-void laserRawCallback(const sensor_msgs::LaserScan& laser_msg);
-void positionCallback(const geometry_msgs::PoseStamped& pose_msg);
-void octomapCallback(const octomap_msgs::Octomap& octomap_msg);
+void callbackScan(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+//void callbackProfile(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+void callbackPosition(const geometry_msgs::PoseStamped& pose_msg);
+void callbackOctomap(const octomap_msgs::Octomap& octomap_msg);
+
+bool callMappingService(int command);
 
 // FSM functions
 void profilingProcessing();
@@ -193,20 +191,6 @@ void sigIntHandler(int sig)
 int main(int argc, char **argv)
 {
   // >>>>>>>>>>>>>>>>>
-  // Parse Inputs
-  // >>>>>>>>>>>>>>>>>
-  for (int n = 1; n < argc; n++)
-  {
-    if (std::string(argv[n]) == "-s") //Skip profiling
-    {
-      is_done_profiling = true;
-      std::cout << "Skipping profiling\n";
-    }
-  }
-  
-  
-  
-  // >>>>>>>>>>>>>>>>>
   // Initialize ROS
   // >>>>>>>>>>>>>>>>>
   state = NBVState::INITIALIZING;
@@ -219,16 +203,16 @@ int main(int argc, char **argv)
   
   ros::NodeHandle ros_node;
 
+
   // >>>>>>>>>>>>>>>>>
   // Subscribers
   // >>>>>>>>>>>>>>>>>
   
   // Sensor data
-  //ros::Subscriber sub_map  = ros_node.subscribe(map_topic, 1, mapCallback);
-  ros::Subscriber sub_laser     = ros_node.subscribe(laser_topic, 1, laserCallback);
-  ros::Subscriber sub_laser_raw = ros_node.subscribe(laser_raw_topic, 1, laserRawCallback);
-  ros::Subscriber sub_pose      = ros_node.subscribe(position_topic, 1, positionCallback);
-  ros::Subscriber sub_octomap   = ros_node.subscribe(octree_topic, 1, octomapCallback);
+  ros::Subscriber sub_pose      = ros_node.subscribe(topic_position, 1, callbackPosition);
+  ros::Subscriber sub_scan      = ros_node.subscribe(topic_scan_cloud, 1, callbackScan);
+  //ros::Subscriber sub_profile   = ros_node.subscribe(topic_profile_cloud, 1, callbackProfile);
+  ros::Subscriber sub_octomap   = ros_node.subscribe(topic_octree, 1, callbackOctomap);
   
   // >>>>>>>>>>>>>>>>>
   // Publishers / Clients
@@ -236,8 +220,41 @@ int main(int argc, char **argv)
   
   // Drone setpoints
   pub_setpoint      = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
-
   srvclient_mapping = ros_node.serviceClient<nbv_exploration::MappingSrv>("nbv_exploration/mapping_command");
+  
+  
+
+  // >>>>>>>>>>>>>>>>>
+  // Parse Inputs
+  // >>>>>>>>>>>>>>>>>  
+  for (int n = 1; n < argc; n++)
+  {
+    if (std::string(argv[n]) == "-s") //Skip profiling
+    {
+      is_done_profiling = true;
+      std::cout << "Skipping profiling\n";
+      
+      bool success = callMappingService(nbv_exploration::MappingSrv::Request::LOAD_MAP);
+      if (!success)
+      {
+        std::cout << cc_red << "Failed to load profile\n" << cc_reset;
+        ros::shutdown();
+        return 1;
+      }
+    }
+  }
+  
+  if (argc == 1)
+  {
+    bool success = callMappingService(nbv_exploration::MappingSrv::Request::START_PROFILING);
+    
+    if (!success)
+    {
+      std::cout << cc_red << "Failed to start profiler\n" << cc_reset;
+      ros::shutdown();
+      return 1;
+    }
+  }
   
   // >>>>>>>>>>>>>>>>
   // Set up viewpoint generator
@@ -334,9 +351,9 @@ int main(int argc, char **argv)
 
 
 // Update global position of UGV
-void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
+void callbackPosition(const geometry_msgs::PoseStamped& pose_msg)
 {
-  if (is_debug && is_debug_continuous_states)
+  if (is_debug && is_debug_callbacks)
   {
     std::cout << cc_magenta << "Grabbing location\n" << cc_reset;
   }
@@ -346,20 +363,22 @@ void positionCallback(const geometry_msgs::PoseStamped& pose_msg)
 }
 
 
-void octomapCallback(const octomap_msgs::Octomap& octomap_msg)
+void callbackOctomap(const octomap_msgs::Octomap& octomap_msg)
 {
-  //octomap_msgs::readTree(global_octomap, *octomap_msg);
-  //global_octomap = static_cast<octomap::OcTreeBase<octomap::OcTreeNode>* >( octomap_msgs::fullMsgToMap(octomap_msg) );
+  if (is_debug && is_debug_callbacks)
+  {
+    std::cout << cc_magenta << "Grabbing octree\n" << cc_reset;
+  }
   
   global_octomap = static_cast<octomap::OcTree* >( octomap_msgs::fullMsgToMap(octomap_msg) );
 }
 
 
-void laserCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+void callbackScan(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
-  if (is_debug && is_debug_continuous_states)
+  if (is_debug && is_debug_callbacks)
   {
-    std::cout << cc_green << "SENSING LASER\n" << cc_reset;
+    std::cout << cc_magenta << "Grabbing profile point cloud\n" << cc_reset;
   }
   
   pcl::PointCloud<pcl::PointXYZRGB> cloud;
@@ -368,47 +387,67 @@ void laserCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
   pcl::fromROSMsg (*cloud_msg, cloud);
   profile_cloud_ptr = cloud.makeShared();
 }
+
+bool callMappingService(int command)
+{
+  nbv_exploration::MappingSrv srv;
+  srv.request.data = command;
   
-void laserRawCallback(const sensor_msgs::LaserScan& laser_msg){
-  if (is_debug && is_debug_continuous_states){
-    std::cout << cc_magenta << "Scan readings\n" << cc_reset;
-  }
+  bool success = srvclient_mapping.call(srv);
+  bool error = false;
   
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
-  
-  int steps = (laser_msg.angle_max - laser_msg.angle_min)/laser_msg.angle_increment;
-  float step_size = (laser_msg.angle_max - laser_msg.angle_min)/steps;
-  float range_buffer = 0.5;
-  
-  
-  int discarded = 0;
-  for (int i=0; i<steps; i++)
+  if (success)
   {
-    float r = laser_msg.ranges[i];
-    float angle = laser_msg.angle_min + step_size*i;
-    
-    if (r > laser_msg.range_max - range_buffer  ||  r < laser_msg.range_min + range_buffer)
+    if (srv.response.data == nbv_exploration::MappingSrv::Response::ERROR)
     {
-      // Discard points that are too close or too far to sensor
-      discarded++;
-      continue;
+      error = true;
     }
-  }
-  
-  // Output whether the scan is empty or not
-  //std::cout << cc_magenta << "Discared " << discarded << "/" << steps << "\n" << cc_reset;
-  if (discarded >= steps*0.95)
-  {
-    is_scan_empty = true;
+    else
+    {
+      return true; //success
+    }
   }
   else
   {
-    is_scan_empty = false;
+    ROS_ERROR("Failed to call service \"mapping_command\"");
+    return false; //failure
   }
+  
+  if (error)
+  {
+    std::string cmd_name;
+    switch (command)
+    {
+      case nbv_exploration::MappingSrv::Request::START_SCANNING:
+        cmd_name = "START_SCANNING";
+        break;
+      case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
+        cmd_name = "STOP_SCANNING";
+        break;
+      case nbv_exploration::MappingSrv::Request::START_PROFILING:
+        cmd_name = "START_PROFILING";
+        break;
+      case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
+        cmd_name = "STOP_PROFILING";
+        break;
+      case nbv_exploration::MappingSrv::Request::SAVE_MAP:
+        cmd_name = "SAVE_MAP";
+        break;
+      case nbv_exploration::MappingSrv::Request::LOAD_MAP:
+        cmd_name = "LOAD_MAP";
+        break;
+      default:
+        cmd_name = "UNKNOWN";
+        break;
+    }
     
+    std::cout << cc_red << "Error after sending " <<  cmd_name << "(ID: " << command << ") to service \"mapping_commands\" \n";
+    std::cout << cc_red << "\t" << srv.response.error << "\n" << cc_reset;
+    return false;
+  }
+  
+  return true;//So the compiler doesn't complain
 }
-
-
 
 
 
@@ -431,17 +470,7 @@ void profilingProcessing(){
     state = NBVState::PROFILING_DONE;
     std::cout << cc_green << "Profiling complete\n" << cc_reset;
     
-    nbv_exploration::MappingSrv srv;
-    srv.request.data = srv.request.STOP_PROFILING;
-    
-    if (srvclient_mapping.call(srv))
-    {
-      std::cout << "Response: " << srv.response.data << "\n";
-    }
-    else
-    {
-      ROS_ERROR("Failed to call service add_two_ints");
-    }
+    callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
     
     return;
   }
@@ -536,20 +565,11 @@ void profilingProcessing(){
   
 }
 
+
 void profileMove(bool is_rising)
 {
   // ==Request START_SCANNING
-  nbv_exploration::MappingSrv srv;
-  srv.request.data = srv.request.START_SCANNING;
-  
-  if (srvclient_mapping.call(srv))
-  {
-    std::cout << "Response: " << srv.response.data << "\n";
-  }
-  else
-  {
-    ROS_ERROR("Failed to call service add_two_ints");
-  }
+  callMappingService(nbv_exploration::MappingSrv::Request::START_SCANNING);
   
   
   // ==Scan
@@ -578,15 +598,14 @@ void profileMove(bool is_rising)
   }
   
   // ==Request STOP_SCANNING
-  srv.request.data = srv.request.STOP_SCANNING;
-  
-  if (srvclient_mapping.call(srv))
+  callMappingService(nbv_exploration::MappingSrv::Request::STOP_SCANNING);
+  if (callMappingService(nbv_exploration::MappingSrv::Request::SAVE_MAP))
   {
-    std::cout << "Response: " << srv.response.data << "\n";
+    std::cout << "Successfully saved profile\n";
   }
   else
   {
-    ROS_ERROR("Failed to call service add_two_ints");
+    std::cout << cc_red << "Failed to save profile\n";
   }
 }
 
@@ -625,6 +644,23 @@ void generateViewpoints()
   if (is_debug && is_debug_states)
   {
     std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
+  }
+  
+  ros::Rate rate(10);
+  while (ros::ok() && !profile_cloud_ptr)
+  {
+    ROS_INFO_ONCE("Waiting for point cloud profile");
+    
+    ros::spinOnce();
+    rate.sleep();
+  }
+  
+  while (ros::ok() && !global_octomap)
+  {
+    ROS_INFO_ONCE("Waiting for octree profile");
+    
+    ros::spinOnce();
+    rate.sleep();
   }
   
   viewGen->setCloud(profile_cloud_ptr);
@@ -719,7 +755,7 @@ void moveVehicle(double threshold_sensitivity)
   ros::Rate rate(10);
   while(ros::ok() && !isNear(setpoint_world, mobile_base_pose, threshold_sensitivity))
   {
-    if (is_debug && is_debug_continuous_states)
+    if (is_debug && is_debug_callbacks)
     {
       std::cout << cc_green << "Moving to destination. " <<
         "Distance to target: " << getDistance(setpoint_world, mobile_base_pose) <<
