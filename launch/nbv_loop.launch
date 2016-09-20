@@ -9,6 +9,7 @@
     <arg name="mav_name" default="iris"/>
     
     <arg name="scan_topic" default="/nbv_exploration/scan"/>
+    <arg name="depth_topic" default="/nbv_exploration/depth"/>
     
     <env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
     
@@ -128,12 +129,21 @@
     <!-- Run nodes -->
     
     <!-- correct the laser scan points near the max and min range -->
-    <node pkg="nbv_exploration" name="correct_laser_scan" type="correct_laser_scan" args="" required="true">
+    <node pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" args="" required="true" output="screen">
       <param name="range_adjustment_max" type="double" value="0.5" />
       <param name="range_adjustment_min" type="double" value="0.5" />
       
+      <param name="depth_range_max" type="double" value="8.0" />
+      <param name="depth_range_min" type="double" value="0.5" />
+      <param name="width_px" type="int" value="640" />
+      <param name="height_px" type="int" value="480" />
+      <param name="fov_vertical" type="double" value="45" />
+      <param name="fov_horizontal" type="double" value="60" />
+      
       <remap from="scan_in"  to="/iris/scan"/>
       <remap from="scan_out" to="$(arg scan_topic)"/>
+      <remap from="depth_in"  to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points"/>
+      <remap from="depth_out" to="$(arg depth_topic)"/>
     </node>
     
     <!--

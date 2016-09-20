@@ -86,9 +86,9 @@ add_executable(teleop_uav src/keyboard_teleop.cpp)
 add_dependencies(teleop_uav ${catkin_EXPORTED_TARGETS})
 target_link_libraries(teleop_uav ${catkin_LIBRARIES} )
 
-add_executable(correct_laser_scan src/correct_laser_scan.cpp)
-add_dependencies(correct_laser_scan ${catkin_EXPORTED_TARGETS})
-target_link_libraries(correct_laser_scan ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES})
+add_executable(correct_laser_scan_and_depth src/correct_laser_scan_and_depth.cpp)
+add_dependencies(correct_laser_scan_and_depth ${catkin_EXPORTED_TARGETS})
+target_link_libraries(correct_laser_scan_and_depth ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_executable(test_octomap src/test_octomap.cpp)
 add_dependencies(test_octomap ${catkin_EXPORTED_TARGETS})

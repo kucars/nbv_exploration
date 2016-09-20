@@ -308,6 +308,9 @@ int main(int argc, char **argv)
         break;
         
       case NBVState::MOVING_COMPLETE:
+        std::cout << cc_magenta << "Requesting camera data\n";
+        callMappingService(nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA);
+        
         state = NBVState::TERMINATION_CHECK;
       
         iteration_count++;
@@ -472,6 +475,15 @@ void profilingProcessing(){
     
     callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
     
+    if (callMappingService(nbv_exploration::MappingSrv::Request::SAVE_MAP))
+    {
+      std::cout << "Successfully saved profile\n";
+    }
+    else
+    {
+      std::cout << cc_red << "Failed to save profile\n";
+    }
+    
     return;
   }
   
@@ -599,14 +611,6 @@ void profileMove(bool is_rising)
   
   // ==Request STOP_SCANNING
   callMappingService(nbv_exploration::MappingSrv::Request::STOP_SCANNING);
-  if (callMappingService(nbv_exploration::MappingSrv::Request::SAVE_MAP))
-  {
-    std::cout << "Successfully saved profile\n";
-  }
-  else
-  {
-    std::cout << cc_red << "Failed to save profile\n";
-  }
 }
 
 
