@@ -248,7 +248,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
     case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
       isScanning = false;
       std::cout << cc_green << "Processing " << scan_vec.size() << " scans...\n" << cc_reset;
-      processScans();
+      //processScans();
       
       response.data = response.DONE;
       break;
@@ -458,9 +458,8 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   octomap::point3d sensor_origin (transform.getOrigin().x(),
                                   transform.getOrigin().y(),
                                   transform.getOrigin().z());
-                                  
-  pose_vec.push_back(sensor_origin);
-  scan_vec.push_back(*scan_ptr + *scan_far_ptr);
+  
+  addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, laser_range);
   
   // == Get profile (remove Z coordinate)
   profile_projected_cloud_ptr = profile_cloud_ptr->makeShared();
@@ -484,7 +483,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
       return;
     }
       
-    std::cout << cc_magenta << "Grabbing depth data\n" << cc_reset;
+    std::cout << "[" << ros::Time::now().toSec() << "]" << cc_magenta << "Grabbing depth data\n" << cc_reset;
     
     pcl::PointCloud<pcl::PointXYZRGB> cloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;

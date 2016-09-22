@@ -1,4 +1,10 @@
 #include <iostream>
+
+#include <ros/ros.h>
+
+#include <geometry_msgs/PoseStamped.h>
+#include <visualization_msgs/Marker.h>
+
 #include <nbv_exploration/view_generator.h>
 #include <nbv_exploration/view_selecter.h>
 
@@ -17,6 +23,70 @@
 // =======
 // Base
 // =======
+ros::Publisher marker_pub;
+ros::Publisher pose_pub;
+
+ViewSelecterBase::ViewSelecterBase()
+{
+	ros::NodeHandle n;
+	marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+	pose_pub = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
+}
+
+void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint)
+{
+	geometry_msgs::Point p;
+	
+	// Start
+	p.x = origin.x();
+	p.y = origin.y();
+	p.z = origin.z();
+	line_list.points.push_back(p);
+
+	// End
+	p.x = endpoint.x();
+	p.y = endpoint.y();
+	p.z = endpoint.z();
+	line_list.points.push_back(p);
+}
+
+
+void ViewSelecterBase::clearRayMarkers()
+{
+	line_list.id = 0;
+	line_list.type = visualization_msgs::Marker::LINE_LIST;
+	line_list.scale.x = 0.01;
+	
+	// Blue lines
+	line_list.color.b = 1.0;
+  line_list.color.a = 0.1;
+	
+	line_list.points.clear();
+
+}
+
+void ViewSelecterBase::publishRayMarkers()
+{
+	line_list.header.frame_id = "world";
+  line_list.header.stamp = ros::Time::now();
+  
+  marker_pub.publish(line_list);
+}
+
+void ViewSelecterBase::publishPose(Pose p)
+{
+	geometry_msgs::PoseStamped msg;
+	msg.header.frame_id = "world";
+  msg.header.stamp = ros::Time::now();
+  
+  msg.pose = p;
+  
+  pose_pub.publish(msg);
+}
+
+
+
+
 double ViewSelecterBase::getNodeOccupancy(octomap::OcTreeNode* node)
 {
 	double p;
@@ -48,22 +118,19 @@ double ViewSelecterBase::computeRelativeRays()
 	ray_directions_.clear();
 	
 	double deg2rad = M_PI/180;
-	double min_x = -range_max_ * tan(fov_horizontal_ * deg2rad);
-	double min_y = -range_max_ * tan(fov_vertical_ * deg2rad);
-	double max_x =  range_max_ * tan(fov_horizontal_ * deg2rad);
-	double max_y =  range_max_ * tan(fov_vertical_ * deg2rad);
+	double min_x = -range_max_ * tan(fov_horizontal_/2 * deg2rad);
+	double min_y = -range_max_ * tan(fov_vertical_/2 * deg2rad);
+	double max_x =  range_max_ * tan(fov_horizontal_/2 * deg2rad);
+	double max_y =  range_max_ * tan(fov_vertical_/2 * deg2rad);
 	
 	double x_step = tree_resolution_;
 	double y_step = tree_resolution_;
-	
-	std::cout << "min_x: " << min_x << "\n";
-	std::cout << "step: " << x_step << "\n";
 	
 	for( double x = min_x; x<=max_x; x+=x_step )
 	{
 		for( double y = min_y; y<=max_y; y+=y_step )
 		{
-			Eigen::Vector3d ray_dir(x, y, range_max_);
+			Eigen::Vector3d ray_dir(y, x, range_max_);
 			ray_dir.normalize();
 			ray_directions_.push_back(ray_dir);
 		}
@@ -77,7 +144,13 @@ void ViewSelecterBase::computeOrientationMatrix(Pose p)
 											 p.orientation.z,
 											 p.orientation.w); 
 	
-	rotation_mtx_ = q.toRotationMatrix();
+	/* Additional rotation to correct alignment of rays */
+	Eigen::Matrix3d r;
+	r << 0, 0, 1,
+			 0, 1, 0,
+			 1, 0, 0;
+	
+	rotation_mtx_ = r*q.toRotationMatrix();
 }
 
 octomap::point3d ViewSelecterBase::getGlobalRayDirection(Eigen::Vector3d ray_dir)
@@ -88,7 +161,14 @@ octomap::point3d ViewSelecterBase::getGlobalRayDirection(Eigen::Vector3d ray_dir
 	return p;
 }
 
-
+struct octomapKeyCompare {
+  bool operator() (const octomap::OcTreeKey& lhs, const octomap::OcTreeKey& rhs) const
+  {
+		size_t h1 = size_t(lhs.k[0]) + 1447*size_t(lhs.k[1]) + 345637*size_t(lhs.k[2]);
+		size_t h2 = size_t(rhs.k[0]) + 1447*size_t(rhs.k[1]) + 345637*size_t(rhs.k[2]);
+		return h1< h2;
+	}
+};
 
 double ViewSelecterBase::calculateIG(Pose p)
 {
@@ -99,10 +179,12 @@ double ViewSelecterBase::calculateIG(Pose p)
   
 	octomap::point3d origin (p.position.x, p.position.y, p.position.z);
 	
-	double ig_total = 0;
 	int nodes_traversed = 0;
+	double observedOccupied = false;
 	
-	//std::set<> nodes;
+	std::set<octomap::OcTreeKey, octomapKeyCompare> nodes; //all nodes in a set are UNIQUE
+	
+	clearRayMarkers();
 	
 	for (int i=0; i<ray_directions_.size(); i++)
 	{
@@ -113,43 +195,51 @@ double ViewSelecterBase::calculateIG(Pose p)
 		
 		// Cast through unknown cells as well as free cells
 		bool found_endpoint = tree_->castRay( origin, dir, endpoint, true, range_max_ );
-		
-		if (!found_endpoint)
+		if (found_endpoint)
+		{
+			observedOccupied = true;
+		}
+		else
 		{
 			endpoint = origin + dir * range_max_;
 		}
 		
+		addToRayMarkers(origin, endpoint);
+		
 		octomap::KeyRay ray;
 		tree_->computeRayKeys( origin, endpoint, ray );
-		
 		for( octomap::KeyRay::iterator it = ray.begin() ; it!=ray.end(); ++it )
 		{
-			octomap::point3d coord = tree_->keyToCoord(*it);
-			octomap::OcTreeNode* node = tree_->search(*it);
+			nodes.insert(*it);
 			nodes_traversed++;
-			
-			ig_ray += getNodeEntropy(node);
 		}
 			
 		octomap::OcTreeKey end_key;
-		
 		if( tree_->coordToKeyChecked(endpoint, end_key) )
 		{
-			octomap::OcTreeNode* node = tree_->search(end_key);
+			nodes.insert(end_key);
 			nodes_traversed++;
-			
-			ig_ray += getNodeEntropy(node);
 		}
-		
-		ig_total += ig_ray;
-		
-		//if (i%1000 == 0)
-		//	std::cout << "\tRay: " << i << "\tIG: " << ig_ray << "\n";
+	}
+	
+	publishRayMarkers();
+	publishPose(p);
+	
+	int nodes_processed = nodes.size();
+	double ig_total = 0;
+	
+	if (observedOccupied) //Only compute IG if we've seen at least one valid occupied voxel
+	{
+		for (std::set<octomap::OcTreeKey>::iterator it=nodes.begin(); it!=nodes.end(); ++it)
+		{
+			octomap::OcTreeNode* node = tree_->search(*it);	
+			ig_total += getNodeEntropy(node);
+		}
 	}
 	
 	t_end = ros::Time::now().toSec();
-  std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_traversed << " (" << 1000*(t_end-t_start)/nodes_traversed << " ms/node)\n";
-	std::cout << "\tRays: " << ray_directions_.size() << "\n";
+  std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
+  //std::cout << "\tAverage nodes per ray: " << nodes_traversed/ray_directions_.size() << "\n";
 	return ig_total;
 }
 
@@ -199,14 +289,14 @@ void ViewSelecterBase::evaluate()
   
   double maxUtility = -1/.0; //-inf
   
-  
-  for (int i=0; i<view_gen_->generated_poses.size(); i++)
+  ros::Duration sleep_duration(1);
+  for (int i=0; i<view_gen_->generated_poses.size() && ros::ok(); i++)
   {
     Pose p = view_gen_->generated_poses[i];
     computeOrientationMatrix(p);
     
     double utility = calculateUtility(p);
-    std::cout << "[ViewSelecterBase::evaluate()] Utility of pose[" << i << "]: " << utility << "\n";
+    std::cout << "Utility of pose[" << i << "]: " << utility << "\n";
     
     if (utility > maxUtility)
     {
@@ -215,7 +305,7 @@ void ViewSelecterBase::evaluate()
       selected_pose_ = p;
     }
     
+    //sleep_duration.sleep();
     //std::cout << "[ViewSelecterBase::evaluate] Looking at pose[" << i << "]:\nx = " << p.position.x << "\ty = "  << p.position.y << "\tz = "  << p.position.z << "\n";
   }
-  
 }

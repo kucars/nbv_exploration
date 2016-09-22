@@ -32,13 +32,13 @@ void ViewGeneratorNN::generateViews()
   {
     std::cout << "[ViewpointGen::NN] Generating 4-D state lattice" << std::endl;
     
-    for (int i_x=-1; i_x<=1; i_x+=2)
+    for (int i_x=-1; i_x<=1; i_x++)
     {
-      for (int i_y=-1; i_y<=1; i_y+=2)
+      for (int i_y=-1; i_y<=1; i_y++)
       {
-        for (int i_z=-1; i_z<=1; i_z+=2)
+        for (int i_z=-1; i_z<=1; i_z++)
         {
-          for (int i_yaw=-1; i_yaw<=1; i_yaw+=2)
+          for (int i_yaw=-1; i_yaw<=1; i_yaw++)
           {
             Pose p;
             p.position.x = currX + res_x_*i_x;
@@ -57,48 +57,6 @@ void ViewGeneratorNN::generateViews()
         }
       }
     }
-    
-    /*
-    for (int i=-1; i<=1; i+=2)
-    {
-      Pose p;
-      p.position.x = currX + res_x_*i;
-      p.position.y = currY;
-      p.position.z = currZ;
-      p.orientation = current_pose_.orientation;
-      generated_poses.push_back(p);
-    }
-    
-    for (int i=-1; i<=1; i+=2)
-    {
-      Pose p;
-      p.position.x = currX;
-      p.position.y = currY + res_y_*i;
-      p.position.z = currZ;
-      p.orientation = current_pose_.orientation;
-      generated_poses.push_back(p);
-    }
-    
-    for (int i=-1; i<=1; i+=2)
-    {
-      Pose p;
-      p.position.x = currX;
-      p.position.y = currY;
-      p.position.z = currZ + res_z_*i;
-      p.orientation = current_pose_.orientation;
-      generated_poses.push_back(p);
-    }
-    
-    for (int i=-1; i<=1; i+=2)
-    {
-      Pose p;
-      p.position.x = currX;
-      p.position.y = currY;
-      p.position.z = currZ;
-      p.orientation = getQuaternionFromYaw(currYaw + res_yaw_*i);
-      generated_poses.push_back(p);
-    }
-    */
     
     std::cout << "[ViewpointGen::NN] Generated " << generated_poses.size() << " poses" << std::endl;
   }

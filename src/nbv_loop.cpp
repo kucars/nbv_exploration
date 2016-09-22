@@ -308,7 +308,7 @@ int main(int argc, char **argv)
         break;
         
       case NBVState::MOVING_COMPLETE:
-        std::cout << cc_magenta << "Requesting camera data\n";
+        std::cout << "[" << ros::Time::now().toSec() << "]" << cc_magenta << "Requesting camera data\n" << cc_reset;
         callMappingService(nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA);
         
         state = NBVState::TERMINATION_CHECK;
@@ -469,7 +469,7 @@ void profilingProcessing(){
   
   profile_angle += angle_inc;
   
-  if (profile_angle >= 2*M_PI + angle_inc){
+  if (profile_angle > 2*M_PI + angle_inc){
     state = NBVState::PROFILING_DONE;
     std::cout << cc_green << "Profiling complete\n" << cc_reset;
     
@@ -527,7 +527,7 @@ void profilingProcessing(){
   }
   
   r = sqrt(r);
-  r += 2; // add a safety margin
+  r += 8; // add a safety margin (to avoid collision and see free spaces close to structure
   
   std::cout << cc_magenta << "x = " << x << "\ty = " << y << "\tr = " << r << "\n" << cc_reset;
   

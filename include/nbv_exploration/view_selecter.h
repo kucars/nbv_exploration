@@ -6,6 +6,7 @@
 #include <Eigen/Geometry>
 
 #include <geometry_msgs/Pose.h>
+#include <visualization_msgs/Marker.h>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -39,9 +40,11 @@ protected:
   
   std::vector<Eigen::Vector3d> ray_directions_;
   
+  visualization_msgs::Marker line_list;
+  
   
 public:
-  ViewSelecterBase(){}
+  ViewSelecterBase();
   ~ViewSelecterBase(){}
   
   void setViewGenerator(ViewGeneratorBase* v)
@@ -50,7 +53,7 @@ public:
     
     fov_horizontal_ = 60;
     fov_vertical_  = 45;
-    range_max_ = 8.0;
+    range_max_ = 6.0;
     range_min_ = 0.05;
   }
   
@@ -85,6 +88,11 @@ public:
   double calculateDistance(Pose p);
   double calculateAngularDistance(Pose p);
   virtual double calculateUtility(Pose p);
+  
+  void addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint);
+  void clearRayMarkers();
+  void publishRayMarkers();
+  void publishPose(Pose p);
 };
 
 #endif
