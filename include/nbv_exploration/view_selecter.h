@@ -2,6 +2,7 @@
 #define NBV_EXPLORATION_VIEW_SELECTER_H
 
 #include <iostream>
+#include <ros/ros.h>
 
 #include <Eigen/Geometry>
 
@@ -37,6 +38,7 @@ protected:
   double range_max_;
   double range_min_;
   double tree_resolution_;
+  double last_max_utility_;
   
   std::vector<Eigen::Vector3d> ray_directions_;
   
@@ -50,11 +52,6 @@ public:
   void setViewGenerator(ViewGeneratorBase* v)
   {
     view_gen_ = v;
-    
-    fov_horizontal_ = 60;
-    fov_vertical_  = 45;
-    range_max_ = 6.0;
-    range_min_ = 0.05;
   }
   
   void update()
@@ -68,6 +65,15 @@ public:
     computeRelativeRays();
   }
   
+  void setParameters(double fov_h, double fov_v, double r_max, double r_min)
+  {
+    fov_horizontal_ = fov_h;
+    fov_vertical_ = fov_v;
+    range_max_ = r_max;
+    range_min_ = r_min;
+  }
+  
+  
   
   
   Pose getTargetPose()
@@ -76,6 +82,7 @@ public:
   }
 
   void evaluate();
+  bool isEntropyLow();
   
   double getNodeOccupancy(octomap::OcTreeNode* node);
   double getNodeEntropy(octomap::OcTreeNode* node);

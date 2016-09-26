@@ -7,6 +7,8 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 
+#include <Eigen/Geometry>
+
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/LaserScan.h>
@@ -68,6 +70,7 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     // Get input parameters
     // >>>>>>>>>>>>>>>>>
+    /*
     ros_node.param("range_adjustment_max", range_adjustment_max, 0.5);
     ros_node.param("range_adjustment_min", range_adjustment_min, 0.5);
     
@@ -77,6 +80,18 @@ int main(int argc, char **argv)
     ros_node.param("height_px", height_px, 480);
     ros_node.param("fov_vertical", fov_vertical, 45.0);
     ros_node.param("fov_horizontal", fov_horizontal, 60.0);
+    */
+    
+    
+    ros::param::param("~range_adjustment_max", range_adjustment_max, 0.5);
+    ros::param::param("~range_adjustment_min", range_adjustment_min, 0.5);
+    
+    ros::param::param("~depth_range_max", depth_range_max, 8.0);
+    ros::param::param("~depth_range_min", depth_range_min, 0.5);
+    ros::param::param("~width_px", width_px, 640);
+    ros::param::param("~height_px", height_px, 480);
+    ros::param::param("~fov_vertical", fov_vertical, 45.0);
+    ros::param::param("~fov_horizontal", fov_horizontal, 60.0);
 
     // >>>>>>>>>>>>>>>>>
     // Topic Handlers
@@ -197,9 +212,24 @@ void createMaxRangeCloud()
   {
     for (int i=0; i<width_px; i++)
     {
+      /*
+      Eigen::Vector3d pe(
+        (i-width_px/2+0.5)*x_step*r,  //x
+        (j-height_px/2+0.5)*y_step*r, //y
+        r //z
+        );
+			pe.normalize();
+      
       pcl::PointXYZRGB p;
       
-      p.x = (i-width_px/2+0.5)*x_step*r; //x position, scaled outside valid range
+      p.x = pe[0]*r;
+      p.y = pe[1]*r;
+      p.z = pe[2]*r;
+      */
+      
+      pcl::PointXYZRGB p;
+      
+      p.x = (i-width_px/2+0.5)*x_step*r;
       p.y = (j-height_px/2+0.5)*y_step*r;
       p.z = r;
       

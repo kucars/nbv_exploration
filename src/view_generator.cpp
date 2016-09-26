@@ -32,17 +32,20 @@ void ViewGeneratorNN::generateViews()
   {
     std::cout << "[ViewpointGen::NN] Generating 4-D state lattice" << std::endl;
     
-    for (int i_x=-1; i_x<=1; i_x++)
+    for (int i_x=1; i_x<=1; i_x++)
     {
-      for (int i_y=-1; i_y<=1; i_y++)
+      for (int i_y=0; i_y<=1; i_y++)
       {
         for (int i_z=-1; i_z<=1; i_z++)
         {
           for (int i_yaw=-1; i_yaw<=1; i_yaw++)
           {
+            if (i_x==0 && i_y==0 && i_z==0 && i_yaw==0)
+              continue;
+            
             Pose p;
-            p.position.x = currX + res_x_*i_x;
-            p.position.y = currY + res_y_*i_y;
+            p.position.x = currX + res_x_*i_x*cos(currYaw) + res_y_*i_y*sin(currYaw);
+            p.position.y = currY - res_x_*i_x*sin(currYaw) + res_y_*i_y*cos(currYaw);
             if (currZ + res_z_*i_z > 1) //Don't collide with the floor
             {
               p.position.z = currZ + res_z_*i_z;

@@ -6,6 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Sensor cloud1
+        - /Scan Cloud1
         - /OccupancyGrid1
       Splitter Ratio: 0.5
     Tree Height: 328
@@ -27,7 +29,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: Sensor cloud
 Visualization Manager:
   Class: ""
   Displays:
@@ -117,8 +119,8 @@ Visualization Manager:
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.01
-      Style: Flat Squares
-      Topic: /iris/xtion_sensor/iris/xtion_sensor_camera/depth/points
+      Style: Squares
+      Topic: /nbv_exploration/depth
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -222,7 +224,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -232,14 +234,14 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
+      Size (Pixels): 1
       Size (m): 0.05
-      Style: Flat Squares
+      Style: Points
       Topic: /nbv_exploration/scan_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 0.8
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -311,18 +313,41 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Class: octomap_rviz_plugin/OccupancyGrid
-      Enabled: true
+      Enabled: false
       Max. Height Display: 3.40282e+38
       Max. Octree Depth: 16
       Min. Height Display: -3.40282e+38
       Name: OccupancyGrid
       Octomap Topic: /nbv_exploration/output_tree
       Queue Size: 5
-      Unknown voxel distance: 2
-      Value: true
+      Unknown voxel distance: 1
+      Value: false
       Voxel Alpha: 1
       Voxel Coloring: Cell Probability
-      Voxel Rendering: Occupied
+      Voxel Rendering: Unknown Near Occupied 2
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker
+      Name: Evaluation Marker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.1
+      Class: rviz/Pose
+      Color: 85; 170; 0
+      Enabled: true
+      Head Length: 0.6
+      Head Radius: 0.6
+      Name: Evaluation Pose
+      Shaft Length: 1
+      Shaft Radius: 0.4
+      Shape: Arrow
+      Topic: /visualization_marker_pose
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -347,22 +372,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 46.0452
+      Distance: 17.7932
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -2.92407
-        Y: 2.36247
-        Z: -4.4817
+        X: -0.596528
+        Y: -12.359
+        Z: 2.25802
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.729796
+      Pitch: 0.8198
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.38227
+      Yaw: 5.06721
     Saved: ~
 Window Geometry:
   Displays:
@@ -382,5 +407,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 687
-  Y: 14
+  X: 662
+  Y: 129

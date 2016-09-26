@@ -87,7 +87,7 @@ std::string topic_profile_cloud = "/nbv_exploration/profile_cloud";
 // == Termination variables
 bool is_terminating = false;
 int iteration_count = 0;
-int max_iterations = 40;
+int max_iterations = 300;
 
 // == Navigation variables
 float distance_threshold = 0.5f;
@@ -202,7 +202,15 @@ int main(int argc, char **argv)
   signal(SIGINT, sigIntHandler);
   
   ros::NodeHandle ros_node;
-
+  
+  // >>>>>>>>>>>>>>>>>
+  // Read params
+  // >>>>>>>>>>>>>>>>>
+  double fov_h, fov_v, r_max, r_min;
+  ros::param::param("~fov_horizontal", fov_h, 60.0);
+  ros::param::param("~fov_vertical", fov_v, 45.0);
+  ros::param::param("~depth_range_max", r_max, 5.0);
+  ros::param::param("~depth_range_min", r_min, 0.05);
 
   // >>>>>>>>>>>>>>>>>
   // Subscribers
@@ -263,8 +271,13 @@ int main(int argc, char **argv)
   viewGen = new ViewGeneratorNN();
   viewGen->setResolution(1.0, 1.0, 1.0, M_PI_4);
 
+  
+  // >>>>>>>>>>>>>>>>>
+  // Set up view selecter
+  // >>>>>>>>>>>>>>>>>
   viewSel = new ViewSelecterBase();
   viewSel->setViewGenerator(viewGen);
+  viewSel->setParameters(fov_h, fov_v, r_max, r_min);
 
   // >>>>>>>>>>>>>>>>>
   // Start the FSM
@@ -339,7 +352,7 @@ int main(int argc, char **argv)
       
       case NBVState::VIEWPOINT_EVALUATION_COMPLETE:
         state = NBVState::MOVING;
-        moveVehicle();
+        moveVehicle(0.25); //Make sure we go to the exact position
         break;
     }
     
@@ -626,15 +639,14 @@ void terminationCheck()
     std::cout << cc_green << "Checking termination condition\n" << cc_reset;
   }
   
+  state = NBVState::TERMINATION_NOT_MET;
+  
   
   if (iteration_count > max_iterations)
-  {
     state = NBVState::TERMINATION_MET;
-  }
-  else
-  {
-    state = NBVState::TERMINATION_NOT_MET;
-  }
+    
+  if (viewSel->isEntropyLow())
+    state = NBVState::TERMINATION_MET;
 }
 
 

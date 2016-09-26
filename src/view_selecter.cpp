@@ -31,6 +31,8 @@ ViewSelecterBase::ViewSelecterBase()
 	ros::NodeHandle n;
 	marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
 	pose_pub = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
+	
+	last_max_utility_ = 1/.0;
 }
 
 void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint)
@@ -181,6 +183,7 @@ double ViewSelecterBase::calculateIG(Pose p)
 	
 	int nodes_traversed = 0;
 	double observedOccupied = false;
+	double min_height = 0.5;
 	
 	std::set<octomap::OcTreeKey, octomapKeyCompare> nodes; //all nodes in a set are UNIQUE
 	
@@ -202,6 +205,12 @@ double ViewSelecterBase::calculateIG(Pose p)
 		else
 		{
 			endpoint = origin + dir * range_max_;
+			
+			if (endpoint.z() < min_height)
+			{
+				double k = (min_height - origin.z()) / dir.z();
+				endpoint = origin + dir * k;
+			}
 		}
 		
 		addToRayMarkers(origin, endpoint);
@@ -308,4 +317,15 @@ void ViewSelecterBase::evaluate()
     //sleep_duration.sleep();
     //std::cout << "[ViewSelecterBase::evaluate] Looking at pose[" << i << "]:\nx = " << p.position.x << "\ty = "  << p.position.y << "\tz = "  << p.position.z << "\n";
   }
+  
+  last_max_utility_ = maxUtility;
+  
+}
+
+bool ViewSelecterBase::isEntropyLow()
+{
+	if (last_max_utility_ == 0)
+		return true;
+	
+	return false;
 }

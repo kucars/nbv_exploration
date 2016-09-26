@@ -65,6 +65,9 @@ const std::string cc_reset("\033[0m");
 bool isDebug = !true; //Set to true to see debug text
 bool isDebugContinuousStates = !true;
 bool is_get_camera_data = false;
+bool is_batch_profiling = true;
+
+double max_range;
 
 // Profiling --------
 bool isScanning = false;
@@ -139,6 +142,11 @@ int main(int argc, char **argv)
 
     ros::init(argc, argv, "sensing_and_mapping");
     ros::NodeHandle ros_node;
+
+    // >>>>>>>>>>>>>>>>>
+    // Parameters
+    // >>>>>>>>>>>>>>>>>
+    ros::param::param("~depth_range_max", max_range, 5.0);
 
     // >>>>>>>>>>>>>>>>>
     // Subscribers / Servers
@@ -248,7 +256,9 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
     case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
       isScanning = false;
       std::cout << cc_green << "Processing " << scan_vec.size() << " scans...\n" << cc_reset;
-      //processScans();
+      
+      if (is_batch_profiling)
+        processScans();
       
       response.data = response.DONE;
       break;
@@ -258,7 +268,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
       std::cout << cc_green << "Started profiling\n" << cc_reset;
     
       if (!tree)
-        tree = new octomap::OcTree (0.3);
+        tree = new octomap::OcTree (0.2);
       
       response.data = response.ACK;
       break;
@@ -307,14 +317,22 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
       
     case nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA:
       is_get_camera_data = true;
+      std::cout << cc_magenta << "Waiting for camera data\n" << cc_reset;
       
-      while (ros::ok() && is_get_camera_data)
+      for (int i=0; i<10 && ros::ok() && is_get_camera_data; i++)
       {
         ros::spinOnce();
         sleep_rate.sleep();
       }
       
-      response.data  = response.DONE;
+      if (is_get_camera_data)
+      {
+        response.data = response.ERROR;
+        response.error = "Could not get camera data";
+      }
+      else
+        response.data = response.DONE;
+      
       break;
       
       
@@ -459,7 +477,15 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
                                   transform.getOrigin().y(),
                                   transform.getOrigin().z());
   
-  addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, laser_range);
+  if (is_batch_profiling)
+  {
+    pose_vec.push_back(sensor_origin); 
+    scan_vec.push_back(*scan_ptr + *scan_far_ptr); 
+  }
+  else
+  {
+    addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, laser_range);
+  }
   
   // == Get profile (remove Z coordinate)
   profile_projected_cloud_ptr = profile_cloud_ptr->makeShared();
@@ -488,10 +514,20 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
     pcl::PointCloud<pcl::PointXYZRGB> cloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_distance_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
 
     // == Convert to pcl pointcloud
     pcl::fromROSMsg (*cloud_msg, cloud);
     cloud_ptr = cloud.makeShared();
+    
+    // == Remove points that are too far
+    for (int i=0; i<cloud.points.size(); i++)
+    {
+      if (cloud.points[i].x*cloud.points[i].x + cloud.points[i].y*cloud.points[i].y + cloud.points[i].z*cloud.points[i].z <= max_range*max_range)
+      {
+        cloud_filtered_distance_ptr->push_back(cloud.points[i]);
+      }
+    }
     
     /*
     // == Remove NAN points
@@ -519,15 +555,18 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
         
         // == Transform point cloud
         pcl::transformPointCloud(*cloud_filtered, *cloud_filtered, tf_eigen);
+        pcl::transformPointCloud(*cloud_filtered_distance_ptr, *cloud_filtered_distance_ptr, tf_eigen);
         
         // == Add filtered to global
-        addToGlobalCloud(cloud_filtered, global_cloud_ptr);
+        addToGlobalCloud(cloud_filtered_distance_ptr, profile_cloud_ptr);
+        //addToGlobalCloud(cloud_filtered, global_cloud_ptr);
         
         octomap::point3d origin (transform.getOrigin().x(),
                                  transform.getOrigin().y(),
                                  transform.getOrigin().z());
-        addPointCloudToTree(*cloud_filtered, origin, 8.0);
+        addPointCloudToTree(*cloud_filtered, origin, max_range);
         
+        /*
         // == Publish
         sensor_msgs::PointCloud2 cloud_msg;
         
@@ -536,7 +575,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
         cloud_msg.header.stamp = ros::Time::now();
         
         pub_global_cloud.publish(cloud_msg);
-        
+        */
     }
     catch (tf::TransformException ex){
         ROS_ERROR("%s",ex.what());

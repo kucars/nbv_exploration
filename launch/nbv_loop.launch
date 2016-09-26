@@ -23,7 +23,6 @@
 	<arg name="gui" value="true"/>
     </include>
     
-
     <!-- Spawn UAV -->
     <group ns="$(arg mav_name)">
 	<include file="$(find rotors_gazebo)/launch/spawn_iris.launch">
@@ -39,7 +38,7 @@
 	    
 	    <!-- Half sized scenario spawn point -->
 	    <arg name="Y" value="3.14" unless="$(arg using_full_sized_scenario)" /><!-- Yaw -->
-	    <arg name="y" value="-15" unless="$(arg using_full_sized_scenario)" />
+	    <arg name="y" value="-12" unless="$(arg using_full_sized_scenario)" />
 	    <arg name="x" value="4" unless="$(arg using_full_sized_scenario)" />
 	</include>
     </group>
@@ -126,24 +125,23 @@
     </group>
     
     
-    <!-- Run nodes -->
-    
+    <!-- Run nodes -->    
     <!-- correct the laser scan points near the max and min range -->
-    <node pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" args="" required="true" output="screen">
-      <param name="range_adjustment_max" type="double" value="0.5" />
-      <param name="range_adjustment_min" type="double" value="0.5" />
-      
-      <param name="depth_range_max" type="double" value="8.0" />
-      <param name="depth_range_min" type="double" value="0.5" />
-      <param name="width_px" type="int" value="640" />
-      <param name="height_px" type="int" value="480" />
-      <param name="fov_vertical" type="double" value="45" />
-      <param name="fov_horizontal" type="double" value="60" />
+    <node pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
+      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
       
       <remap from="scan_in"  to="/iris/scan"/>
       <remap from="scan_out" to="$(arg scan_topic)"/>
       <remap from="depth_in"  to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points"/>
       <remap from="depth_out" to="$(arg depth_topic)"/>
+    </node>
+    
+    
+    <!-- profiler and mapper -->
+    <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" args="" required="true" output="screen">
+      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+    
+      <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
     
     <!--

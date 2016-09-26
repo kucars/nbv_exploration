@@ -1,0 +1,9 @@
+range_adjustment_max: 0.5
+range_adjustment_min: 0.5
+      
+depth_range_max: 5.0
+depth_range_min: 0.8
+width_px: 640
+height_px: 480
+fov_vertical: 45
+fov_horizontal: 60
