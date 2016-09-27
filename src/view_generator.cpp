@@ -32,9 +32,9 @@ void ViewGeneratorNN::generateViews()
   {
     std::cout << "[ViewpointGen::NN] Generating 4-D state lattice" << std::endl;
     
-    for (int i_x=1; i_x<=1; i_x++)
+    for (int i_x=-1; i_x<=1; i_x++)
     {
-      for (int i_y=0; i_y<=1; i_y++)
+      for (int i_y=-1; i_y<=0; i_y++)
       {
         for (int i_z=-1; i_z<=1; i_z++)
         {

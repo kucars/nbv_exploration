@@ -28,16 +28,14 @@
 pcl::PointXYZRGB* cloud_max_range;
 
 // == Parameters
-double range_adjustment_max;
-double range_adjustment_min;
+double laser_range_upper_threshold_trim, laser_range_lower_threshold_trim;
+double laser_range_upper_adjustment;
 
-double depth_range_max;
-double depth_range_min;
-int width_px;
-int height_px;
-double fov_vertical;
-double fov_horizontal;
+double depth_range_max, depth_range_min;
+int width_px, height_px;
+double fov_vertical, fov_horizontal;
 
+double depth_range_upper_adjustment;
 
 // == Consts
 std::string topic_scan_in   = "scan_in";
@@ -69,22 +67,9 @@ int main(int argc, char **argv)
 
     // >>>>>>>>>>>>>>>>>
     // Get input parameters
-    // >>>>>>>>>>>>>>>>>
-    /*
-    ros_node.param("range_adjustment_max", range_adjustment_max, 0.5);
-    ros_node.param("range_adjustment_min", range_adjustment_min, 0.5);
-    
-    ros_node.param("depth_range_max", depth_range_max, 8.0);
-    ros_node.param("depth_range_min", depth_range_min, 0.5);
-    ros_node.param("width_px", width_px, 640);
-    ros_node.param("height_px", height_px, 480);
-    ros_node.param("fov_vertical", fov_vertical, 45.0);
-    ros_node.param("fov_horizontal", fov_horizontal, 60.0);
-    */
-    
-    
-    ros::param::param("~range_adjustment_max", range_adjustment_max, 0.5);
-    ros::param::param("~range_adjustment_min", range_adjustment_min, 0.5);
+    ros::param::param("~laser_range_upper_threshold_trim", laser_range_upper_threshold_trim, 0.5);
+    ros::param::param("~laser_range_lower_threshold_trim", laser_range_lower_threshold_trim, 0.5);
+    ros::param::param("~laser_range_upper_adjustment", laser_range_upper_adjustment, 0.1);
     
     ros::param::param("~depth_range_max", depth_range_max, 8.0);
     ros::param::param("~depth_range_min", depth_range_min, 0.5);
@@ -92,6 +77,9 @@ int main(int argc, char **argv)
     ros::param::param("~height_px", height_px, 480);
     ros::param::param("~fov_vertical", fov_vertical, 45.0);
     ros::param::param("~fov_horizontal", fov_horizontal, 60.0);
+    
+    ros::param::param("~depth_range_upper_adjustment", depth_range_upper_adjustment, 0.1);
+    
 
     // >>>>>>>>>>>>>>>>>
     // Topic Handlers
@@ -129,14 +117,14 @@ void callbackScan(const sensor_msgs::LaserScan& input_msg){
    * Points near the max and min range are pushed outside the range
    * This way, they can be ignored
    */
-  float inf = output_msg.range_max + range_adjustment_max + 1;
+  float inf = output_msg.range_max + laser_range_upper_adjustment;
   int steps = (output_msg.angle_max - output_msg.angle_min)/output_msg.angle_increment;
   
   for (int i=0; i<=steps; i++)
   {
-    if (output_msg.ranges[i] + range_adjustment_max > output_msg.range_max)
+    if (output_msg.ranges[i] + laser_range_upper_threshold_trim > output_msg.range_max)
       output_msg.ranges[i] = inf;
-    else if (output_msg.ranges[i] - range_adjustment_min < output_msg.range_min)
+    else if (output_msg.ranges[i] - laser_range_lower_threshold_trim < output_msg.range_min)
       output_msg.ranges[i] = 0;
   }
   
@@ -176,23 +164,16 @@ void callbackDepth(const sensor_msgs::PointCloud2& input_msg)
     
     int x_px = i%width_px;
     int y_px = i/width_px;
-    //y_px*height_px + x_px
-    
-    //int x_px = i/height_px;
-    //int y_px = i%height_px;
+
     cloud.points[i] = cloud_max_range[y_px*width_px + x_px];
   }
   
   
-  
+  // Publish
   sensor_msgs::PointCloud2 output_msg;
   pcl::toROSMsg(cloud, output_msg); 	//cloud of original (white) using original cloud
-  
   output_msg.header = input_msg.header;
   output_msg.is_dense = true;
-  
-  //output_msg.header.frame_id = "world";
-  //output_msg.header.stamp = ros::Time::now();
   
   pub_depth.publish(output_msg);
 }
@@ -203,7 +184,7 @@ void createMaxRangeCloud()
 {
   cloud_max_range = new pcl::PointXYZRGB[width_px*height_px];
   
-  double r = depth_range_max + range_adjustment_max;
+  double r = depth_range_max + depth_range_upper_adjustment;
   
   double x_step = tan(fov_horizontal/2*M_PI/180)/(width_px/2);
   double y_step = tan(fov_vertical/2*M_PI/180)/(height_px/2);

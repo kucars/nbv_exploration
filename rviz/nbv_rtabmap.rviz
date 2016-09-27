@@ -7,8 +7,6 @@ Panels:
         - /Global Options1
         - /Status1
         - /Sensor cloud1
-        - /Scan Cloud1
-        - /OccupancyGrid1
       Splitter Ratio: 0.5
     Tree Height: 328
   - Class: rviz/Selection
@@ -95,7 +93,7 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Alpha: 1
+    - Alpha: 0.5
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
         Max Value: 10
@@ -372,22 +370,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 17.7932
+      Distance: 17.7356
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.596528
-        Y: -12.359
-        Z: 2.25802
+        X: 2.31828
+        Y: -11.2582
+        Z: 2.00078
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.8198
+      Pitch: 0.5098
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.06721
+      Yaw: 5.90721
     Saved: ~
 Window Geometry:
   Displays:
@@ -407,5 +405,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 662
-  Y: 129
+  X: 652
+  Y: 119

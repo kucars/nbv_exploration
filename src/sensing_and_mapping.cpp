@@ -523,7 +523,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
     // == Remove points that are too far
     for (int i=0; i<cloud.points.size(); i++)
     {
-      if (cloud.points[i].x*cloud.points[i].x + cloud.points[i].y*cloud.points[i].y + cloud.points[i].z*cloud.points[i].z <= max_range*max_range)
+      if (cloud.points[i].z <= max_range)
       {
         cloud_filtered_distance_ptr->push_back(cloud.points[i]);
       }
@@ -558,7 +558,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
         pcl::transformPointCloud(*cloud_filtered_distance_ptr, *cloud_filtered_distance_ptr, tf_eigen);
         
         // == Add filtered to global
-        addToGlobalCloud(cloud_filtered_distance_ptr, profile_cloud_ptr);
+        addToGlobalCloud(cloud_filtered_distance_ptr, profile_cloud_ptr, true);
         //addToGlobalCloud(cloud_filtered, global_cloud_ptr);
         
         octomap::point3d origin (transform.getOrigin().x(),

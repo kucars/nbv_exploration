@@ -1,9 +1,21 @@
-range_adjustment_max: 0.5
-range_adjustment_min: 0.5
-      
+## Laser scan correction
+## Trim causes any values close to the max or min range to be considered very far (inf) or very close (zero)
+## For example, if max_range=30 and laser_range_upper_threshold_trim=0.5, any values from 29.5 onwards are considered to be at infinity
+## Infinity in this case is max_range + laser_range_upper_adjustment
+
+## Similarly, min_range=1 and laser_range_lower_threshold_trim=0.2, any values from 1.2 downwards are considered to be invalid
+## Invalid values are set to zero
+laser_range_upper_threshold_trim: 0.5
+laser_range_lower_threshold_trim: 0.5
+laser_range_upper_adjustment: 0.1
+
+## Camera settings
 depth_range_max: 5.0
 depth_range_min: 0.8
 width_px: 640
 height_px: 480
 fov_vertical: 45
 fov_horizontal: 60
+
+## Camera correction
+depth_range_upper_adjustment: 0.1
