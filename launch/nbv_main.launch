@@ -4,5 +4,6 @@
   
     <node pkg="nbv_exploration" name="nbv_loop" type="nbv_loop" args="$(arg skip_profiling)" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+      <rosparam file="$(find nbv_exploration)/config/navigation_settings.yaml" command="load" />
     </node>
 </launch>

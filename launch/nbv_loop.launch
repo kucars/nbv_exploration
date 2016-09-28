@@ -1,6 +1,9 @@
 <?xml version="1.0" ?>
 <launch>
+    <arg name="using_debug_box" default="true"/>
     <arg name="using_full_sized_scenario" default="false"/>
+
+    
     <arg name="enable_rtab" default="false"/>
     <arg name="start_gazebo" default="false"/>
     
@@ -25,7 +28,21 @@
     
     <!-- Spawn UAV -->
     <group ns="$(arg mav_name)">
-	<include file="$(find rotors_gazebo)/launch/spawn_iris.launch">
+	<!-- If we're using the debug box -->
+	<include file="$(find rotors_gazebo)/launch/spawn_iris.launch" if="$(arg using_debug_box)">
+	    <arg name="model" value="$(find rotors_description)/urdf/$(arg mav_name)_nbv_exploration.gazebo" />
+	    <arg name="enable_logging" value="false" />
+	    <arg name="enable_ground_truth" value="true" />
+	    <arg name="log_file" value="$(arg ns)"/>
+	    
+	    <!-- Half sized scenario spawn point -->
+	    <arg name="Y" value="0"/><!-- Yaw -->
+	    <arg name="y" value="-5"/>
+	    <arg name="x" value="-5"/>
+	</include>
+	
+	<!-- If we're using the aircraft -->
+	<include file="$(find rotors_gazebo)/launch/spawn_iris.launch" unless="$(arg using_debug_box)">
 	    <arg name="model" value="$(find rotors_description)/urdf/$(arg mav_name)_nbv_exploration.gazebo" />
 	    <arg name="enable_logging" value="false" />
 	    <arg name="enable_ground_truth" value="true" />
@@ -140,7 +157,7 @@
     <!-- profiler and mapper -->
     <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
-    
+   
       <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
     

@@ -40,6 +40,8 @@ protected:
   double tree_resolution_;
   double last_max_utility_;
   
+  bool is_debug_;
+  
   std::vector<Eigen::Vector3d> ray_directions_;
   
   visualization_msgs::Marker line_list;
@@ -65,20 +67,23 @@ public:
     computeRelativeRays();
   }
   
-  void setParameters(double fov_h, double fov_v, double r_max, double r_min)
+
+  Pose getTargetPose()
+  {
+    return selected_pose_;
+  }
+
+  void setCameraSettings(double fov_h, double fov_v, double r_max, double r_min)
   {
     fov_horizontal_ = fov_h;
     fov_vertical_ = fov_v;
     range_max_ = r_max;
     range_min_ = r_min;
   }
-  
-  
-  
-  
-  Pose getTargetPose()
+
+  void setDebug(bool b)
   {
-    return selected_pose_;
+    is_debug_ = b;
   }
 
   void evaluate();

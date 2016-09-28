@@ -1,11 +1,16 @@
 <?xml version="1.0" ?>
 <launch>
+    <arg name="using_debug_box" default="true"/>
     <arg name="using_full_sized_scenario" default="false"/>
     
     <env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
     
     <!-- Start Gazebo and set up the world -->
-    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg using_debug_box)">
+	<arg name="world_name" value="$(find nbv_exploration)/worlds/box.world"/>
+    </include>
+    
+    <include file="$(find gazebo_ros)/launch/empty_world.launch" unless="$(arg using_debug_box)">
 	<arg name="world_name" value="$(find rotors_gazebo)/worlds/etihad_aircraft_world.world" if="$(arg using_full_sized_scenario)" /> <!-- full sized -->
 	<arg name="world_name" value="$(find rotors_gazebo)/worlds/etihad_aircraft_world_half.world" unless="$(arg using_full_sized_scenario)" /> <!-- half sized -->
 	<arg name="debug" value="false" />

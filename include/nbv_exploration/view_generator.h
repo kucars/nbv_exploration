@@ -15,63 +15,37 @@
 typedef geometry_msgs::Pose Pose;
 
 
-
-double getYawFromQuaternion(geometry_msgs::Quaternion gm_q)
-{
-  double roll, pitch, yaw;
-
-  tf::Quaternion quat (gm_q.x, gm_q.y, gm_q.z, gm_q.w);
-    
-  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
-  
-  return yaw;
-}
-
-geometry_msgs::Quaternion getQuaternionFromYaw(double yaw)
-{
-  geometry_msgs::Quaternion quat;
-  
-  tf::Quaternion tf_q;
-  tf_q = tf::createQuaternionFromYaw(yaw);
-  
-  quat.x = tf_q.getX();
-  quat.y = tf_q.getY();
-  quat.z = tf_q.getZ();
-  quat.w = tf_q.getW();
-  
-  return quat;
-}
-
-
-
-
 class ViewGeneratorBase
 {
 protected:
-  double res_x_;
-  double res_y_;
-  double res_z_;
+  double res_x_, res_y_, res_z_;
   double res_yaw_ = M_PI_4;
   
+  double bounds_x_max_, bounds_y_max_, bounds_z_max_;
+  double bounds_x_min_, bounds_y_min_, bounds_z_min_;
+  bool is_debug_;
+  
 public:
-  ViewGeneratorBase(){}
-  ~ViewGeneratorBase(){}
-
+  // == Variables
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
-  
   Pose current_pose_;
   std::vector<Pose, Eigen::aligned_allocator<Pose> > generated_poses;
+
+  // == Constructor and Destructor
+  ViewGeneratorBase();
+  ~ViewGeneratorBase(){}
+
   
-
-  void setMap(octomap::OcTree* oct)
+  // == Setters
+  void setBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
   {
-    tree_ = oct;
-  }
-
-  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud)
-  {
-    cloud_occupied_ptr_ = in_occ_cloud;
+    bounds_x_min_ = x_min;
+    bounds_x_max_ = x_max;
+    bounds_y_min_ = y_min;
+    bounds_y_max_ = y_max;
+    bounds_z_min_ = z_min;
+    bounds_z_max_ = z_max;
   }
   
   void setCurrentPose(Pose p)
@@ -79,19 +53,38 @@ public:
     current_pose_ = p;
   }
   
-  virtual void generateViews()
+  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud)
   {
-    std::cout << "[WARNING] Call to ViewGeneratorBase::generateViews(). Impliment function in derived class. No poses generated." << std::endl;
+    cloud_occupied_ptr_ = in_occ_cloud;
+  }
+  
+  void setDebug(bool b)
+  {
+    is_debug_ = b;
+  }
+  
+  void setMap(octomap::OcTree* oct)
+  {
+    tree_ = oct;
   }
   
   // Not used by all derived classes
-  virtual void setResolution(double x, double y, double z, double yaw)
+  void setResolution(double x, double y, double z, double yaw)
   {
     res_x_   = x;
     res_y_   = y;
     res_z_   = z;
     res_yaw_ = yaw;
   }
+  
+  
+  // == Methods
+  virtual void generateViews()
+  {
+    std::cout << "[WARNING] Call to ViewGeneratorBase::generateViews(). Impliment function in derived class. No poses generated." << std::endl;
+  }
+  
+  virtual void visualize();
 };
 
 

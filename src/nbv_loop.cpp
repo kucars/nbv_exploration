@@ -42,6 +42,7 @@
 // Custom classes
 #include <nbv_exploration/view_generator.h>
 #include <nbv_exploration/view_selecter.h>
+#include <nbv_exploration/pose_conversion.h>
 
 // =========================
 // Colors for console window
@@ -75,7 +76,9 @@ bool is_debug_callbacks = !true;
 bool is_done_profiling = false;
 bool is_scan_empty = false;
 bool is_flying_up = false;
+
 double profile_angle = 0;
+double uav_height_min, uav_height_max, uav_obstacle_distance_min;
 
 // == Consts
 std::string topic_depth         = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
@@ -206,11 +209,11 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>>
   // Read params
   // >>>>>>>>>>>>>>>>>
-  double fov_h, fov_v, r_max, r_min;
-  ros::param::param("~fov_horizontal", fov_h, 60.0);
-  ros::param::param("~fov_vertical", fov_v, 45.0);
-  ros::param::param("~depth_range_max", r_max, 5.0);
-  ros::param::param("~depth_range_min", r_min, 0.05);
+  ros::param::param("~uav_height_min", uav_height_min, 0.05);
+  ros::param::param("~uav_height_max", uav_height_max, 10.0);
+  ros::param::param("~uav_obstacle_distance_min", uav_obstacle_distance_min, 1.0);
+  
+  
 
   // >>>>>>>>>>>>>>>>>
   // Subscribers
@@ -219,7 +222,6 @@ int main(int argc, char **argv)
   // Sensor data
   ros::Subscriber sub_pose      = ros_node.subscribe(topic_position, 1, callbackPosition);
   ros::Subscriber sub_scan      = ros_node.subscribe(topic_scan_cloud, 1, callbackScan);
-  //ros::Subscriber sub_profile   = ros_node.subscribe(topic_profile_cloud, 1, callbackProfile);
   ros::Subscriber sub_octomap   = ros_node.subscribe(topic_octree, 1, callbackOctomap);
   
   // >>>>>>>>>>>>>>>>>
@@ -267,18 +269,40 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>
   // Set up viewpoint generator
   // >>>>>>>>>>>>>>>>
+  double res_x, res_y, res_z, res_yaw;
+  ros::param::param("~uav_position_resolution_x", res_x, 1.0);
+  ros::param::param("~uav_position_resolution_y", res_y, 1.0);
+  ros::param::param("~uav_position_resolution_z", res_z, 1.0);
+  ros::param::param("~uav_position_resolution_yaw", res_yaw, M_PI_4);
+  
+  double x_min, x_max, y_min, y_max, z_min, z_max;
+  ros::param::param("~bounding_x_min", x_min,-1.0);
+  ros::param::param("~bounding_x_max", x_max, 1.0);
+  ros::param::param("~bounding_y_min", y_min,-1.0);
+  ros::param::param("~bounding_y_max", y_max, 1.0);
+  ros::param::param("~bounding_z_min", z_min, 0.0);
+  ros::param::param("~bounding_z_max", z_max, 1.0);
+  
   //viewGen = new ViewGenerator_Frontier();
   viewGen = new ViewGeneratorNN();
-  viewGen->setResolution(1.0, 1.0, 1.0, M_PI_4);
-
+  viewGen->setResolution(res_x, res_y, res_z, res_yaw);
+  viewGen->setBounds(x_min, x_max, y_min, y_max, z_min, z_max);
+  viewGen->setDebug(true);
   
   // >>>>>>>>>>>>>>>>>
   // Set up view selecter
   // >>>>>>>>>>>>>>>>>
+  double fov_h, fov_v, r_max, r_min;
+  ros::param::param("~fov_horizontal", fov_h, 60.0);
+  ros::param::param("~fov_vertical", fov_v, 45.0);
+  ros::param::param("~depth_range_max", r_max, 5.0);
+  ros::param::param("~depth_range_min", r_min, 0.05);
+  
   viewSel = new ViewSelecterBase();
   viewSel->setViewGenerator(viewGen);
-  viewSel->setParameters(fov_h, fov_v, r_max, r_min);
-
+  viewSel->setCameraSettings(fov_h, fov_v, r_max, r_min);
+  viewSel->setDebug(true);
+  
   // >>>>>>>>>>>>>>>>>
   // Start the FSM
   // >>>>>>>>>>>>>>>>>
@@ -540,7 +564,7 @@ void profilingProcessing(){
   }
   
   r = sqrt(r);
-  r += 8; // add a safety margin (to avoid collision and see free spaces close to structure
+  r += uav_obstacle_distance_min; // add a safety margin (to avoid collision and see free spaces close to structure
   
   std::cout << cc_magenta << "x = " << x << "\ty = " << y << "\tr = " << r << "\n" << cc_reset;
   
@@ -603,7 +627,7 @@ void profileMove(bool is_rising)
     std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
     
     //while (ros::ok() && !is_scan_empty)
-    while (ros::ok() && mobile_base_pose.position.z < 10)
+    while (ros::ok() && mobile_base_pose.position.z < uav_height_max)
     {
       setWaypoint(0, 0, 0.3, 0, true);
       moveVehicle(0.25); // Scan slowly
@@ -614,7 +638,7 @@ void profileMove(bool is_rising)
   {
     std::cout << cc_magenta << "Profiling move down\n" << cc_reset;
     
-    while (ros::ok() && mobile_base_pose.position.z > 0.7)
+    while (ros::ok() && mobile_base_pose.position.z > uav_height_min)
     {
       setWaypoint(0, 0, -0.3, 0, true);
       moveVehicle(0.25);
@@ -718,8 +742,8 @@ void setWaypoint(double x, double y, double z, double yaw, bool is_relative=fals
     setpoint_world.position.z = mobile_base_pose.position.z + z;
     
     // Orientation
-    double yaw_current = getYawFromQuaternion(mobile_base_pose.orientation);
-    setpoint_world.orientation = getQuaternionFromYaw(yaw_current + yaw);
+    double yaw_current =  pose_conversion::getYawFromQuaternion(mobile_base_pose.orientation);
+    setpoint_world.orientation =  pose_conversion::getQuaternionFromYaw(yaw_current + yaw);
   }
   else
   {
@@ -729,7 +753,7 @@ void setWaypoint(double x, double y, double z, double yaw, bool is_relative=fals
     setpoint_world.position.z = z;
     
     // Orientation
-    setpoint_world.orientation = getQuaternionFromYaw(yaw);
+    setpoint_world.orientation = pose_conversion::getQuaternionFromYaw(yaw);
   }
   
   // Transform to setpoint frame
@@ -800,10 +824,10 @@ void takeoff()
   
   std::cout << cc_green << "Taking off\n" << cc_reset;
   
-  if (mobile_base_pose.position.z < 0.5)
+  if (mobile_base_pose.position.z < uav_height_min)
   {
-    setWaypoint(0, 0, 1, 0, true);
-    moveVehicle();
+    setWaypoint(0, 0, uav_height_min, 0, true);
+    moveVehicle(0.3);
   }
   
   std::cout << cc_green << "Done taking off\n" << cc_reset;
@@ -842,25 +866,8 @@ double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
 
 double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
 {
-  double roll1, pitch1, yaw1;
-  double roll2, pitch2, yaw2;
-  
-  tf::Quaternion q1 (
-    p1.orientation.x,
-    p1.orientation.y,
-    p1.orientation.z,
-    p1.orientation.w
-    );
-    
-  tf::Quaternion q2 (
-    p2.orientation.x,
-    p2.orientation.y,
-    p2.orientation.z,
-    p2.orientation.w
-    );
-  
-  tf::Matrix3x3(q1).getRPY(roll1, pitch1, yaw1);
-  tf::Matrix3x3(q2).getRPY(roll2, pitch2, yaw2);
+  double yaw1 = pose_conversion::getYawFromQuaternion(p1.orientation);
+  double yaw2 = pose_conversion::getYawFromQuaternion(p1.orientation);
   
   // Set differnce from -pi to pi
   double yaw_diff = fmod(yaw1 - yaw2, 2*M_PI);
@@ -889,26 +896,11 @@ void transformSetpoint2Global (const geometry_msgs::Pose & p_set, geometry_msgs:
   p_global.position.z = p_set.position.z;
   
   
-  
-  double roll, pitch, yaw;
-  
-  tf::Quaternion q1 (
-    p_set.orientation.x,
-    p_set.orientation.y,
-    p_set.orientation.z,
-    p_set.orientation.w
-    );
-    
-  tf::Matrix3x3(q1).getRPY(roll, pitch, yaw);
+  double yaw = pose_conversion::getYawFromQuaternion(p_set.orientation);
   
   yaw -= M_PI_2; //Rotate
   
-  tf::Quaternion qt = tf::createQuaternionFromRPY(roll,pitch,yaw);
-  
-  p_global.orientation.x = qt.getX();
-  p_global.orientation.y = qt.getY();
-  p_global.orientation.z = qt.getZ();
-  p_global.orientation.w = qt.getW();
+  p_global.orientation = pose_conversion::getQuaternionFromYaw(yaw);
 }
 
 void transformGlobal2Setpoint (const geometry_msgs::Pose & p_global, geometry_msgs::Pose& p_set)
@@ -918,24 +910,9 @@ void transformGlobal2Setpoint (const geometry_msgs::Pose & p_global, geometry_ms
   p_set.position.y = p_global.position.x;
   p_set.position.z = p_global.position.z;
   
-  
-  double roll, pitch, yaw;
-  
-  tf::Quaternion q1 (
-    p_global.orientation.x,
-    p_global.orientation.y,
-    p_global.orientation.z,
-    p_global.orientation.w
-    );
-    
-  tf::Matrix3x3(q1).getRPY(roll, pitch, yaw);
+  double yaw = pose_conversion::getYawFromQuaternion(p_global.orientation);
   
   yaw += M_PI_2; //Rotate
   
-  tf::Quaternion qt = tf::createQuaternionFromRPY(roll,pitch,yaw);
-  
-  p_set.orientation.x = qt.getX();
-  p_set.orientation.y = qt.getY();
-  p_set.orientation.z = qt.getZ();
-  p_set.orientation.w = qt.getW();
+  p_set.orientation = pose_conversion::getQuaternionFromYaw(yaw);
 }

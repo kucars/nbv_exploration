@@ -27,6 +27,8 @@
 #include <octomap/Pointcloud.h>
 #include <octomap_msgs/conversions.h>
 
+#include <nbv_exploration/pose_conversion.h>
+
 //PCL
 //#include <pcl/filters.hpp>
 #include <pcl/io/pcd_io.h>
@@ -67,11 +69,13 @@ bool isDebugContinuousStates = !true;
 bool is_get_camera_data = false;
 bool is_batch_profiling = true;
 
+// Config
 double max_range;
+double sensor_data_min_height;
 
 // Profiling --------
 bool isScanning = false;
-std::vector<octomap::point3d> pose_vec;
+std::vector<octomap::point3d> pose_vec, dir_vec;
 std::vector< pcl::PointCloud<pcl::PointXYZRGB> > scan_vec;
 //std::vector<octomap::Pointcloud> scan_vec;
 double laser_range = -1;
@@ -128,10 +132,9 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg);
 bool callbackCommand(nbv_exploration::MappingSrv::Request  &req, nbv_exploration::MappingSrv::Response &res);
 
 void processScans();
-void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::point3d sensor_origin, double range);
+void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
 
 void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter = true);
-Eigen::Matrix4d convertStampedTransform2Matrix4d(tf::StampedTransform t);
 
 int main(int argc, char **argv)
 {
@@ -147,6 +150,8 @@ int main(int argc, char **argv)
     // Parameters
     // >>>>>>>>>>>>>>>>>
     ros::param::param("~depth_range_max", max_range, 5.0);
+    ros::param::param("~sensor_data_min_height", sensor_data_min_height, 0.5);
+    
 
     // >>>>>>>>>>>>>>>>>
     // Subscribers / Servers
@@ -412,7 +417,7 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   
   try{
     tf_listener->lookupTransform("world", "/iris/hokuyo_laser_link", ros::Time(0), transform);
-    tf_eigen = convertStampedTransform2Matrix4d(transform);
+    tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
   }
   catch (tf::TransformException ex){
     ROS_ERROR("%s",ex.what());
@@ -463,7 +468,7 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   
   for (int i=0; i<scan_ptr->points.size(); i++)
   {
-    if (scan_ptr->points[i].z > 0.2)
+    if (scan_ptr->points[i].z > sensor_data_min_height)
     {
       scan_ptr_filtered->push_back(scan_ptr->points[i]);
     }
@@ -476,15 +481,18 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   octomap::point3d sensor_origin (transform.getOrigin().x(),
                                   transform.getOrigin().y(),
                                   transform.getOrigin().z());
+                                  
+  octomap::point3d sensor_dir =  pose_conversion::getOctomapDirectionVectorFromTransform(transform);
   
   if (is_batch_profiling)
   {
-    pose_vec.push_back(sensor_origin); 
+    pose_vec.push_back(sensor_origin);
+    dir_vec.push_back(sensor_dir);
     scan_vec.push_back(*scan_ptr + *scan_far_ptr); 
   }
   else
   {
-    addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, laser_range);
+    addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, sensor_dir, laser_range);
   }
   
   // == Get profile (remove Z coordinate)
@@ -508,85 +516,131 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
       //std::cout << "Not allowed to process depth data yet\n";
       return;
     }
-      
-    std::cout << "[" << ros::Time::now().toSec() << "]" << cc_magenta << "Grabbing depth data\n" << cc_reset;
     
     pcl::PointCloud<pcl::PointXYZRGB> cloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_raw_ptr;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_distance_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_distance_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
 
     // == Convert to pcl pointcloud
     pcl::fromROSMsg (*cloud_msg, cloud);
-    cloud_ptr = cloud.makeShared();
+    cloud_raw_ptr = cloud.makeShared();
     
-    // == Remove points that are too far
+    // == Create cloud without points that are too far
     for (int i=0; i<cloud.points.size(); i++)
-    {
       if (cloud.points[i].z <= max_range)
-      {
-        cloud_filtered_distance_ptr->push_back(cloud.points[i]);
-      }
-    }
-    
-    /*
-    // == Remove NAN points
-    std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(*cloud_ptr,*cloud_ptr, indices);
-    */
-    
+        cloud_distance_ptr->push_back(cloud.points[i]);
     
     // == Perform voxelgrid filtering
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
 
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-    sor.setInputCloud (cloud_ptr);
+    sor.setInputCloud (cloud_raw_ptr);
     sor.setLeafSize (grid_res, grid_res, grid_res);
     sor.filter (*cloud_filtered);
     
     // == Transform
+    tf::StampedTransform transform;
     try{
         // Listen for transform
-        tf::StampedTransform transform;
         tf_listener->lookupTransform("world", "iris/xtion_sensor/camera_depth_optical_frame", ros::Time(0), transform);
-        
-        // == Convert tf:Transform to Eigen::Matrix4d
-        Eigen::Matrix4d tf_eigen = convertStampedTransform2Matrix4d(transform);
-        
-        // == Transform point cloud
-        pcl::transformPointCloud(*cloud_filtered, *cloud_filtered, tf_eigen);
-        pcl::transformPointCloud(*cloud_filtered_distance_ptr, *cloud_filtered_distance_ptr, tf_eigen);
-        
-        // == Add filtered to global
-        addToGlobalCloud(cloud_filtered_distance_ptr, profile_cloud_ptr, true);
-        //addToGlobalCloud(cloud_filtered, global_cloud_ptr);
-        
-        octomap::point3d origin (transform.getOrigin().x(),
-                                 transform.getOrigin().y(),
-                                 transform.getOrigin().z());
-        addPointCloudToTree(*cloud_filtered, origin, max_range);
-        
-        /*
-        // == Publish
-        sensor_msgs::PointCloud2 cloud_msg;
-        
-        pcl::toROSMsg(*global_cloud_ptr, cloud_msg); 	//cloud of original (white) using original cloud
-        cloud_msg.header.frame_id = "world";
-        cloud_msg.header.stamp = ros::Time::now();
-        
-        pub_global_cloud.publish(cloud_msg);
-        */
     }
     catch (tf::TransformException ex){
         ROS_ERROR("%s",ex.what());
         ros::Duration(1.0).sleep();
+        return;
     }
+    
+    // == Convert tf:Transform to Eigen::Matrix4d
+    Eigen::Matrix4d tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
+    
+    // == Transform point cloud
+    pcl::transformPointCloud(*cloud_filtered, *cloud_filtered, tf_eigen);
+    pcl::transformPointCloud(*cloud_distance_ptr, *cloud_distance_ptr, tf_eigen);
+    
+    // == Add filtered to global
+    addToGlobalCloud(cloud_distance_ptr, profile_cloud_ptr, true);
+    
+    octomap::point3d origin (transform.getOrigin().x(),
+                             transform.getOrigin().y(),
+                             transform.getOrigin().z());
+    octomap::point3d sensor_dir = pose_conversion::getOctomapDirectionVectorFromTransform(transform);
+    
+    addPointCloudToTree(*cloud_filtered, origin, sensor_dir, max_range, true);
+    
     
     is_get_camera_data = false;
 }
 
-void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::point3d sensor_origin, double range)
+void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::point3d& origin, octomap::point3d& sensor_dir,
+                      octomap::KeySet& free_cells, octomap::KeySet& occupied_cells,
+                      double maxrange)
 {
+  /*
+   * Based on the implimentation of computeUpdate in http://octomap.github.io/octomap/doc/OccupancyOcTreeBase_8hxx_source.html
+   * 
+   * This method does not use "max_range" as a radial/Eucledian distance (as in the original implimentation)
+   * Instead, it is used to evaluate the perpendicular distance to the far plane of the camera
+   * @todo: bbx limit
+   * @todo: parallel processing
+   */
+  
+  sensor_dir.normalize();
+  
+  for (int i = 0; i < (int)scan.size(); ++i)
+  {
+    const octomap::point3d& p = scan[i];
+    octomap::KeyRay keyray;
+    
+    // Gets the perpendicular distance from the UAV's direction vector
+    double perp_dist = sensor_dir.dot(p - origin);
+    
+    if (maxrange < 0.0 || perp_dist <= maxrange ) // is not maxrange meas.
+    { 
+      // free cells
+      
+      if (tree->computeRayKeys(origin, p, keyray) )
+      {
+        free_cells.insert(keyray.begin(), keyray.end());
+      }
+
+      // occupied endpoint
+      octomap::OcTreeKey key;
+      if (tree->coordToKeyChecked(p, key))
+      {
+        occupied_cells.insert(key);  
+      }
+    }
+     
+    else
+    { // user set a maxrange and length is above
+      octomap::point3d direction = (p - origin).normalized ();
+      double max_range_to_point = maxrange/sensor_dir.dot(direction);
+      
+      octomap::point3d new_end = origin + direction * (float) max_range_to_point;
+     
+      if (tree->computeRayKeys(origin, new_end, keyray))
+      {
+       free_cells.insert(keyray.begin(), keyray.end());
+      }
+    } // end if maxrange
+  } // end for all points
+
+  // prefer occupied cells over free ones (and make sets disjunct)
+  for(octomap::KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; )
+  {
+   if (occupied_cells.find(*it) != occupied_cells.end())
+     it = free_cells.erase(it);
+
+   else 
+     ++it;
+  }
+}
+
+void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar)
+{
+  // Note that "range" is the perpendicular distance to the end of the camera plane
+  
   octomap::Pointcloud ocCloud;
   for (int j=0; j<cloud_in.points.size(); j++)
   {
@@ -595,21 +649,24 @@ void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::po
                       cloud_in.points[j].z);
   }
   
-  // == Insert point cloud
-  //tree.insertPointCloud(ocCloud, sensor_origin, laser_range);
-    
+  // == Insert point cloud based on planar (camera) or spherical (laser) scan data
   octomap::KeySet free_cells, occupied_cells;
-  tree->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
   
-  // insert data into tree  -----------------------
+  if (isPlanar)
+    computeTreeUpdatePlanar(ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
+  else
+    tree->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
+  
+  // insert data into tree using binary probabilities -----------------------
   for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
   {
     tree->updateNode(*it, false);
   }
+  
   for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
   {
     octomap::point3d p = tree->keyToCoord(*it);
-    if (p.z() <= 0.2)
+    if (p.z() <= sensor_data_min_height)
       tree->updateNode(*it, false);
     else
       tree->updateNode(*it, true);
@@ -625,12 +682,14 @@ void processScans()
   for (int i=scan_vec.size()-1; i>=0; i--)
   {
     octomap::point3d sensor_origin = pose_vec[i];
+    octomap::point3d sensor_dir = dir_vec[i];
     pcl::PointCloud<pcl::PointXYZRGB> scan = scan_vec[i];
     
-    addPointCloudToTree(scan_vec[i], sensor_origin, laser_range);
+    addPointCloudToTree(scan_vec[i], sensor_origin, sensor_dir, laser_range);
     
     // == Pop
     pose_vec.pop_back();
+    dir_vec.pop_back();
     scan_vec.pop_back();
     count++;
   }
@@ -655,7 +714,10 @@ void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pc
         return;
     }
 
-    *cloud_out += *cloud_in;
+    // Only add points that meet the min height requirement
+    for (int i=0; i<cloud_in->points.size(); i++)
+      if (cloud_in->points[i].z >= sensor_data_min_height)
+        cloud_out->push_back(cloud_in->points[i]);
     
     // Perform voxelgrid filtering
     if (should_filter)
@@ -686,27 +748,4 @@ void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pc
     if (isDebug && isDebugContinuousStates){
         std::cout << cc_blue << "Number of points in global map: " << cloud_out->points.size() << "\n" << cc_reset;
     }
-}
-
-Eigen::Matrix4d convertStampedTransform2Matrix4d(tf::StampedTransform t){
-  Eigen::Matrix4d tf_eigen;
-        
-  Eigen::Vector3d T1(
-      t.getOrigin().x(),
-      t.getOrigin().y(),
-      t.getOrigin().z()
-  );
-  
-  Eigen::Matrix3d R;
-  tf::Quaternion qt = t.getRotation();
-  tf::Matrix3x3 R1(qt);
-  tf::matrixTFToEigen(R1,R);
-  
-  // Set
-  tf_eigen.setZero ();
-  tf_eigen.block (0, 0, 3, 3) = R;
-  tf_eigen.block (0, 3, 3, 1) = T1;
-  tf_eigen (3, 3) = 1;
-  
-  return tf_eigen;
 }

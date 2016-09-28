@@ -7,10 +7,13 @@
 
 #include <nbv_exploration/view_generator.h>
 #include <nbv_exploration/view_selecter.h>
+#include <nbv_exploration/pose_conversion.h>
 
 #include <tf_conversions/tf_eigen.h>
 
 #include <culling/occlusion_culling.h>
+
+
 
 
 // =======
@@ -33,6 +36,7 @@ ViewSelecterBase::ViewSelecterBase()
 	pose_pub = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
 	
 	last_max_utility_ = 1/.0;
+	is_debug_ = false;
 }
 
 void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint)
@@ -61,7 +65,7 @@ void ViewSelecterBase::clearRayMarkers()
 	
 	// Blue lines
 	line_list.color.b = 1.0;
-  line_list.color.a = 0.1;
+  line_list.color.a = 0.3;
 	
 	line_list.points.clear();
 
@@ -133,7 +137,7 @@ double ViewSelecterBase::computeRelativeRays()
 		for( double y = min_y; y<=max_y; y+=y_step )
 		{
 			Eigen::Vector3d ray_dir(y, x, range_max_);
-			ray_dir.normalize();
+			//ray_dir.normalize();
 			ray_directions_.push_back(ray_dir);
 		}
   }
@@ -182,7 +186,7 @@ double ViewSelecterBase::calculateIG(Pose p)
 	octomap::point3d origin (p.position.x, p.position.y, p.position.z);
 	
 	int nodes_traversed = 0;
-	double observedOccupied = false;
+	double observedOccupied = true;
 	double min_height = 0.5;
 	
 	std::set<octomap::OcTreeKey, octomapKeyCompare> nodes; //all nodes in a set are UNIQUE
@@ -193,18 +197,20 @@ double ViewSelecterBase::calculateIG(Pose p)
 	{
 		double ig_ray = 0;
 		
-		octomap::point3d dir = getGlobalRayDirection(ray_directions_[i]);
+		octomap::point3d dir = getGlobalRayDirection(ray_directions_[i]).normalize();
 		octomap::point3d endpoint;
 		
+		double range = ray_directions_[i].norm();
+		
 		// Cast through unknown cells as well as free cells
-		bool found_endpoint = tree_->castRay( origin, dir, endpoint, true, range_max_ );
+		bool found_endpoint = tree_->castRay( origin, dir, endpoint, true, range);
 		if (found_endpoint)
 		{
 			observedOccupied = true;
 		}
 		else
 		{
-			endpoint = origin + dir * range_max_;
+			endpoint = origin + dir * range;
 			
 			if (endpoint.z() < min_height)
 			{
@@ -231,8 +237,11 @@ double ViewSelecterBase::calculateIG(Pose p)
 		}
 	}
 	
-	publishRayMarkers();
-	publishPose(p);
+	if(is_debug_)
+	{
+		publishRayMarkers();
+		publishPose(p);
+	}
 	
 	int nodes_processed = nodes.size();
 	double ig_total = 0;
@@ -247,8 +256,12 @@ double ViewSelecterBase::calculateIG(Pose p)
 	}
 	
 	t_end = ros::Time::now().toSec();
-  std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
-  //std::cout << "\tAverage nodes per ray: " << nodes_traversed/ray_directions_.size() << "\n";
+	if(is_debug_)
+	{
+		std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
+    std::cout << "\tAverage nodes per ray: " << nodes_traversed/ray_directions_.size() << "\n";
+	}
+  
 	return ig_total;
 }
 
@@ -263,19 +276,19 @@ double ViewSelecterBase::calculateDistance(Pose p)
 
 double ViewSelecterBase::calculateAngularDistance(Pose p)
 {
-  double yaw1 = getYawFromQuaternion(current_pose_.orientation);
-  double yaw2 = getYawFromQuaternion(p.orientation);
+  double yaw1 = pose_conversion::getYawFromQuaternion(current_pose_.orientation);
+  double yaw2 = pose_conversion::getYawFromQuaternion(p.orientation);
   
   // Set difference from -pi to pi
-    double yaw_diff = fmod(yaw1 - yaw2, 2*M_PI);
-    if (yaw_diff > M_PI)
-    {
-        yaw_diff = yaw_diff - 2*M_PI;
-    }
-    else if (yaw_diff < -M_PI)
-    {
-        yaw_diff = yaw_diff + 2*M_PI;
-    }
+	double yaw_diff = fmod(yaw1 - yaw2, 2*M_PI);
+	if (yaw_diff > M_PI)
+	{
+			yaw_diff = yaw_diff - 2*M_PI;
+	}
+	else if (yaw_diff < -M_PI)
+	{
+			yaw_diff = yaw_diff + 2*M_PI;
+	}
   
   return fabs(yaw_diff);
 }
@@ -314,8 +327,12 @@ void ViewSelecterBase::evaluate()
       selected_pose_ = p;
     }
     
-    //sleep_duration.sleep();
-    //std::cout << "[ViewSelecterBase::evaluate] Looking at pose[" << i << "]:\nx = " << p.position.x << "\ty = "  << p.position.y << "\tz = "  << p.position.z << "\n";
+    if (is_debug_)
+    {
+			//std::cout << "[ViewSelecterBase::evaluate] Looking at pose[" << i << "]:\nx = " << p.position.x << "\ty = "  << p.position.y << "\tz = "  << p.position.z << "\n";
+			std::cout << "Press ENTER to continue\n";
+			std::cin.get();
+		}
   }
   
   last_max_utility_ = maxUtility;

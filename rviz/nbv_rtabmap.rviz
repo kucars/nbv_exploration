@@ -6,7 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Sensor cloud1
+        - /Evaluation Marker1
+        - /Viewpoint Array1/Status1
       Splitter Ratio: 0.5
     Tree Height: 328
   - Class: rviz/Selection
@@ -311,7 +312,7 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Class: octomap_rviz_plugin/OccupancyGrid
-      Enabled: false
+      Enabled: true
       Max. Height Display: 3.40282e+38
       Max. Octree Depth: 16
       Min. Height Display: -3.40282e+38
@@ -319,7 +320,7 @@ Visualization Manager:
       Octomap Topic: /nbv_exploration/output_tree
       Queue Size: 5
       Unknown voxel distance: 1
-      Value: false
+      Value: true
       Voxel Alpha: 1
       Voxel Coloring: Cell Probability
       Voxel Rendering: Unknown Near Occupied 2
@@ -346,6 +347,14 @@ Visualization Manager:
       Topic: /visualization_marker_pose
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: generated_pose_marker_array
+      Name: Viewpoint Array
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -370,22 +379,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 17.7356
+      Distance: 15.5361
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.31828
-        Y: -11.2582
-        Z: 2.00078
+        X: -2.54207
+        Y: -7.28524
+        Z: 2.87023
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.5098
+      Pitch: 1.1598
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.90721
+      Yaw: 3.07221
     Saved: ~
 Window Geometry:
   Displays:
@@ -405,5 +414,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 652
-  Y: 119
+  X: 669
+  Y: 229

@@ -1,0 +1,17 @@
+## Scenario settings
+bounding_x_max: 5
+bounding_x_min: -5
+bounding_y_max: 5
+bounding_y_min: -5
+bounding_z_max: 5
+bounding_z_min: 0
+
+uav_height_min: 0.7 ## Do not allow the UAV to go below this height, as it may collide with the floor
+uav_height_max: 7
+uav_obstacle_distance_min: 4
+
+## Motion planner settings
+uav_position_resolution_x: 1.0
+uav_position_resolution_y: 1.0
+uav_position_resolution_z: 1.0
+uav_position_resolution_yaw: rad(pi/4)

@@ -193,21 +193,6 @@ void createMaxRangeCloud()
   {
     for (int i=0; i<width_px; i++)
     {
-      /*
-      Eigen::Vector3d pe(
-        (i-width_px/2+0.5)*x_step*r,  //x
-        (j-height_px/2+0.5)*y_step*r, //y
-        r //z
-        );
-			pe.normalize();
-      
-      pcl::PointXYZRGB p;
-      
-      p.x = pe[0]*r;
-      p.y = pe[1]*r;
-      p.z = pe[2]*r;
-      */
-      
       pcl::PointXYZRGB p;
       
       p.x = (i-width_px/2+0.5)*x_step*r;
