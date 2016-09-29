@@ -20,12 +20,13 @@ typedef geometry_msgs::Pose Pose;
 class ViewGeneratorBase
 {
 protected:
-  double res_x_, res_y_, res_z_;
-  double res_yaw_ = M_PI_4;
+  double res_x_, res_y_, res_z_, res_yaw_;
   
-  double bounds_x_max_, bounds_y_max_, bounds_z_max_;
-  double bounds_x_min_, bounds_y_min_, bounds_z_min_;
   double collision_radius_;
+  double obj_bounds_x_max_, obj_bounds_y_max_, obj_bounds_z_max_;
+  double obj_bounds_x_min_, obj_bounds_y_min_, obj_bounds_z_min_;
+  double nav_bounds_x_max_, nav_bounds_y_max_, nav_bounds_z_max_;
+  double nav_bounds_x_min_, nav_bounds_y_min_, nav_bounds_z_min_;
   bool is_debug_;
   std::vector<fcl::CollisionObject*> collision_boxes_;
   
@@ -42,27 +43,37 @@ public:
 
   
   // == Setters
-  void setBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
-  {
-    bounds_x_min_ = x_min;
-    bounds_x_max_ = x_max;
-    bounds_y_min_ = y_min;
-    bounds_y_max_ = y_max;
-    bounds_z_min_ = z_min;
-    bounds_z_max_ = z_max;
-  }
-  
-  void setCurrentPose(Pose p){current_pose_ = p;}
+  void setCollisionRadius(double r){collision_radius_ = r;}
   
   void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud){cloud_occupied_ptr_ = in_occ_cloud;}
   
-  void setCollisionRadius(double r){collision_radius_ = r;}
+  void setCurrentPose(Pose p){current_pose_ = p;}
   
   void setDebug(bool b){is_debug_ = b;}
+  
+  void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
+  {
+    nav_bounds_x_min_ = x_min;
+    nav_bounds_x_max_ = x_max;
+    nav_bounds_y_min_ = y_min;
+    nav_bounds_y_max_ = y_max;
+    nav_bounds_z_min_ = z_min;
+    nav_bounds_z_max_ = z_max;
+  }
   
   void setMap(octomap::OcTree* oct){
     tree_ = oct;
     updateCollisionBoxesFromOctomap();
+  }
+  
+  void setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
+  {
+    obj_bounds_x_min_ = x_min;
+    obj_bounds_x_max_ = x_max;
+    obj_bounds_y_min_ = y_min;
+    obj_bounds_y_max_ = y_max;
+    obj_bounds_z_min_ = z_min;
+    obj_bounds_z_max_ = z_max;
   }
   
   // Not used by all derived classes
@@ -83,6 +94,8 @@ public:
   
   virtual void visualize(std::vector<Pose> valid_poses, std::vector<Pose> invalid_poses);
   virtual void updateCollisionBoxesFromOctomap();
+  virtual bool isCollidingWithOctree(Pose p);
+  virtual bool isInsideBounds(Pose p);
   virtual bool isValidViewpoint(Pose p);
 };
 

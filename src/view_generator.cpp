@@ -83,7 +83,19 @@ void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
   }
 }
 
-bool ViewGeneratorBase::isValidViewpoint(Pose p)
+bool ViewGeneratorBase::isInsideBounds(Pose p)
+{
+  if (p.position.x < nav_bounds_x_min_ || p.position.x > nav_bounds_x_max_ ||
+      p.position.y < nav_bounds_y_min_ || p.position.y > nav_bounds_y_max_ ||
+      p.position.z < nav_bounds_z_min_ || p.position.z > nav_bounds_z_max_)
+  {
+    return false;
+  }
+  
+  return true;
+}
+
+bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
 {
   /* Collision detection based on octomap
    * 
@@ -123,7 +135,22 @@ bool ViewGeneratorBase::isValidViewpoint(Pose p)
     }
   }
   
-  return !collisionDetected;
+  return collisionDetected;
+}
+
+bool ViewGeneratorBase::isValidViewpoint(Pose p)
+{
+  if (!isInsideBounds(p) )
+  {
+    return false;
+  }
+    
+  if (isCollidingWithOctree(p) )
+  {
+    return false;
+  }
+    
+  return true;
 }
 
 visualization_msgs::Marker deleteArrowMarker(int id)
@@ -268,14 +295,8 @@ void ViewGeneratorNN::generateViews()
             Pose p;
             p.position.x = currX + res_x_*i_x*cos(currYaw) + res_y_*i_y*sin(currYaw);
             p.position.y = currY - res_x_*i_x*sin(currYaw) + res_y_*i_y*cos(currYaw);
-            if (currZ + res_z_*i_z > 1) //Don't collide with the floor
-            {
-              p.position.z = currZ + res_z_*i_z;
-            }
-            else
-            {
-              continue;
-            }
+            p.position.z = currZ + res_z_*i_z;
+            
             p.orientation = pose_conversion::getQuaternionFromYaw(currYaw + res_yaw_*i_yaw);
             initial_poses.push_back(p);
           }

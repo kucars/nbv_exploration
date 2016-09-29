@@ -213,8 +213,8 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>>
   // Read params
   // >>>>>>>>>>>>>>>>>
-  ros::param::param("~uav_height_min", uav_height_min, 0.05);
-  ros::param::param("~uav_height_max", uav_height_max, 10.0);
+  ros::param::param("~nav_bounds_z_min", uav_height_min, 0.05);
+  ros::param::param("~nav_bounds_z_max", uav_height_max, 10.0);
   ros::param::param("~uav_obstacle_distance_min", uav_obstacle_distance_min, 1.0);
   
   
@@ -294,13 +294,21 @@ int main(int argc, char **argv)
   ros::param::param("~uav_position_resolution_z", res_z, 1.0);
   ros::param::param("~uav_position_resolution_yaw", res_yaw, M_PI_4);
   
-  double x_min, x_max, y_min, y_max, z_min, z_max;
-  ros::param::param("~bounding_x_min", x_min,-1.0);
-  ros::param::param("~bounding_x_max", x_max, 1.0);
-  ros::param::param("~bounding_y_min", y_min,-1.0);
-  ros::param::param("~bounding_y_max", y_max, 1.0);
-  ros::param::param("~bounding_z_min", z_min, 0.0);
-  ros::param::param("~bounding_z_max", z_max, 1.0);
+  double obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max;
+  ros::param::param("~object_bounds_x_min", obj_x_min,-1.0);
+  ros::param::param("~object_bounds_x_max", obj_x_max, 1.0);
+  ros::param::param("~object_bounds_y_min", obj_y_min,-1.0);
+  ros::param::param("~object_bounds_y_max", obj_y_max, 1.0);
+  ros::param::param("~object_bounds_z_min", obj_z_min, 0.0);
+  ros::param::param("~object_bounds_z_max", obj_z_max, 1.0);
+  
+  double nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max;
+  ros::param::param("~nav_bounds_x_min", nav_x_min,-5.0);
+  ros::param::param("~nav_bounds_x_max", nav_x_max, 5.0);
+  ros::param::param("~nav_bounds_y_min", nav_y_min,-5.0);
+  ros::param::param("~nav_bounds_y_max", nav_y_max, 5.0);
+  ros::param::param("~nav_bounds_z_min", nav_z_min, 1.0);
+  ros::param::param("~nav_bounds_z_max", nav_z_max, 5.0);
   
   double collision_radius;
   ros::param::param("~uav_collision_radius", collision_radius, 1.0);
@@ -308,7 +316,8 @@ int main(int argc, char **argv)
   //viewGen = new ViewGenerator_Frontier();
   viewGen = new ViewGeneratorNN();
   viewGen->setResolution(res_x, res_y, res_z, res_yaw);
-  viewGen->setBounds(x_min, x_max, y_min, y_max, z_min, z_max);
+  viewGen->setObjectBounds(obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max);
+  viewGen->setNavigationBounds(nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max);
   viewGen->setCollisionRadius(collision_radius);
   viewGen->setDebug(true);
   
@@ -324,7 +333,7 @@ int main(int argc, char **argv)
   viewSel = new ViewSelecterBase();
   viewSel->setViewGenerator(viewGen);
   viewSel->setCameraSettings(fov_h, fov_v, r_max, r_min);
-  viewSel->setDebug(true);
+  viewSel->setDebug(false);
   
   // >>>>>>>>>>>>>>>>>
   // Start the FSM
