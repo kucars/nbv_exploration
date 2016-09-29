@@ -10,6 +10,9 @@ uav_height_min: 0.7 ## Do not allow the UAV to go below this height, as it may c
 uav_height_max: 7
 uav_obstacle_distance_min: 4
 
+## UAV dimensions (used in collision detection)
+uav_collision_radius: 1.0
+
 ## Motion planner settings
 uav_position_resolution_x: 1.0
 uav_position_resolution_y: 1.0

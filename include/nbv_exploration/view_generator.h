@@ -5,6 +5,8 @@
 
 #include <geometry_msgs/Pose.h>
 
+#include "fcl/shape/geometric_shapes.h"
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
@@ -23,14 +25,16 @@ protected:
   
   double bounds_x_max_, bounds_y_max_, bounds_z_max_;
   double bounds_x_min_, bounds_y_min_, bounds_z_min_;
+  double collision_radius_;
   bool is_debug_;
+  std::vector<fcl::CollisionObject*> collision_boxes_;
   
 public:
   // == Variables
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
   Pose current_pose_;
-  std::vector<Pose, Eigen::aligned_allocator<Pose> > generated_poses;
+  std::vector<Pose> generated_poses;
 
   // == Constructor and Destructor
   ViewGeneratorBase();
@@ -48,24 +52,17 @@ public:
     bounds_z_max_ = z_max;
   }
   
-  void setCurrentPose(Pose p)
-  {
-    current_pose_ = p;
-  }
+  void setCurrentPose(Pose p){current_pose_ = p;}
   
-  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud)
-  {
-    cloud_occupied_ptr_ = in_occ_cloud;
-  }
+  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud){cloud_occupied_ptr_ = in_occ_cloud;}
   
-  void setDebug(bool b)
-  {
-    is_debug_ = b;
-  }
+  void setCollisionRadius(double r){collision_radius_ = r;}
   
-  void setMap(octomap::OcTree* oct)
-  {
+  void setDebug(bool b){is_debug_ = b;}
+  
+  void setMap(octomap::OcTree* oct){
     tree_ = oct;
+    updateCollisionBoxesFromOctomap();
   }
   
   // Not used by all derived classes
@@ -84,7 +81,9 @@ public:
     std::cout << "[WARNING] Call to ViewGeneratorBase::generateViews(). Impliment function in derived class. No poses generated." << std::endl;
   }
   
-  virtual void visualize();
+  virtual void visualize(std::vector<Pose> valid_poses, std::vector<Pose> invalid_poses);
+  virtual void updateCollisionBoxesFromOctomap();
+  virtual bool isValidViewpoint(Pose p);
 };
 
 

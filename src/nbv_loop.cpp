@@ -77,6 +77,10 @@ bool is_done_profiling = false;
 bool is_scan_empty = false;
 bool is_flying_up = false;
 
+bool waiting_for_profile_cloud = false;
+bool waiting_for_profile_octomap = false;
+
+
 double profile_angle = 0;
 double uav_height_min, uav_height_max, uav_obstacle_distance_min;
 
@@ -163,8 +167,8 @@ namespace NBVState
     NOT_STARTED,
     INITIALIZING,
     IDLE,
-    TAKING_OFF,
-    PROFILING_PROCESSING, PROFILING_DONE,
+    TAKEOFF, TAKEOFF_COMPLETE,
+    PROFILING_PROCESSING, PROFILING_COMPLETE,
     TERMINATION_CHECK, TERMINATION_MET, TERMINATION_NOT_MET,
     VIEWPOINT_GENERATION, VIEWPOINT_GENERATION_COMPLETE, 
     VIEWPOINT_EVALUATION, VIEWPOINT_EVALUATION_COMPLETE,
@@ -244,6 +248,7 @@ int main(int argc, char **argv)
       is_done_profiling = true;
       std::cout << "Skipping profiling\n";
       
+      
       bool success = callMappingService(nbv_exploration::MappingSrv::Request::LOAD_MAP);
       if (!success)
       {
@@ -251,6 +256,20 @@ int main(int argc, char **argv)
         ros::shutdown();
         return 1;
       }
+      
+      
+      /* Create an empty octomap */
+      /*
+      bool success = callMappingService(nbv_exploration::MappingSrv::Request::START_PROFILING);
+      success = callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
+      if (!success)
+      {
+        std::cout << cc_red << "Failed to start profiler\n" << cc_reset;
+        ros::shutdown();
+        return 1;
+      }
+      */
+      
     }
   }
   
@@ -283,10 +302,14 @@ int main(int argc, char **argv)
   ros::param::param("~bounding_z_min", z_min, 0.0);
   ros::param::param("~bounding_z_max", z_max, 1.0);
   
+  double collision_radius;
+  ros::param::param("~uav_collision_radius", collision_radius, 1.0);
+  
   //viewGen = new ViewGenerator_Frontier();
   viewGen = new ViewGeneratorNN();
   viewGen->setResolution(res_x, res_y, res_z, res_yaw);
   viewGen->setBounds(x_min, x_max, y_min, y_max, z_min, z_max);
+  viewGen->setCollisionRadius(collision_radius);
   viewGen->setDebug(true);
   
   // >>>>>>>>>>>>>>>>>
@@ -307,7 +330,7 @@ int main(int argc, char **argv)
   // Start the FSM
   // >>>>>>>>>>>>>>>>>
   ROS_INFO("nbv_loop: Ready to take off. Waiting for current position information.");
-  state = NBVState::TAKING_OFF;
+  state = NBVState::TAKEOFF;
   
   ros::Rate loop_rate(10);
   
@@ -315,7 +338,11 @@ int main(int argc, char **argv)
   {
     switch(state)
     {
-      case NBVState::TAKING_OFF:
+      case NBVState::IDLE:
+        state = NBVState::MOVING_COMPLETE;
+      break;
+      
+      case NBVState::TAKEOFF:
         // Wait till we have current location to properly set waypoint for takeoff
         if( mobile_base_pose.orientation.x == 0 &&
           mobile_base_pose.orientation.y == 0 &&
@@ -328,7 +355,7 @@ int main(int argc, char **argv)
         takeoff();
         break;
         
-      case NBVState::IDLE:
+      case NBVState::TAKEOFF_COMPLETE:
         if (!is_done_profiling)
         {
           state = NBVState::PROFILING_PROCESSING;
@@ -336,10 +363,11 @@ int main(int argc, char **argv)
         }
         else
         {
-          state = NBVState::MOVING_COMPLETE;
+          state = NBVState::VIEWPOINT_GENERATION;
+          generateViewpoints();
         }
         break;
-        
+      
       case NBVState::PROFILING_PROCESSING:
         profilingProcessing();
         break;
@@ -363,7 +391,7 @@ int main(int argc, char **argv)
         std::cout << cc_yellow << "Termination condition met\n" << cc_reset;
         break;
         
-      case NBVState::PROFILING_DONE:
+      case NBVState::PROFILING_COMPLETE:
       case NBVState::TERMINATION_NOT_MET:
         state = NBVState::VIEWPOINT_GENERATION;
         generateViewpoints();
@@ -411,6 +439,15 @@ void callbackOctomap(const octomap_msgs::Octomap& octomap_msg)
   }
   
   global_octomap = static_cast<octomap::OcTree* >( octomap_msgs::fullMsgToMap(octomap_msg) );
+  
+  
+  if (global_octomap)
+  {
+    // Correct the information that was lost in transmission
+    //global_octomap->setClampingThresMin( 1-global_octomap->getClampingThresMax() );
+    
+    waiting_for_profile_octomap = false;
+  }
 }
 
 
@@ -426,6 +463,8 @@ void callbackScan(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
   // == Convert to pcl pointcloud
   pcl::fromROSMsg (*cloud_msg, cloud);
   profile_cloud_ptr = cloud.makeShared();
+  
+  waiting_for_profile_cloud = false;
 }
 
 bool callMappingService(int command)
@@ -507,7 +546,7 @@ void profilingProcessing(){
   profile_angle += angle_inc;
   
   if (profile_angle > 2*M_PI + angle_inc){
-    state = NBVState::PROFILING_DONE;
+    state = NBVState::PROFILING_COMPLETE;
     std::cout << cc_green << "Profiling complete\n" << cc_reset;
     
     callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
@@ -686,8 +725,11 @@ void generateViewpoints()
     std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
   }
   
+  waiting_for_profile_cloud = true;
+  waiting_for_profile_octomap = true;
+  
   ros::Rate rate(10);
-  while (ros::ok() && !profile_cloud_ptr)
+  while (ros::ok() && (!profile_cloud_ptr || waiting_for_profile_cloud) )
   {
     ROS_INFO_ONCE("Waiting for point cloud profile");
     
@@ -695,7 +737,7 @@ void generateViewpoints()
     rate.sleep();
   }
   
-  while (ros::ok() && !global_octomap)
+  while (ros::ok() && (!global_octomap || waiting_for_profile_octomap) )
   {
     ROS_INFO_ONCE("Waiting for octree profile");
     
@@ -769,7 +811,7 @@ void setWaypoint(geometry_msgs::Pose p)
 void moveVehicle(double threshold_sensitivity)
 {
   if (state != NBVState::MOVING
-      && state != NBVState::TAKING_OFF
+      && state != NBVState::TAKEOFF
       && state != NBVState::PROFILING_PROCESSING)
   {
     std::cout << cc_red << "ERROR: Attempt to move vehicle out of order\n" << cc_reset;
@@ -816,7 +858,7 @@ void moveVehicle(double threshold_sensitivity)
 
 void takeoff()
 {
-  if (state != NBVState::TAKING_OFF)
+  if (state != NBVState::TAKEOFF)
   {
     std::cout << cc_red << "ERROR: Attempt to take off out of order\n" << cc_reset;
     return;
@@ -832,7 +874,7 @@ void takeoff()
   
   std::cout << cc_green << "Done taking off\n" << cc_reset;
   
-  state = NBVState::IDLE;
+  state = NBVState::TAKEOFF_COMPLETE;
 }
 
 bool isNear(double p1, double p2, double threshold_sensitivity )

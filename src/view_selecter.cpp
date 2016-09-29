@@ -61,11 +61,13 @@ void ViewSelecterBase::clearRayMarkers()
 {
 	line_list.id = 0;
 	line_list.type = visualization_msgs::Marker::LINE_LIST;
-	line_list.scale.x = 0.01;
+	line_list.scale.x = 0.03;
 	
 	// Blue lines
+	line_list.color.r = 1.0;
+	line_list.color.g = 0;
 	line_list.color.b = 1.0;
-  line_list.color.a = 0.3;
+  line_list.color.a = 0.2;
 	
 	line_list.points.clear();
 
@@ -113,7 +115,7 @@ double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
 {
 	double p = getNodeOccupancy(node);
 	
-	if (p==0 || p==1)
+	if (p <= tree_->getClampingThresMin() || p >= tree_->getClampingThresMax() )
 		return 0;
 		
 	return - p*log(p) - (1-p)*log(1-p);
@@ -186,12 +188,16 @@ double ViewSelecterBase::calculateIG(Pose p)
 	octomap::point3d origin (p.position.x, p.position.y, p.position.z);
 	
 	int nodes_traversed = 0;
-	double observedOccupied = true;
+	int nodes_free = 0;
+	int nodes_occ = 0;
+	int nodes_unknown = 0;
+	int nodes_unobserved = 0;
 	double min_height = 0.5;
 	
 	std::set<octomap::OcTreeKey, octomapKeyCompare> nodes; //all nodes in a set are UNIQUE
 	
 	clearRayMarkers();
+	double ig_total = 0;
 	
 	for (int i=0; i<ray_directions_.size(); i++)
 	{
@@ -204,11 +210,7 @@ double ViewSelecterBase::calculateIG(Pose p)
 		
 		// Cast through unknown cells as well as free cells
 		bool found_endpoint = tree_->castRay( origin, dir, endpoint, true, range);
-		if (found_endpoint)
-		{
-			observedOccupied = true;
-		}
-		else
+		if (!found_endpoint)
 		{
 			endpoint = origin + dir * range;
 			
@@ -225,16 +227,43 @@ double ViewSelecterBase::calculateIG(Pose p)
 		tree_->computeRayKeys( origin, endpoint, ray );
 		for( octomap::KeyRay::iterator it = ray.begin() ; it!=ray.end(); ++it )
 		{
-			nodes.insert(*it);
+			octomap::OcTreeNode* node = tree_->search(*it);	
+			ig_ray += getNodeEntropy(node);
+			
+			//nodes.insert(*it);
 			nodes_traversed++;
+			
+			double prob = getNodeOccupancy(node);
+			if (prob > 0.8)
+				nodes_occ++;
+			else if (prob < 0.2)
+				nodes_free++;
+			else
+				nodes_unknown++;
+				
+			if (prob == 0.5)
+				nodes_unobserved++;
 		}
 			
 		octomap::OcTreeKey end_key;
 		if( tree_->coordToKeyChecked(endpoint, end_key) )
 		{
-			nodes.insert(end_key);
+			octomap::OcTreeNode* node = tree_->search(end_key);	
+			ig_ray += getNodeEntropy(node);
+			
+			//nodes.insert(end_key);
 			nodes_traversed++;
+			
+			double prob = getNodeOccupancy(node);
+			if (prob > 0.5)
+				nodes_occ++;
+			else if (prob < 0.5)
+				nodes_free++;
+			else
+				nodes_unknown++;
 		}
+		
+		ig_total += ig_ray;///(ray.size()+1);
 	}
 	
 	if(is_debug_)
@@ -243,21 +272,24 @@ double ViewSelecterBase::calculateIG(Pose p)
 		publishPose(p);
 	}
 	
+	/*
 	int nodes_processed = nodes.size();
-	double ig_total = 0;
-	
-	if (observedOccupied) //Only compute IG if we've seen at least one valid occupied voxel
+	for (std::set<octomap::OcTreeKey>::iterator it=nodes.begin(); it!=nodes.end(); ++it)
 	{
-		for (std::set<octomap::OcTreeKey>::iterator it=nodes.begin(); it!=nodes.end(); ++it)
-		{
-			octomap::OcTreeNode* node = tree_->search(*it);	
-			ig_total += getNodeEntropy(node);
-		}
+		octomap::OcTreeNode* node = tree_->search(*it);	
+		ig_total += getNodeEntropy(node);
 	}
+	
+	ig_total /= nodes_processed;
+	*/
+	
+	int nodes_processed = nodes_traversed;
 	
 	t_end = ros::Time::now().toSec();
 	if(is_debug_)
 	{
+		std::cout << "\nIG: " << ig_total << "\tAverage IG: " << ig_total/nodes_processed <<"\n";
+		std::cout << "Unobserved: " << nodes_unobserved << "\tUnknown: " << nodes_unknown << "\tOcc: " << nodes_occ << "\tFree: " << nodes_free << "\n";
 		std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
     std::cout << "\tAverage nodes per ray: " << nodes_traversed/ray_directions_.size() << "\n";
 	}

@@ -23,10 +23,11 @@ find_package(catkin REQUIRED COMPONENTS
   keyboard
 )
 
-find_package(PCL REQUIRED)
 find_package(Boost REQUIRED)
-find_package(octomap REQUIRED)
 find_package(Eigen REQUIRED)
+find_package(fcl REQUIRED)
+find_package(octomap REQUIRED)
+find_package(PCL REQUIRED)
 
 add_service_files(
   FILES
@@ -75,7 +76,13 @@ target_link_libraries(nbv_loop
     frustum_culling
     occlusion_culling
     vox_grid_occ_est
-    ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
+    ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} 
+    ${catkin_LIBRARIES} -lgmp -lmpfr
+    ${Eigen_LIBRARIES}
+    ${fcl_LIBRARIES}
+    ${OCTOMAP_LIBRARIES}
+    ${PCL_LIBRARIES}
+    )
 
 
 add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)

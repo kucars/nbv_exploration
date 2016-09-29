@@ -6,8 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Evaluation Marker1
-        - /Viewpoint Array1/Status1
+        - /Sensor cloud1
       Splitter Ratio: 0.5
     Tree Height: 328
   - Class: rviz/Selection
@@ -94,7 +93,7 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Alpha: 0.5
+    - Alpha: 0.2
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
         Max Value: 10
@@ -200,13 +199,13 @@ Visualization Manager:
       Axes Length: 1
       Axes Radius: 0.1
       Class: rviz/Pose
-      Color: 255; 25; 0
+      Color: 255; 170; 0
       Enabled: true
-      Head Length: 1
-      Head Radius: 1
+      Head Length: 0.25
+      Head Radius: 0.25
       Name: Ground Truth
-      Shaft Length: 2
-      Shaft Radius: 0.5
+      Shaft Length: 0.5
+      Shaft Radius: 0.125
       Shape: Arrow
       Topic: /iris/ground_truth/pose
       Unreliable: false
@@ -223,7 +222,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -240,7 +239,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 0.8
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -301,7 +300,7 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Alpha: 0.7
+    - Alpha: 0.1
       Class: octomap_rviz_plugin/OccupancyMap
       Color Scheme: map
       Draw Behind: false
@@ -327,7 +326,7 @@ Visualization Manager:
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /visualization_marker
-      Name: Evaluation Marker
+      Name: Evaluation Rays
       Namespaces:
         "": true
       Queue Size: 100
@@ -355,6 +354,14 @@ Visualization Manager:
         "": true
       Queue Size: 100
       Value: true
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: collision_marker
+      Name: Collision Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -379,22 +386,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 15.5361
+      Distance: 10.7023
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -2.54207
-        Y: -7.28524
-        Z: 2.87023
+        X: 0.562921
+        Y: -2.51627
+        Z: 3.40801
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 1.1598
+      Pitch: 0.995203
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.07221
+      Yaw: 4.37858
     Saved: ~
 Window Geometry:
   Displays:
@@ -414,5 +421,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 669
-  Y: 229
+  X: 639
+  Y: 171
