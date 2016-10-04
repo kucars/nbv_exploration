@@ -23,8 +23,6 @@ protected:
   double res_x_, res_y_, res_z_, res_yaw_;
   
   double collision_radius_;
-  double obj_bounds_x_max_, obj_bounds_y_max_, obj_bounds_z_max_;
-  double obj_bounds_x_min_, obj_bounds_y_min_, obj_bounds_z_min_;
   double nav_bounds_x_max_, nav_bounds_y_max_, nav_bounds_z_max_;
   double nav_bounds_x_min_, nav_bounds_y_min_, nav_bounds_z_min_;
   bool is_debug_;
@@ -32,6 +30,9 @@ protected:
   
 public:
   // == Variables
+  double obj_bounds_x_max_, obj_bounds_y_max_, obj_bounds_z_max_; //Made public for viewselector. May benefit from getter
+  double obj_bounds_x_min_, obj_bounds_y_min_, obj_bounds_z_min_;
+  
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
   Pose current_pose_;

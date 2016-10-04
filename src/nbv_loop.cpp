@@ -341,7 +341,7 @@ int main(int argc, char **argv)
   ROS_INFO("nbv_loop: Ready to take off. Waiting for current position information.");
   state = NBVState::TAKEOFF;
   
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(30);
   
   while (ros::ok() && !is_terminating)
   {

@@ -4,6 +4,7 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/Marker.h>
+#include <std_msgs/Float32.h>
 
 #include <nbv_exploration/view_generator.h>
 #include <nbv_exploration/view_selecter.h>
@@ -11,16 +12,7 @@
 
 #include <tf_conversions/tf_eigen.h>
 
-#include <culling/occlusion_culling.h>
-
-
-
-
-// =======
-// Occlusion culling
-// =======
-
-
+//#include <culling/occlusion_culling.h>
 
 
 // =======
@@ -28,12 +20,14 @@
 // =======
 ros::Publisher marker_pub;
 ros::Publisher pose_pub;
+ros::Publisher ig_pub;
 
 ViewSelecterBase::ViewSelecterBase()
 {
 	ros::NodeHandle n;
 	marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
-	pose_pub = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
+	pose_pub   = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
+	ig_pub     = n.advertise<std_msgs::Float32>("nbv_exploration/total_ig", 10);
 	
 	last_max_utility_ = 1/.0;
 	is_debug_ = false;
@@ -293,7 +287,7 @@ double ViewSelecterBase::calculateIG(Pose p)
 		std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
     std::cout << "\tAverage nodes per ray: " << nodes_traversed/ray_directions_.size() << "\n";
 	}
-  
+	
 	return ig_total;
 }
 
@@ -336,6 +330,30 @@ double ViewSelecterBase::calculateUtility(Pose p)
 void ViewSelecterBase::evaluate()
 {
 	update();
+	
+	// Find total ig in system so far
+	double ig_total=0;
+	
+	double res = tree_->getResolution();
+	for (double x=view_gen_->obj_bounds_x_min_; x < view_gen_->obj_bounds_x_max_; x+=res)
+	{
+		for (double y=view_gen_->obj_bounds_y_min_; y < view_gen_->obj_bounds_y_max_; y+=res)
+		{
+			for (double z=view_gen_->obj_bounds_z_min_; z < view_gen_->obj_bounds_z_max_; z+=res)
+			{
+				octomap::OcTreeKey key = tree_->coordToKey(x,y,z);
+				octomap::OcTreeNode* node = tree_->search(key);	
+				ig_total += getNodeEntropy(node);
+			}
+		}
+	}
+	
+	std::cout << "TOTAL IG IN SCENE: " << ig_total << "\n";
+	
+	std_msgs::Float32 msg;
+  msg.data = ig_total;
+  ig_pub.publish(msg);
+  
 	
   // Update curernt pose and map
   cloud_occupied_ptr_ = view_gen_->cloud_occupied_ptr_;
