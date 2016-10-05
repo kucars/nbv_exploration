@@ -13,6 +13,7 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
 #include <octomap/octomap.h>
@@ -86,7 +87,7 @@ double uav_height_min, uav_height_max, uav_obstacle_distance_min;
 
 // == Consts
 std::string topic_depth         = "/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
-std::string topic_position      = "/iris/ground_truth/pose";
+std::string topic_odometry      = "/iris/ground_truth/odometry";
 std::string topic_octree        = "/nbv_exploration/output_tree";
 std::string topic_scan_cloud    = "/nbv_exploration/scan_cloud";
 std::string topic_profile_cloud = "/nbv_exploration/profile_cloud";
@@ -97,10 +98,13 @@ int iteration_count = 0;
 int max_iterations = 300;
 
 // == Navigation variables
-float distance_threshold = 0.5f;
-float angular_threshold = 10.0 * M_PI/180.0;//Degrees to radians
+float distance_threshold      = 0.4f;
+float angular_threshold       = 10.0 * M_PI/180.0;//Degrees to radians
+float linear_speed_threshold  = 0.05f;
+float angular_speed_threshold = 0.1f;
 
-geometry_msgs::Pose mobile_base_pose;
+geometry_msgs::Pose  mobile_base_pose;
+geometry_msgs::Twist mobile_base_twist;
 geometry_msgs::PoseStamped setpoint;
 
 
@@ -121,19 +125,14 @@ float grid_res = 0.1f; //Voxel grid resolution
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_projected_cloud_ptr  (new pcl::PointCloud<pcl::PointXYZRGB>);
-//pcl::VoxelGrid<pcl::PointXYZRGB> occGrid;
-//octomap::OcTree* global_octomap;
-//octomap::OcTreeBase<octomap::OcTreeNode>* global_octomap;
 octomap::OcTree* global_octomap;
 
 // ======================
 // Function prototypes (@todo: move to header file)
 // ======================
 // Callbacks
-//void mapCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
 void callbackScan(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-//void callbackProfile(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-void callbackPosition(const geometry_msgs::PoseStamped& pose_msg);
+void callbackOdometry(const nav_msgs::Odometry& odom_msg);
 void callbackOctomap(const octomap_msgs::Octomap& octomap_msg);
 
 bool callMappingService(int command);
@@ -154,6 +153,7 @@ double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
 double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
 bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current, double threshold_sensitivity = 1);
 bool isNear(double p1, double p2, double threshold_sensitivity = 1);
+bool isStationary(double threshold_sensitivity = 1);
 
 void transformSetpoint2Global (const geometry_msgs::Pose & p_set, geometry_msgs::Pose & p_global);
 void transformGlobal2Setpoint (const geometry_msgs::Pose & p_global, geometry_msgs::Pose & p_set);
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>>
   
   // Sensor data
-  ros::Subscriber sub_pose      = ros_node.subscribe(topic_position, 1, callbackPosition);
+  ros::Subscriber sub_odom      = ros_node.subscribe(topic_odometry, 1, callbackOdometry);
   ros::Subscriber sub_scan      = ros_node.subscribe(topic_scan_cloud, 1, callbackScan);
   ros::Subscriber sub_octomap   = ros_node.subscribe(topic_octree, 1, callbackOctomap);
   
@@ -246,8 +246,7 @@ int main(int argc, char **argv)
     if (std::string(argv[n]) == "-s") //Skip profiling
     {
       is_done_profiling = true;
-      std::cout << "Skipping profiling\n";
-      
+      std::cout << "Skipping profiling (load map)\n";
       
       bool success = callMappingService(nbv_exploration::MappingSrv::Request::LOAD_MAP);
       if (!success)
@@ -256,10 +255,15 @@ int main(int argc, char **argv)
         ros::shutdown();
         return 1;
       }
+    }
       
+      
+    if (std::string(argv[n]) == "-e") //Skip profiling by creating empty map
+    {
+      is_done_profiling = true;
+      std::cout << "Skipping profiling (empty map)\n";
       
       /* Create an empty octomap */
-      /*
       bool success = callMappingService(nbv_exploration::MappingSrv::Request::START_PROFILING);
       success = callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
       if (!success)
@@ -268,9 +272,8 @@ int main(int argc, char **argv)
         ros::shutdown();
         return 1;
       }
-      */
-      
     }
+    
   }
   
   if (argc == 1)
@@ -428,15 +431,16 @@ int main(int argc, char **argv)
 
 
 // Update global position of UGV
-void callbackPosition(const geometry_msgs::PoseStamped& pose_msg)
+void callbackOdometry(const nav_msgs::Odometry& odom_msg)
 {
   if (is_debug && is_debug_callbacks)
   {
-    std::cout << cc_magenta << "Grabbing location\n" << cc_reset;
+    std::cout << cc_magenta << "Grabbing odom information\n" << cc_reset;
   }
   
-  // Save UGV pose
-  mobile_base_pose = pose_msg.pose;
+  // Save UGV pose and velocities
+  mobile_base_pose  = odom_msg.pose.pose;
+  mobile_base_twist = odom_msg.twist.twist;
 }
 
 
@@ -843,8 +847,8 @@ void moveVehicle(double threshold_sensitivity)
   transformSetpoint2Global (setpoint.pose, setpoint_world);
   
   // Wait till we've reached the waypoint
-  ros::Rate rate(10);
-  while(ros::ok() && !isNear(setpoint_world, mobile_base_pose, threshold_sensitivity))
+  ros::Rate rate(30);
+  while(ros::ok() && (!isNear(setpoint_world, mobile_base_pose, threshold_sensitivity) || !isStationary(threshold_sensitivity) ) )
   {
     if (is_debug && is_debug_callbacks)
     {
@@ -900,10 +904,28 @@ bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_curr
   if (
     getDistance(p_target, p_current) < distance_threshold*threshold_sensitivity &&
     fabs(getAngularDistance(p_target, p_current)) < angular_threshold*threshold_sensitivity )
-    {
+  {
     return true;
   }
     
+  return false;
+}
+
+bool isStationary(double threshold_sensitivity)
+{
+  double max_speed = linear_speed_threshold*threshold_sensitivity;
+  double max_rate = angular_speed_threshold*threshold_sensitivity;
+  
+  if (mobile_base_twist.linear.x < max_speed &&
+      mobile_base_twist.linear.y < max_speed &&
+      mobile_base_twist.linear.z < max_speed &&
+      mobile_base_twist.angular.x < max_rate &&
+      mobile_base_twist.angular.y < max_rate &&
+      mobile_base_twist.angular.z < max_rate)
+  {
+    return true;
+  }
+  
   return false;
 }
 

@@ -82,9 +82,8 @@
 
 
     <!-- Publish static transporms -->
-    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster"  args="0   0 0    -0.5 0.5     -0.5 0.5     /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />
-    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="0.1 0 0.2   0  0.05234  0   0.99863 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/hokuyo_laser_link 500" />
-    <!--<node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="0 0 0      0  -0.04362  0   0.99905 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/hokuyo_laser_link 500" />-->
+    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster"  args="0.05 0.022 -0.055    -0.5 0.5     -0.5 0.5     /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />
+    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="0.10 0.0    0.10      0   0.05234  0   0.99863 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/hokuyo_laser_link 500" />
     
     <!-- Start RVIZ -->
     <node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/rviz/nbv_rtabmap.rviz" required="true" />

@@ -64,6 +64,19 @@ public:
     
     tree_resolution_ = tree_->getResolution();
     
+    octomap::point3d min (view_gen_->obj_bounds_x_min_,
+			  view_gen_->obj_bounds_y_min_,
+			  view_gen_->obj_bounds_z_min_);
+    octomap::point3d max (view_gen_->obj_bounds_x_max_,
+			  view_gen_->obj_bounds_y_max_,
+			  view_gen_->obj_bounds_z_max_);
+			  
+    std::cout << "Bounds min: " << view_gen_->obj_bounds_x_min_ << ", " << view_gen_->obj_bounds_y_min_ << ", " << view_gen_->obj_bounds_z_min_ << "\n";
+    std::cout << "Bounds max: " << view_gen_->obj_bounds_x_max_ << ", " << view_gen_->obj_bounds_y_max_ << ", " << view_gen_->obj_bounds_z_max_ << "\n";
+		    
+    tree_->setBBXMin( min );	       
+    tree_->setBBXMax( max );
+    
     computeRelativeRays();
   }
   
@@ -95,6 +108,9 @@ public:
   double computeRelativeRays();
   void computeOrientationMatrix(Pose p);
   octomap::point3d getGlobalRayDirection(Eigen::Vector3d ray_dir);
+  bool isNodeInBounds(octomap::OcTreeKey &key);
+  bool isPointInBounds(octomap::point3d &p);
+  octomap::point3d getEndpointWithinBounds(octomap::point3d origin, octomap::point3d dir, octomap::point3d endpoint);
   
   double calculateIG(Pose p);
   double calculateDistance(Pose p);

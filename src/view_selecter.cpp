@@ -104,7 +104,6 @@ double ViewSelecterBase::getNodeOccupancy(octomap::OcTreeNode* node)
 	return p;
 }
 
-
 double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
 {
 	double p = getNodeOccupancy(node);
@@ -114,6 +113,7 @@ double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
 		
 	return - p*log(p) - (1-p)*log(1-p);
 }
+
 
 double ViewSelecterBase::computeRelativeRays()
 {
@@ -186,7 +186,6 @@ double ViewSelecterBase::calculateIG(Pose p)
 	int nodes_occ = 0;
 	int nodes_unknown = 0;
 	int nodes_unobserved = 0;
-	double min_height = 0.5;
 	
 	std::set<octomap::OcTreeKey, octomapKeyCompare> nodes; //all nodes in a set are UNIQUE
 	
@@ -200,22 +199,24 @@ double ViewSelecterBase::calculateIG(Pose p)
 		octomap::point3d dir = getGlobalRayDirection(ray_directions_[i]).normalize();
 		octomap::point3d endpoint;
 		
+		// Get length of beam to the far plane of sensor
 		double range = ray_directions_[i].norm();
 		
 		// Cast through unknown cells as well as free cells
-		bool found_endpoint = tree_->castRay( origin, dir, endpoint, true, range);
+		bool found_endpoint = tree_->castRay(origin, dir, endpoint, true, range);
 		if (!found_endpoint)
 		{
 			endpoint = origin + dir * range;
-			
-			if (endpoint.z() < min_height)
-			{
-				double k = (min_height - origin.z()) / dir.z();
-				endpoint = origin + dir * k;
-			}
+		}
+		
+		// Compute new endpoint within bounds
+		if( !isPointInBounds(endpoint) )
+		{
+			endpoint = getEndpointWithinBounds(origin, dir, endpoint);
 		}
 		
 		addToRayMarkers(origin, endpoint);
+		
 		
 		octomap::KeyRay ray;
 		tree_->computeRayKeys( origin, endpoint, ray );
@@ -243,28 +244,19 @@ double ViewSelecterBase::calculateIG(Pose p)
 		if( tree_->coordToKeyChecked(endpoint, end_key) )
 		{
 			octomap::OcTreeNode* node = tree_->search(end_key);	
-			ig_ray += getNodeEntropy(node);
 			
-			//nodes.insert(end_key);
+			nodes.insert(end_key);
 			nodes_traversed++;
-			
-			double prob = getNodeOccupancy(node);
-			if (prob > 0.5)
-				nodes_occ++;
-			else if (prob < 0.5)
-				nodes_free++;
-			else
-				nodes_unknown++;
 		}
 		
-		ig_total += ig_ray;///(ray.size()+1);
+		ig_total += ig_ray;
 	}
 	
-	if(is_debug_)
-	{
+	//if(is_debug_)
+	//{
 		publishRayMarkers();
 		publishPose(p);
-	}
+	//}
 	
 	/*
 	int nodes_processed = nodes.size();
@@ -272,10 +264,17 @@ double ViewSelecterBase::calculateIG(Pose p)
 	{
 		octomap::OcTreeNode* node = tree_->search(*it);	
 		ig_total += getNodeEntropy(node);
+		
+		double prob = getNodeOccupancy(node);
+		if (prob > 0.5)
+			nodes_occ++;
+		else if (prob < 0.5)
+			nodes_free++;
+		else
+			nodes_unknown++;
 	}
-	
-	ig_total /= nodes_processed;
 	*/
+	//ig_total /= nodes_processed;
 	
 	int nodes_processed = nodes_traversed;
 	
@@ -355,7 +354,7 @@ void ViewSelecterBase::evaluate()
   ig_pub.publish(msg);
   
 	
-  // Update curernt pose and map
+  // Update current pose and map
   cloud_occupied_ptr_ = view_gen_->cloud_occupied_ptr_;
   current_pose_ = view_gen_->current_pose_;
   
@@ -395,4 +394,156 @@ bool ViewSelecterBase::isEntropyLow()
 		return true;
 	
 	return false;
+}
+
+bool ViewSelecterBase::isNodeInBounds(octomap::OcTreeKey &key)
+{
+	octomap::point3d p = tree_->keyToCoord(key);
+	return isPointInBounds(p);
+}
+
+bool ViewSelecterBase::isPointInBounds(octomap::point3d &p)
+{
+	if (p.x() >= view_gen_->obj_bounds_x_min_ && p.x() <= view_gen_->obj_bounds_x_max_ &&
+			p.y() >= view_gen_->obj_bounds_y_min_ && p.y() <= view_gen_->obj_bounds_y_max_ &&
+			p.z() >= view_gen_->obj_bounds_z_min_ && p.z() <= view_gen_->obj_bounds_z_max_ )
+	{
+		return true;
+	}
+	
+	return false;
+}
+
+octomap::point3d ViewSelecterBase::getEndpointWithinBounds(octomap::point3d origin, octomap::point3d dir, octomap::point3d endpoint)
+{
+	bool showMsg = false;
+	dir.normalize();
+	
+	if (showMsg)
+	{
+		std::cout << "Out of bounds\n";
+		std::cout << "\tOrigin: (" << origin.x() << ", " << origin.y() << ", " << origin.z() << ")\n";
+		std::cout << "\tDirect: (" << dir.x() << ", " << dir.y() << ", " << dir.z() << ")\n";
+		std::cout << "\tEnd pt: (" << endpoint.x() << ", " << endpoint.y() << ", " << endpoint.z() << ")\n";
+	}
+		
+	double k_min = 1/.0;
+	double k_last;
+	
+	double xmin = view_gen_->obj_bounds_x_min_, ymin=view_gen_->obj_bounds_y_min_, zmin = view_gen_->obj_bounds_z_min_;
+	double xmax = view_gen_->obj_bounds_x_max_, ymax=view_gen_->obj_bounds_y_max_, zmax = view_gen_->obj_bounds_z_max_;
+	
+	for (int i=0; i<3; i++) //Check thrice to ensure all 3 dimensions are satisfied
+	{
+		k_last = k_min;
+		
+		if (endpoint.x() < xmin)
+		{
+			double k = (xmin - origin.x()) / dir.x();
+			if (k<=0)
+				k=0;
+			
+			if (k<k_min)
+			{
+				k_min = k;
+				endpoint = origin + dir * k;
+				
+				if (showMsg)
+					std::cout << "\t" << k << "\t(" << endpoint.x() << ", " << endpoint.y() << ", " << endpoint.z() << ")\n";
+			}
+		}
+		
+		if (endpoint.y() < ymin)
+		{
+			double k = (ymin - origin.y()) / dir.y();
+			
+			if (k<=0)
+				k=0;
+			
+			if (k<k_min)
+			{
+				k_min = k;
+				endpoint = origin + dir * k;
+				
+				if (showMsg)
+					std::cout << "\t" << k << "\t(" << endpoint.x() << ", " << endpoint.y() << ", " << endpoint.z() << ")\n";
+			}
+		}
+		
+		if (endpoint.z() < zmin)
+		{
+			double k = (zmin - origin.z()) / dir.z();
+			
+			if (k<=0)
+				k=0;
+			
+			if (k<k_min)
+			{
+				k_min = k;
+				endpoint = origin + dir * k;
+				
+				if (showMsg)
+					std::cout << "\t" << k << "\t(" << endpoint.x() << ", " << endpoint.y() << ", " << endpoint.z() << ")\n";
+			}
+		}
+		
+		
+		
+		if (endpoint.x() > xmax)
+		{
+			double k = (xmax - origin.x()) / dir.x();
+			
+			if (k<=0)
+				k=0;
+			
+			if (k<k_min)
+			{
+				k_min = k;
+				endpoint = origin + dir * k;
+				
+				if (showMsg)
+					std::cout << "\t" << k << "\t(" << endpoint.x() << ", " << endpoint.y() << ", " << endpoint.z() << ")\n";
+			}
+		}
+		
+		if (endpoint.y() > ymax)
+		{
+			double k = (ymax - origin.y()) / dir.y();
+			
+			if (k<=0)
+				k=0;
+			
+			if (k<k_min)
+			{
+				k_min = k;
+				endpoint = origin + dir * k;
+				
+				if (showMsg)
+					std::cout << "\t" << k << "\t(" << endpoint.x() << ", " << endpoint.y() << ", " << endpoint.z() << ")\n";
+			}
+		}
+		
+		if (endpoint.z() > zmax)
+		{
+			double k = (zmax - origin.z()) / dir.z();
+			
+			if (k<=0)
+				k=0;
+			
+			if (k<k_min)
+			{
+				k_min = k;
+				endpoint = origin + dir * k;
+				
+				if (showMsg)
+					std::cout << "\t" << k << "\t(" << endpoint.x() << ", " << endpoint.y() << ", " << endpoint.z() << ")\n";
+			}
+		}
+		
+		// Converged, break out of loop
+		if (k_last == k_min || k_min == 0)
+			break;
+	}
+	
+	return endpoint;
 }
