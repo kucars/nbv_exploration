@@ -37,8 +37,8 @@
 	    
 	    <!-- Half sized scenario spawn point -->
 	    <arg name="Y" value="0"/><!-- Yaw -->
-	    <arg name="y" value="-5"/>
-	    <arg name="x" value="-5"/>
+	    <arg name="y" value="-6"/>
+	    <arg name="x" value="-6"/>
 	</include>
 	
 	<!-- If we're using the aircraft -->

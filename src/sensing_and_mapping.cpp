@@ -72,6 +72,7 @@ bool is_batch_profiling = true;
 // Config
 double max_range;
 double sensor_data_min_height;
+double profile_grid_res, depth_grid_res; //Voxel grid resolution
 
 // Profiling --------
 bool isScanning = false;
@@ -113,8 +114,6 @@ tf::TransformListener *tf_listener;
 
 
 // == Point clouds and octrees
-float grid_res = 0.1f; //Voxel grid resolution
-
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_sensed(new pcl::PointCloud<pcl::PointXYZRGB>);
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr global_cloud_ptr;
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);;
@@ -151,6 +150,8 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     ros::param::param("~depth_range_max", max_range, 5.0);
     ros::param::param("~sensor_data_min_height", sensor_data_min_height, 0.5);
+    ros::param::param("~voxel_grid_resolution_profile", profile_grid_res, 0.1); 
+    ros::param::param("~voxel_grid_resolution_depth_sensor", depth_grid_res, 0.1); 
     
 
     // >>>>>>>>>>>>>>>>>
@@ -536,8 +537,9 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud (cloud_raw_ptr);
-    sor.setLeafSize (grid_res, grid_res, grid_res);
+    sor.setLeafSize (depth_grid_res, depth_grid_res, depth_grid_res);
     sor.filter (*cloud_filtered);
+    
     
     // == Transform
     tf::StampedTransform transform;
@@ -727,8 +729,10 @@ void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pc
 
       pcl::VoxelGrid<pcl::PointXYZRGB> vox_sor;
       vox_sor.setInputCloud (cloud_out);
-      vox_sor.setLeafSize (grid_res, grid_res, grid_res);
+      vox_sor.setLeafSize (profile_grid_res, profile_grid_res, profile_grid_res);
       vox_sor.filter (*voxel_filtered);
+      
+      cloud_out = voxel_filtered;
 
 
       // == Statistical outlier removal

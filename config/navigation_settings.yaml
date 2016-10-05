@@ -15,7 +15,7 @@ nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may
 
 ## UAV dimensions (used in collision detection)
 uav_obstacle_distance_min: 4
-uav_collision_radius: 1.0
+uav_collision_radius: 0.8
 
 ## Motion planner settings
 uav_position_resolution_x: 1.0

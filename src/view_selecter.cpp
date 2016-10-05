@@ -61,7 +61,7 @@ void ViewSelecterBase::clearRayMarkers()
 	line_list.color.r = 1.0;
 	line_list.color.g = 0;
 	line_list.color.b = 1.0;
-  line_list.color.a = 0.2;
+  line_list.color.a = 0.1;
 	
 	line_list.points.clear();
 
