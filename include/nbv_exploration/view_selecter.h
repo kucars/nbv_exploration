@@ -42,7 +42,8 @@ protected:
   
   bool is_debug_;
   
-  std::vector<Eigen::Vector3d> ray_directions_;
+  std::vector<Eigen::Vector3d> rays_near_plane_;
+  std::vector<Eigen::Vector3d> rays_far_plane_;
   
   visualization_msgs::Marker line_list;
   
@@ -107,7 +108,7 @@ public:
   
   double computeRelativeRays();
   void computeOrientationMatrix(Pose p);
-  octomap::point3d getGlobalRayDirection(Eigen::Vector3d ray_dir);
+  octomap::point3d transformToGlobalRay(Eigen::Vector3d ray_dir);
   bool isNodeInBounds(octomap::OcTreeKey &key);
   bool isPointInBounds(octomap::point3d &p);
   octomap::point3d getEndpointWithinBounds(octomap::point3d origin, octomap::point3d dir, octomap::point3d endpoint);

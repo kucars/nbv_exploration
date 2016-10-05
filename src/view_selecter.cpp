@@ -55,7 +55,7 @@ void ViewSelecterBase::clearRayMarkers()
 {
 	line_list.id = 0;
 	line_list.type = visualization_msgs::Marker::LINE_LIST;
-	line_list.scale.x = 0.03;
+	line_list.scale.x = 0.05;
 	
 	// Blue lines
 	line_list.color.r = 1.0;
@@ -117,7 +117,8 @@ double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
 
 double ViewSelecterBase::computeRelativeRays()
 {
-	ray_directions_.clear();
+	rays_near_plane_.clear();
+	rays_far_plane_.clear();
 	
 	double deg2rad = M_PI/180;
 	double min_x = -range_max_ * tan(fov_horizontal_/2 * deg2rad);
@@ -132,9 +133,11 @@ double ViewSelecterBase::computeRelativeRays()
 	{
 		for( double y = min_y; y<=max_y; y+=y_step )
 		{
-			Eigen::Vector3d ray_dir(y, x, range_max_);
-			//ray_dir.normalize();
-			ray_directions_.push_back(ray_dir);
+			Eigen::Vector3d p_far(y, x, range_max_);
+			rays_far_plane_.push_back(p_far);
+			
+			Eigen::Vector3d p_near(y, x, range_min_);
+			rays_near_plane_.push_back(p_near);
 		}
   }
 }
@@ -155,7 +158,7 @@ void ViewSelecterBase::computeOrientationMatrix(Pose p)
 	rotation_mtx_ = r*q.toRotationMatrix();
 }
 
-octomap::point3d ViewSelecterBase::getGlobalRayDirection(Eigen::Vector3d ray_dir)
+octomap::point3d ViewSelecterBase::transformToGlobalRay(Eigen::Vector3d ray_dir)
 {
 	Eigen::Vector3d temp = rotation_mtx_*ray_dir;
 	octomap::point3d p (temp[0], temp[1], temp[2]);
@@ -192,15 +195,16 @@ double ViewSelecterBase::calculateIG(Pose p)
 	clearRayMarkers();
 	double ig_total = 0;
 	
-	for (int i=0; i<ray_directions_.size(); i++)
+	for (int i=0; i<rays_far_plane_.size(); i++)
 	{
 		double ig_ray = 0;
 		
-		octomap::point3d dir = getGlobalRayDirection(ray_directions_[i]).normalize();
+		octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
 		octomap::point3d endpoint;
 		
 		// Get length of beam to the far plane of sensor
-		double range = ray_directions_[i].norm();
+		double range = rays_far_plane_[i].norm();
+		double min_dist = rays_near_plane_[i].norm();
 		
 		// Cast through unknown cells as well as free cells
 		bool found_endpoint = tree_->castRay(origin, dir, endpoint, true, range);
@@ -209,19 +213,57 @@ double ViewSelecterBase::calculateIG(Pose p)
 			endpoint = origin + dir * range;
 		}
 		
-		// Compute new endpoint within bounds
-		if( !isPointInBounds(endpoint) )
-		{
-			endpoint = getEndpointWithinBounds(origin, dir, endpoint);
-		}
 		
-		addToRayMarkers(origin, endpoint);
+		octomap::point3d start_pt, end_pt;
+		bool entered_valid_range = false;
+		bool exited_valid_range = false;
 		
+		/* Check ray
+		 * 
+		 * We first draw a ray from the UAV to the endpoint
+		 * 
+		 * For generality, we assume the UAV is outside the object bounds. We only consider nodes
+		 * 	that are inside the object bounds, and past the near-plane of the camera.
+		 * 
+		 * The ray continues until the end point.
+		 * If the ray exits the bounds, we stop adding nodes to IG and discard the endpoint.
+		 * 
+		 */
 		
 		octomap::KeyRay ray;
 		tree_->computeRayKeys( origin, endpoint, ray );
+		
 		for( octomap::KeyRay::iterator it = ray.begin() ; it!=ray.end(); ++it )
 		{
+			octomap::point3d p = tree_->keyToCoord(*it);
+			
+			if (!entered_valid_range)
+			{
+				// Find the first valid point
+				if ( /*(origin-p).norm() >= min_dist &&*/ isPointInBounds(p) )
+				{
+					entered_valid_range = true;
+					start_pt = p;
+					end_pt = p;
+				}
+				
+				else
+					continue;
+			}
+			
+			else
+			{
+				if (isPointInBounds(p))
+					end_pt = p;
+				
+				else
+				{
+					exited_valid_range = true;
+					break; //We've exited the valid range
+				}
+			}
+			
+			// Add point to IG
 			octomap::OcTreeNode* node = tree_->search(*it);	
 			ig_ray += getNodeEntropy(node);
 			
@@ -239,17 +281,35 @@ double ViewSelecterBase::calculateIG(Pose p)
 			if (prob == 0.5)
 				nodes_unobserved++;
 		}
-			
-		octomap::OcTreeKey end_key;
-		if( tree_->coordToKeyChecked(endpoint, end_key) )
+		
+		// Evaluate endpoint
+		if (!exited_valid_range)
 		{
-			octomap::OcTreeNode* node = tree_->search(end_key);	
-			
-			nodes.insert(end_key);
-			nodes_traversed++;
+			if ( isPointInBounds(endpoint) )
+			{
+				end_pt = endpoint;
+				
+				octomap::OcTreeKey end_key;
+				if( tree_->coordToKeyChecked(endpoint, end_key) )
+				{
+					octomap::OcTreeNode* node = tree_->search(end_key);	
+					
+					nodes.insert(end_key);
+					nodes_traversed++;
+				}
+				
+				ig_total += ig_ray;
+			}
 		}
 		
-		ig_total += ig_ray;
+		/*
+		 * Project the discretized start and end point to the ray we started with
+		 * This just cleans up the lines for visualization
+		 */
+		start_pt = origin + dir * (dir.dot(start_pt-origin)/dir.dot(dir));
+		end_pt = origin + dir * (dir.dot(end_pt-origin)/dir.dot(dir));
+		
+		addToRayMarkers(start_pt, end_pt);
 	}
 	
 	//if(is_debug_)
@@ -284,7 +344,7 @@ double ViewSelecterBase::calculateIG(Pose p)
 		std::cout << "\nIG: " << ig_total << "\tAverage IG: " << ig_total/nodes_processed <<"\n";
 		std::cout << "Unobserved: " << nodes_unobserved << "\tUnknown: " << nodes_unknown << "\tOcc: " << nodes_occ << "\tFree: " << nodes_free << "\n";
 		std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
-    std::cout << "\tAverage nodes per ray: " << nodes_traversed/ray_directions_.size() << "\n";
+    std::cout << "\tAverage nodes per ray: " << nodes_traversed/rays_far_plane_.size() << "\n";
 	}
 	
 	return ig_total;
