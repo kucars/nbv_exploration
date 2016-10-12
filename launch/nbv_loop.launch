@@ -154,11 +154,13 @@
     
     
     <!-- profiler and mapper -->
+    <!--
     <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
    
       <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
+    -->
     
     <!--
     <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" args="" required="true" output="screen" >

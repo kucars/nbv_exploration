@@ -29,6 +29,18 @@ find_package(fcl REQUIRED)
 find_package(octomap REQUIRED)
 find_package(PCL REQUIRED)
 
+# OCTOMAP_OMP = enable OpenMP parallelization (experimental, defaults to OFF)
+SET(OCTOMAP_OMP TRUE CACHE BOOL "Enable/disable OpenMP parallelization")
+IF(DEFINED ENV{OCTOMAP_OMP})
+  SET(OCTOMAP_OMP $ENV{OCTOMAP_OMP})
+ENDIF(DEFINED ENV{OCTOMAP_OMP})
+IF(OCTOMAP_OMP)
+  FIND_PACKAGE( OpenMP REQUIRED)
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+ENDIF(OCTOMAP_OMP)
+
 add_service_files(
   FILES
   MappingSrv.srv
@@ -83,7 +95,6 @@ target_link_libraries(nbv_loop
     ${OCTOMAP_LIBRARIES}
     ${PCL_LIBRARIES}
     )
-
 
 add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)
 add_dependencies(sensing_and_mapping ${catkin_EXPORTED_TARGETS})

@@ -6,6 +6,8 @@ height_px: 480
 fov_vertical: 45
 fov_horizontal: 60
 
+#std_dev = noise_coefficient * z^2
+noise_coefficient: 0.0025
 
 ## Laser scan correction
 ## Trim causes any values close to the max or min range to be considered very far (inf) or very close (zero)
@@ -22,6 +24,7 @@ laser_range_upper_adjustment: 0.1
 depth_range_upper_adjustment: 0.1
 
 ## Mapping settings
+octree_resolution: 0.2
 sensor_data_min_height: 0.3 #Min height from floor in order to register points
 voxel_grid_resolution_profile: 0.05 #Resolution to use for point cloud filtering
 voxel_grid_resolution_depth_sensor: 0.05 #Resolution to use for point cloud filtering

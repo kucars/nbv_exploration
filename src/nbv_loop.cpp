@@ -375,8 +375,7 @@ int main(int argc, char **argv)
         }
         else
         {
-          state = NBVState::VIEWPOINT_GENERATION;
-          generateViewpoints();
+          state = NBVState::MOVING_COMPLETE;
         }
         break;
       

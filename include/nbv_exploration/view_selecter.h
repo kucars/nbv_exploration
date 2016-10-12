@@ -111,7 +111,6 @@ public:
   octomap::point3d transformToGlobalRay(Eigen::Vector3d ray_dir);
   bool isNodeInBounds(octomap::OcTreeKey &key);
   bool isPointInBounds(octomap::point3d &p);
-  octomap::point3d getEndpointWithinBounds(octomap::point3d origin, octomap::point3d dir, octomap::point3d endpoint);
   
   double calculateIG(Pose p);
   double calculateDistance(Pose p);

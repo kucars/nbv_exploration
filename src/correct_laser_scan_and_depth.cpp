@@ -152,7 +152,7 @@ void callbackDepth(const sensor_msgs::PointCloud2& input_msg)
     return;
   }
   
-  for (int i=0; i<=cloud.points.size(); i++)
+  for (int i=0; i<cloud.points.size(); i++)
   {
     if (std::isfinite(cloud.points[i].x) &&
         std::isfinite(cloud.points[i].y) &&

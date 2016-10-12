@@ -73,12 +73,14 @@ bool is_batch_profiling = true;
 double max_range;
 double sensor_data_min_height;
 double profile_grid_res, depth_grid_res; //Voxel grid resolution
+double octree_res;
+octomap::point3d bound_min, bound_max;
+double noise_coefficient;
 
 // Profiling --------
 bool isScanning = false;
 std::vector<octomap::point3d> pose_vec, dir_vec;
 std::vector< pcl::PointCloud<pcl::PointXYZRGB> > scan_vec;
-//std::vector<octomap::Pointcloud> scan_vec;
 double laser_range = -1;
 
 // == Consts
@@ -116,8 +118,7 @@ tf::TransformListener *tf_listener;
 // == Point clouds and octrees
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_sensed(new pcl::PointCloud<pcl::PointXYZRGB>);
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr global_cloud_ptr;
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);;
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_projected_cloud_ptr;
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
 
 octomap::OcTree* tree;
 
@@ -135,6 +136,14 @@ void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::po
 
 void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter = true);
 
+void sigIntHandler(int sig)
+{
+  std::cout << cc_yellow << "Handling SIGINT exception\n" << cc_reset;
+  
+  // Forces ros::Rate::sleep() to end if it's stuck (for example, Gazebo isn't running)
+  ros::shutdown();
+}
+
 int main(int argc, char **argv)
 {
     // >>>>>>>>>>>>>>>>>
@@ -142,17 +151,31 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     std::cout << cc_red << "Begin Sensing\n" << cc_reset;
 
-    ros::init(argc, argv, "sensing_and_mapping");
+    ros::init(argc, argv, "sensing_and_mapping", ros::init_options::NoSigintHandler);
     ros::NodeHandle ros_node;
 
     // >>>>>>>>>>>>>>>>>
     // Parameters
     // >>>>>>>>>>>>>>>>>
     ros::param::param("~depth_range_max", max_range, 5.0);
+    ros::param::param("~octree_resolution", octree_res, 0.2);
     ros::param::param("~sensor_data_min_height", sensor_data_min_height, 0.5);
     ros::param::param("~voxel_grid_resolution_profile", profile_grid_res, 0.1); 
     ros::param::param("~voxel_grid_resolution_depth_sensor", depth_grid_res, 0.1); 
     
+    double obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max;
+    ros::param::param("~object_bounds_x_min", obj_x_min,-1.0);
+    ros::param::param("~object_bounds_x_max", obj_x_max, 1.0);
+    ros::param::param("~object_bounds_y_min", obj_y_min,-1.0);
+    ros::param::param("~object_bounds_y_max", obj_y_max, 1.0);
+    ros::param::param("~object_bounds_z_min", obj_z_min, 0.0);
+    ros::param::param("~object_bounds_z_max", obj_z_max, 1.0);
+    
+    bound_min = octomap::point3d(obj_x_min, obj_y_min, obj_z_min);
+    bound_max = octomap::point3d(obj_x_max, obj_y_max, obj_z_max);
+			  
+    
+    ros::param::param("~noise_coefficient", noise_coefficient, 0.02);
 
     // >>>>>>>>>>>>>>>>>
     // Subscribers / Servers
@@ -209,16 +232,6 @@ int main(int argc, char **argv)
           cloud_msg.header.stamp = ros::Time::now();
           pub_scan_cloud.publish(cloud_msg);
         }
-        
-        // 2D profile
-        if (profile_projected_cloud_ptr)
-        {
-          sensor_msgs::PointCloud2 cloud_msg;
-          pcl::toROSMsg(*profile_projected_cloud_ptr, cloud_msg); 	//cloud of original (white) using original cloud
-          cloud_msg.header.frame_id = "world";
-          cloud_msg.header.stamp = ros::Time::now();
-          pub_profile_cloud.publish(cloud_msg);
-        }
       
         // Octomap
         if (tree)
@@ -274,7 +287,12 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
       std::cout << cc_green << "Started profiling\n" << cc_reset;
     
       if (!tree)
-        tree = new octomap::OcTree (0.2);
+      {
+        tree = new octomap::OcTree (octree_res);
+        tree->setBBXMin( bound_min );	       
+        tree->setBBXMax( bound_max );
+      }
+        
       
       response.data = response.ACK;
       break;
@@ -351,14 +369,6 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
         response.error = "Failed to load point cloud: Could not read file " + filename_pcl;
         error = true;
         break;
-      }
-      
-      // Generate 2D profile
-      profile_projected_cloud_ptr = profile_cloud_ptr->makeShared();
-      
-      for (int i=0; i<profile_projected_cloud_ptr->points.size(); i++)
-      {
-        profile_projected_cloud_ptr->points[i].z = 0;
       }
       
       // Octree
@@ -495,14 +505,6 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   {
     addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, sensor_dir, laser_range);
   }
-  
-  // == Get profile (remove Z coordinate)
-  profile_projected_cloud_ptr = profile_cloud_ptr->makeShared();
-  
-  for (int i=0; i<profile_projected_cloud_ptr->points.size(); i++)
-  {
-    profile_projected_cloud_ptr->points[i].z = 0;
-  }
 }
 
 
@@ -532,7 +534,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
       if (cloud.points[i].z <= max_range)
         cloud_distance_ptr->push_back(cloud.points[i]);
     
-    // == Perform voxelgrid filtering
+    // == Perform voxelgrid filtering (for updated pcl)
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
 
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
@@ -557,6 +559,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
     Eigen::Matrix4d tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
     
     // == Transform point cloud
+    pcl::transformPointCloud(*cloud_raw_ptr, *cloud_raw_ptr, tf_eigen);
     pcl::transformPointCloud(*cloud_filtered, *cloud_filtered, tf_eigen);
     pcl::transformPointCloud(*cloud_distance_ptr, *cloud_distance_ptr, tf_eigen);
     
@@ -568,7 +571,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
                              transform.getOrigin().z());
     octomap::point3d sensor_dir = pose_conversion::getOctomapDirectionVectorFromTransform(transform);
     
-    addPointCloudToTree(*cloud_filtered, origin, sensor_dir, max_range, true);
+    addPointCloudToTree(*cloud_raw_ptr, origin, sensor_dir, max_range, true);
     
     
     is_get_camera_data = false;
@@ -586,10 +589,63 @@ void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::poi
    * @todo: bbx limit
    * @todo: parallel processing
    */
-  
+   
   sensor_dir.normalize();
   
-  for (int i = 0; i < (int)scan.size(); ++i)
+  /*
+  // create as many KeyRays as there are OMP_THREADS defined,
+  // one buffer for each thread
+  bool lazy_eval = false;
+  std::vector<octomap::keyRay> keyrays;
+
+#ifdef _OPENMP
+  std::cout << cc_green << "OpenMP enabled\n" << cc_reset;
+#endif
+
+#ifdef _OPENMP
+    #pragma omp parallel
+    #pragma omp critical
+    {
+      if (omp_get_thread_num() == 0){
+        keyrays.resize(omp_get_num_threads());
+      }
+
+    } // end critical
+#else
+    keyrays.resize(1);
+#endif
+  
+#ifdef _OPENMP
+  omp_set_num_threads(keyrays.size());
+  #pragma omp parallel for
+#endif
+  for (int i = 0; i < (int)scan.size() && ros::ok(); ++i)
+  {
+    const octomap::point3d& p = scan[i];
+    unsigned threadIdx = 0;
+    
+    
+#ifdef _OPENMP
+    threadIdx = omp_get_thread_num();
+#endif
+    KeyRay* keyray = &(keyrays.at(threadIdx));
+
+    if (tree->computeRayKeys(origin, p, *keyray)){
+#ifdef _OPENMP
+      #pragma omp critical
+#endif
+        {
+          for(KeyRay::iterator it=keyray->begin(); it != keyray->end(); it++) {
+            updateNode(*it, false, lazy_eval); // insert freespace measurement
+          }
+          updateNode(p, true, lazy_eval); // update endpoint to be occupied
+        } //end critical
+      } //end if
+    } //end for
+  */
+    
+  
+  for (int i = 0; i < (int)scan.size() && ros::ok(); ++i)
   {
     const octomap::point3d& p = scan[i];
     octomap::KeyRay keyray;
@@ -654,11 +710,36 @@ void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::po
   // == Insert point cloud based on planar (camera) or spherical (laser) scan data
   octomap::KeySet free_cells, occupied_cells;
   
+  std::cout << "Computing nodes\n";
+  
   if (isPlanar)
     computeTreeUpdatePlanar(ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
   else
     tree->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
   
+  std::cout << "Computed nodes\n";
+  
+  // insert data into tree using continuous probabilities -----------------------
+  for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
+  {
+    tree->updateNode(*it, false);
+  }
+  
+  for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
+  {
+    octomap::point3d p = tree->keyToCoord(*it);
+    if (p.z() <= sensor_data_min_height)
+      tree->updateNode(*it, false);
+    else
+    {
+      
+      tree->updateNode(*it, true);
+    }
+  }
+  
+  std::cout << "Computed updates\n";
+  
+  /*
   // insert data into tree using binary probabilities -----------------------
   for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
   {
@@ -673,6 +754,7 @@ void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::po
     else
       tree->updateNode(*it, true);
   }
+  */
 }
 
 void processScans()
