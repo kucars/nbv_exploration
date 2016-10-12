@@ -101,7 +101,7 @@ int max_iterations = 300;
 float distance_threshold      = 0.4f;
 float angular_threshold       = 10.0 * M_PI/180.0;//Degrees to radians
 float linear_speed_threshold  = 0.05f;
-float angular_speed_threshold = 0.1f;
+float angular_speed_threshold = 0.03f;
 
 geometry_msgs::Pose  mobile_base_pose;
 geometry_msgs::Twist mobile_base_twist;
@@ -740,7 +740,7 @@ void generateViewpoints()
   waiting_for_profile_cloud = true;
   waiting_for_profile_octomap = true;
   
-  ros::Rate rate(10);
+  ros::Rate rate(30);
   while (ros::ok() && (!profile_cloud_ptr || waiting_for_profile_cloud) )
   {
     ROS_INFO_ONCE("Waiting for point cloud profile");
