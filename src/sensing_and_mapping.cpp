@@ -76,6 +76,7 @@ double profile_grid_res, depth_grid_res; //Voxel grid resolution
 double octree_res;
 octomap::point3d bound_min, bound_max;
 double noise_coefficient;
+int camera_width_px, camera_height_px, ray_skipping_vertical, ray_skipping_horizontal;
 
 // Profiling --------
 bool isScanning = false;
@@ -176,6 +177,11 @@ int main(int argc, char **argv)
 			  
     
     ros::param::param("~noise_coefficient", noise_coefficient, 0.02);
+    
+    ros::param::param("~width_px", camera_width_px, 640);
+    ros::param::param("~height_px", camera_height_px, 480);
+    ros::param::param("~ray_skipping_vertical", ray_skipping_vertical, 1);
+    ros::param::param("~ray_skipping_horizontal", ray_skipping_horizontal, 1);
 
     // >>>>>>>>>>>>>>>>>
     // Subscribers / Servers
@@ -643,10 +649,30 @@ void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::poi
       } //end if
     } //end for
   */
-    
+  
+  
+  
+  
+  
+  
+  bool use_ray_skipping = false;
+  if (camera_width_px*camera_height_px == scan.size())
+  {
+    use_ray_skipping = true;
+    std::cout << "Ray skipping\n";
+  }
   
   for (int i = 0; i < (int)scan.size() && ros::ok(); ++i)
   {
+    if (use_ray_skipping)
+    {
+      int ix = i%camera_width_px;
+      int iy = i/camera_width_px;
+      
+      if (ix % ray_skipping_horizontal != 0 || iy % ray_skipping_horizontal != 0)
+        continue;
+    }
+    
     const octomap::point3d& p = scan[i];
     octomap::KeyRay keyray;
     
