@@ -7,8 +7,8 @@ fov_vertical: 45
 fov_horizontal: 60
 
 #ray skipping to reduce load during node updates (if 5, only preserve the 5th ray)
-ray_skipping_vertical: 5
-ray_skipping_horizontal: 5
+ray_skipping_vertical: 1
+ray_skipping_horizontal: 1
 
 #std_dev = noise_coefficient * z^2
 noise_coefficient: 0.0025

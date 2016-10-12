@@ -526,28 +526,19 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
       return;
     }
     
+    // == Convert to pcl pointcloud
     pcl::PointCloud<pcl::PointXYZRGB> cloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_raw_ptr;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_ptr;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_distance_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    // == Convert to pcl pointcloud
+    
     pcl::fromROSMsg (*cloud_msg, cloud);
     cloud_raw_ptr = cloud.makeShared();
     
     // == Create cloud without points that are too far
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_distance_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+    
     for (int i=0; i<cloud.points.size(); i++)
       if (cloud.points[i].z <= max_range)
         cloud_distance_ptr->push_back(cloud.points[i]);
-    
-    // == Perform voxelgrid filtering (for updated pcl)
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-    sor.setInputCloud (cloud_raw_ptr);
-    sor.setLeafSize (depth_grid_res, depth_grid_res, depth_grid_res);
-    sor.filter (*cloud_filtered);
-    
     
     // == Transform
     tf::StampedTransform transform;
@@ -564,14 +555,14 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
     // == Convert tf:Transform to Eigen::Matrix4d
     Eigen::Matrix4d tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
     
-    // == Transform point cloud
+    // == Transform point cloud to global frame
     pcl::transformPointCloud(*cloud_raw_ptr, *cloud_raw_ptr, tf_eigen);
-    pcl::transformPointCloud(*cloud_filtered, *cloud_filtered, tf_eigen);
     pcl::transformPointCloud(*cloud_distance_ptr, *cloud_distance_ptr, tf_eigen);
     
     // == Add filtered to global
     addToGlobalCloud(cloud_distance_ptr, profile_cloud_ptr, true);
     
+    // == Update octomap
     octomap::point3d origin (transform.getOrigin().x(),
                              transform.getOrigin().y(),
                              transform.getOrigin().z());
@@ -580,6 +571,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
     addPointCloudToTree(*cloud_raw_ptr, origin, sensor_dir, max_range, true);
     
     
+    // == Done updating
     is_get_camera_data = false;
 }
 
@@ -593,22 +585,23 @@ void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::poi
    * This method does not use "max_range" as a radial/Eucledian distance (as in the original implimentation)
    * Instead, it is used to evaluate the perpendicular distance to the far plane of the camera
    * @todo: bbx limit
-   * @todo: parallel processing
    */
-   
+  
   sensor_dir.normalize();
   
-  /*
+  bool lazy_eval = false;
+  bool use_ray_skipping = false;
+  if (camera_width_px*camera_height_px == scan.size() &&
+      (ray_skipping_horizontal != 1 || ray_skipping_horizontal != 1))
+  {
+    use_ray_skipping = true;
+    std::cout << "Ray skipping\n";
+  }
+  
   // create as many KeyRays as there are OMP_THREADS defined,
   // one buffer for each thread
-  bool lazy_eval = false;
-  std::vector<octomap::keyRay> keyrays;
-
-#ifdef _OPENMP
-  std::cout << cc_green << "OpenMP enabled\n" << cc_reset;
-#endif
-
-#ifdef _OPENMP
+  std::vector<octomap::KeyRay> keyrays;
+  #ifdef _OPENMP
     #pragma omp parallel
     #pragma omp critical
     {
@@ -617,52 +610,16 @@ void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::poi
       }
 
     } // end critical
-#else
+  #else
     keyrays.resize(1);
-#endif
+  #endif
   
+
 #ifdef _OPENMP
   omp_set_num_threads(keyrays.size());
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(guided)
 #endif
-  for (int i = 0; i < (int)scan.size() && ros::ok(); ++i)
-  {
-    const octomap::point3d& p = scan[i];
-    unsigned threadIdx = 0;
-    
-    
-#ifdef _OPENMP
-    threadIdx = omp_get_thread_num();
-#endif
-    KeyRay* keyray = &(keyrays.at(threadIdx));
-
-    if (tree->computeRayKeys(origin, p, *keyray)){
-#ifdef _OPENMP
-      #pragma omp critical
-#endif
-        {
-          for(KeyRay::iterator it=keyray->begin(); it != keyray->end(); it++) {
-            updateNode(*it, false, lazy_eval); // insert freespace measurement
-          }
-          updateNode(p, true, lazy_eval); // update endpoint to be occupied
-        } //end critical
-      } //end if
-    } //end for
-  */
-  
-  
-  
-  
-  
-  
-  bool use_ray_skipping = false;
-  if (camera_width_px*camera_height_px == scan.size())
-  {
-    use_ray_skipping = true;
-    std::cout << "Ray skipping\n";
-  }
-  
-  for (int i = 0; i < (int)scan.size() && ros::ok(); ++i)
+  for (int i = 0; i < (int)scan.size(); ++i)
   {
     if (use_ray_skipping)
     {
@@ -674,50 +631,64 @@ void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::poi
     }
     
     const octomap::point3d& p = scan[i];
-    octomap::KeyRay keyray;
+    unsigned threadIdx = 0;
+    #ifdef _OPENMP
+    threadIdx = omp_get_thread_num();
+    #endif
+    
+    octomap::KeyRay* keyray = &(keyrays.at(threadIdx));
     
     // Gets the perpendicular distance from the UAV's direction vector
     double perp_dist = sensor_dir.dot(p - origin);
-    
-    if (maxrange < 0.0 || perp_dist <= maxrange ) // is not maxrange meas.
-    { 
-      // free cells
-      
-      if (tree->computeRayKeys(origin, p, keyray) )
-      {
-        free_cells.insert(keyray.begin(), keyray.end());
-      }
 
+    if (maxrange < 0.0 || perp_dist <= maxrange) 
+    { // is not maxrange meas.
+      // free cells
+      if (tree->computeRayKeys(origin, p, *keyray))
+      {
+        #ifdef _OPENMP
+        #pragma omp critical (free_insert)
+        #endif
+        {
+          free_cells.insert(keyray->begin(), keyray->end());
+        }
+      }
       // occupied endpoint
       octomap::OcTreeKey key;
-      if (tree->coordToKeyChecked(p, key))
-      {
-        occupied_cells.insert(key);  
+      if (tree->coordToKeyChecked(p, key)){
+        #ifdef _OPENMP
+        #pragma omp critical (occupied_insert)
+        #endif
+        {
+          occupied_cells.insert(key);
+        }
       }
     }
-     
     else
     { // user set a maxrange and length is above
       octomap::point3d direction = (p - origin).normalized ();
-      double max_range_to_point = maxrange/sensor_dir.dot(direction);
+      double max_range_to_point = maxrange/sensor_dir.dot(direction); 
       
       octomap::point3d new_end = origin + direction * (float) max_range_to_point;
-     
-      if (tree->computeRayKeys(origin, new_end, keyray))
-      {
-       free_cells.insert(keyray.begin(), keyray.end());
+      if (tree->computeRayKeys(origin, new_end, *keyray)){
+        #ifdef _OPENMP
+        #pragma omp critical (free_insert)
+        #endif
+        {
+          free_cells.insert(keyray->begin(), keyray->end());
+        }
       }
     } // end if maxrange
-  } // end for all points
+  } // end for all points, end of parallel OMP loop
 
   // prefer occupied cells over free ones (and make sets disjunct)
   for(octomap::KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; )
   {
-   if (occupied_cells.find(*it) != occupied_cells.end())
-     it = free_cells.erase(it);
-
-   else 
-     ++it;
+    if (occupied_cells.find(*it) != occupied_cells.end())
+      it = free_cells.erase(it);
+    
+    else 
+      ++it;
   }
 }
 
@@ -736,14 +707,10 @@ void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::po
   // == Insert point cloud based on planar (camera) or spherical (laser) scan data
   octomap::KeySet free_cells, occupied_cells;
   
-  std::cout << "Computing nodes\n";
-  
   if (isPlanar)
     computeTreeUpdatePlanar(ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
   else
     tree->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
-  
-  std::cout << "Computed nodes\n";
   
   // insert data into tree using continuous probabilities -----------------------
   for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
@@ -762,8 +729,6 @@ void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::po
       tree->updateNode(*it, true);
     }
   }
-  
-  std::cout << "Computed updates\n";
   
   /*
   // insert data into tree using binary probabilities -----------------------
