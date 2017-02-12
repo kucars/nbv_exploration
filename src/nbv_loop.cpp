@@ -45,27 +45,8 @@
 #include <nbv_exploration/view_selecter.h>
 #include <nbv_exploration/pose_conversion.h>
 
-// =========================
-// Colors for console window
-// =========================
-const std::string cc_black("\033[0;30m");
-const std::string cc_red("\033[0;31m");
-const std::string cc_green("\033[1;32m");
-const std::string cc_yellow("\033[1;33m");
-const std::string cc_blue("\033[1;34m");
-const std::string cc_magenta("\033[0;35m");
-const std::string cc_cyan("\033[0;36m");
-const std::string cc_white("\033[0;37m");
-
-const std::string cc_bold("\033[1m");
-const std::string cc_darken("\033[2m");
-const std::string cc_underline("\033[4m");
-const std::string cc_background("\033[7m");
-const std::string cc_strike("\033[9m");
-
-const std::string cc_erase_line("\033[2K");
-const std::string cc_reset("\033[0m");
-
+#include "utilities/console_utility.h"
+ConsoleUtility cc;
 
 // ===================
 // === Variables  ====
@@ -189,7 +170,7 @@ double randomDouble(double min, double max)
 
 void sigIntHandler(int sig)
 {
-  std::cout << cc_yellow << "Handling SIGINT exception\n" << cc_reset;
+  std::cout << cc.yellow << "Handling SIGINT exception\n" << cc.reset;
   
   // Forces ros::Rate::sleep() to end if it's stuck (for example, Gazebo isn't running)
   ros::shutdown();
@@ -251,7 +232,7 @@ int main(int argc, char **argv)
       bool success = callMappingService(nbv_exploration::MappingSrv::Request::LOAD_MAP);
       if (!success)
       {
-        std::cout << cc_red << "Failed to load profile\n" << cc_reset;
+        std::cout << cc.red << "Failed to load profile\n" << cc.reset;
         ros::shutdown();
         return 1;
       }
@@ -268,7 +249,7 @@ int main(int argc, char **argv)
       success = callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
       if (!success)
       {
-        std::cout << cc_red << "Failed to start profiler\n" << cc_reset;
+        std::cout << cc.red << "Failed to start profiler\n" << cc.reset;
         ros::shutdown();
         return 1;
       }
@@ -282,7 +263,7 @@ int main(int argc, char **argv)
     
     if (!success)
     {
-      std::cout << cc_red << "Failed to start profiler\n" << cc_reset;
+      std::cout << cc.red << "Failed to start profiler\n" << cc.reset;
       ros::shutdown();
       return 1;
     }
@@ -384,7 +365,7 @@ int main(int argc, char **argv)
         break;
         
       case NBVState::MOVING_COMPLETE:
-        std::cout << "[" << ros::Time::now().toSec() << "]" << cc_magenta << "Requesting camera data\n" << cc_reset;
+        std::cout << "[" << ros::Time::now().toSec() << "]" << cc.magenta << "Requesting camera data\n" << cc.reset;
         callMappingService(nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA);
         
         state = NBVState::TERMINATION_CHECK;
@@ -399,7 +380,7 @@ int main(int argc, char **argv)
         
       case NBVState::TERMINATION_MET:
         is_terminating = true;
-        std::cout << cc_yellow << "Termination condition met\n" << cc_reset;
+        std::cout << cc.yellow << "Termination condition met\n" << cc.reset;
         break;
         
       case NBVState::PROFILING_COMPLETE:
@@ -423,7 +404,7 @@ int main(int argc, char **argv)
     loop_rate.sleep();
   }
 
-  std::cout << cc_yellow << "Shutting down\n" << cc_reset;
+  std::cout << cc.yellow << "Shutting down\n" << cc.reset;
   ros::shutdown();
   return 0;
 }
@@ -434,7 +415,7 @@ void callbackOdometry(const nav_msgs::Odometry& odom_msg)
 {
   if (is_debug && is_debug_callbacks)
   {
-    std::cout << cc_magenta << "Grabbing odom information\n" << cc_reset;
+    std::cout << cc.magenta << "Grabbing odom information\n" << cc.reset;
   }
   
   // Save UGV pose and velocities
@@ -447,7 +428,7 @@ void callbackOctomap(const octomap_msgs::Octomap& octomap_msg)
 {
   if (is_debug && is_debug_callbacks)
   {
-    std::cout << cc_magenta << "Grabbing octree\n" << cc_reset;
+    std::cout << cc.magenta << "Grabbing octree\n" << cc.reset;
   }
   
   global_octomap = static_cast<octomap::OcTree* >( octomap_msgs::fullMsgToMap(octomap_msg) );
@@ -467,7 +448,7 @@ void callbackScan(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
   if (is_debug && is_debug_callbacks)
   {
-    std::cout << cc_magenta << "Grabbing profile point cloud\n" << cc_reset;
+    std::cout << cc.magenta << "Grabbing profile point cloud\n" << cc.reset;
   }
   
   pcl::PointCloud<pcl::PointXYZRGB> cloud;
@@ -532,8 +513,8 @@ bool callMappingService(int command)
         break;
     }
     
-    std::cout << cc_red << "Error after sending " <<  cmd_name << "(ID: " << command << ") to service \"mapping_commands\" \n";
-    std::cout << cc_red << "\t" << srv.response.error << "\n" << cc_reset;
+    std::cout << cc.red << "Error after sending " <<  cmd_name << "(ID: " << command << ") to service \"mapping_commands\" \n";
+    std::cout << cc.red << "\t" << srv.response.error << "\n" << cc.reset;
     return false;
   }
   
@@ -545,12 +526,12 @@ bool callMappingService(int command)
 void profilingProcessing(){
   if (state != NBVState::PROFILING_PROCESSING)
   {
-    std::cout << cc_red << "ERROR: Attempt to start profiling out of order\n" << cc_reset;
+    std::cout << cc.red << "ERROR: Attempt to start profiling out of order\n" << cc.reset;
     return;
   }
   if (is_debug && is_debug_states)
   {
-    std::cout << cc_green << "Processing profile\n" << cc_reset;
+    std::cout << cc.green << "Processing profile\n" << cc.reset;
   }
     
   double angle_inc = (2*M_PI)/5;
@@ -559,7 +540,7 @@ void profilingProcessing(){
   
   if (profile_angle > 2*M_PI + angle_inc){
     state = NBVState::PROFILING_COMPLETE;
-    std::cout << cc_green << "Profiling complete\n" << cc_reset;
+    std::cout << cc.green << "Profiling complete\n" << cc.reset;
     
     callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
     
@@ -569,7 +550,7 @@ void profilingProcessing(){
     }
     else
     {
-      std::cout << cc_red << "Failed to save profile\n";
+      std::cout << cc.red << "Failed to save profile\n";
     }
     
     return;
@@ -587,7 +568,7 @@ void profilingProcessing(){
   
   // Calculate centroid
   if (profile_cloud_ptr->points.size() == 0){
-    std::cout << cc_red << "Error: No points detected in profile cloud. Make sure mapping node is running\n" << cc_reset;
+    std::cout << cc.red << "Error: No points detected in profile cloud. Make sure mapping node is running\n" << cc.reset;
     return;
   }
   
@@ -617,7 +598,7 @@ void profilingProcessing(){
   r = sqrt(r);
   r += uav_obstacle_distance_min; // add a safety margin (to avoid collision and see free spaces close to structure
   
-  std::cout << cc_magenta << "x = " << x << "\ty = " << y << "\tr = " << r << "\n" << cc_reset;
+  std::cout << cc.magenta << "x = " << x << "\ty = " << y << "\tr = " << r << "\n" << cc.reset;
   
   // Move back on the circle
   double theta  = atan2(mobile_base_pose.position.y - y, mobile_base_pose.position.x - x);
@@ -625,7 +606,7 @@ void profilingProcessing(){
   double y_move = y+r*sin(theta);
   double yaw_move = theta-M_PI; //towards the center of the circle
   
-  std::cout << cc_magenta << "Moving back\n" << cc_reset;
+  std::cout << cc.magenta << "Moving back\n" << cc.reset;
   setWaypoint(x_move, y_move, mobile_base_pose.position.z, yaw_move, false);
   moveVehicle();
   
@@ -643,7 +624,7 @@ void profilingProcessing(){
     y_move = y+r*sin(theta);
     yaw_move = theta-M_PI; //towards the center of the circle
     
-    std::cout << cc_magenta << "Moving along\n" << cc_reset;
+    std::cout << cc.magenta << "Moving along\n" << cc.reset;
     setWaypoint(x_move, y_move, z_move, yaw_move, false);
     moveVehicle(1.5);
   }
@@ -657,7 +638,7 @@ void profilingProcessing(){
       y_move = y+r*sin(theta);
       yaw_move = theta-M_PI; //towards the center of the circle
       
-      std::cout << cc_magenta << "Moving along\n" << cc_reset;
+      std::cout << cc.magenta << "Moving along\n" << cc.reset;
       setWaypoint(x_move, y_move, z_move, yaw_move, false);
       moveVehicle(1.5); // Be less picky about position, just move around quickly
     }
@@ -675,7 +656,7 @@ void profileMove(bool is_rising)
   // ==Scan
   if (is_rising)
   {
-    std::cout << cc_magenta << "Profiling move up\n" << cc_reset;
+    std::cout << cc.magenta << "Profiling move up\n" << cc.reset;
     
     //while (ros::ok() && !is_scan_empty)
     while (ros::ok() && mobile_base_pose.position.z < uav_height_max)
@@ -687,7 +668,7 @@ void profileMove(bool is_rising)
   }
   else
   {
-    std::cout << cc_magenta << "Profiling move down\n" << cc_reset;
+    std::cout << cc.magenta << "Profiling move down\n" << cc.reset;
     
     while (ros::ok() && mobile_base_pose.position.z > uav_height_min)
     {
@@ -706,12 +687,12 @@ void terminationCheck()
 {
   if (state != NBVState::TERMINATION_CHECK)
   {
-    std::cout << cc_red << "ERROR: Attempt to check termination out of order\n" << cc_reset;
+    std::cout << cc.red << "ERROR: Attempt to check termination out of order\n" << cc.reset;
     return;
   }
   if (is_debug && is_debug_states)
   {
-    std::cout << cc_green << "Checking termination condition\n" << cc_reset;
+    std::cout << cc.green << "Checking termination condition\n" << cc.reset;
   }
   
   state = NBVState::TERMINATION_NOT_MET;
@@ -729,12 +710,12 @@ void generateViewpoints()
 {
   if (state != NBVState::VIEWPOINT_GENERATION)
   {
-    std::cout << cc_red << "ERROR: Attempt to generate viewpoints out of order\n" << cc_reset;
+    std::cout << cc.red << "ERROR: Attempt to generate viewpoints out of order\n" << cc.reset;
     return;
   }
   if (is_debug && is_debug_states)
   {
-    std::cout << cc_green << "Generating viewpoints\n" << cc_reset;
+    std::cout << cc.green << "Generating viewpoints\n" << cc.reset;
   }
   
   waiting_for_profile_cloud = true;
@@ -770,12 +751,12 @@ void evaluateViewpoints()
 {
   if (state != NBVState::VIEWPOINT_EVALUATION)
   {
-    std::cout << cc_red << "ERROR: Attempt to evaluate viewpoints out of order\n" << cc_reset;
+    std::cout << cc.red << "ERROR: Attempt to evaluate viewpoints out of order\n" << cc.reset;
     return;
   }
   if (is_debug && is_debug_states)
   {
-    std::cout << cc_green << "Evaluating viewpoints\n" << cc_reset;
+    std::cout << cc.green << "Evaluating viewpoints\n" << cc.reset;
   }
   
   viewSel->evaluate();
@@ -826,12 +807,12 @@ void moveVehicle(double threshold_sensitivity)
       && state != NBVState::TAKEOFF
       && state != NBVState::PROFILING_PROCESSING)
   {
-    std::cout << cc_red << "ERROR: Attempt to move vehicle out of order\n" << cc_reset;
+    std::cout << cc.red << "ERROR: Attempt to move vehicle out of order\n" << cc.reset;
     return;
   }
   if (is_debug && is_debug_states)
   {
-    std::cout << cc_green << "Moving (setting waypoints)\n" << cc_reset;
+    std::cout << cc.green << "Moving (setting waypoints)\n" << cc.reset;
   }
   
   
@@ -851,9 +832,9 @@ void moveVehicle(double threshold_sensitivity)
   {
     if (is_debug && is_debug_callbacks)
     {
-      std::cout << cc_green << "Moving to destination. " <<
+      std::cout << cc.green << "Moving to destination. " <<
         "Distance to target: " << getDistance(setpoint_world, mobile_base_pose) <<
-        "\tAngle to target: " << getAngularDistance(setpoint_world, mobile_base_pose) << "\n" << cc_reset;
+        "\tAngle to target: " << getAngularDistance(setpoint_world, mobile_base_pose) << "\n" << cc.reset;
     }
     
     ros::spinOnce();
@@ -862,7 +843,7 @@ void moveVehicle(double threshold_sensitivity)
   
   if (state == NBVState::MOVING)
   {
-    std::cout << cc_green << "Done moving\n" << cc_reset;
+    std::cout << cc.green << "Done moving\n" << cc.reset;
     state = NBVState::MOVING_COMPLETE;
   }
 }
@@ -872,11 +853,11 @@ void takeoff()
 {
   if (state != NBVState::TAKEOFF)
   {
-    std::cout << cc_red << "ERROR: Attempt to take off out of order\n" << cc_reset;
+    std::cout << cc.red << "ERROR: Attempt to take off out of order\n" << cc.reset;
     return;
   }
   
-  std::cout << cc_green << "Taking off\n" << cc_reset;
+  std::cout << cc.green << "Taking off\n" << cc.reset;
   
   if (mobile_base_pose.position.z < uav_height_min)
   {
@@ -884,7 +865,7 @@ void takeoff()
     moveVehicle(0.3);
   }
   
-  std::cout << cc_green << "Done taking off\n" << cc_reset;
+  std::cout << cc.green << "Done taking off\n" << cc.reset;
   
   state = NBVState::TAKEOFF_COMPLETE;
 }
@@ -945,17 +926,17 @@ double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
   double yaw_diff = fmod(yaw1 - yaw2, 2*M_PI);
   if (yaw_diff > M_PI)
   {
-    //std::cout << cc_green << "Decreased by 360: \n";
+    //std::cout << cc.green << "Decreased by 360: \n";
     yaw_diff = yaw_diff - 2*M_PI;
   }
   else if (yaw_diff < -M_PI)
   {
-    //std::cout << cc_green << "Increased by 360: \n";
+    //std::cout << cc.green << "Increased by 360: \n";
     yaw_diff = yaw_diff + 2*M_PI;
   }
     
-  //std::cout << cc_green << "Yaw1: " << yaw1*180/M_PI << "\tYaw2: " << yaw2*180/M_PI << "\n" << cc_reset;
-  //std::cout << cc_green << "Yaw difference: " << yaw_diff*180/M_PI << "\n" << cc_reset;
+  //std::cout << cc.green << "Yaw1: " << yaw1*180/M_PI << "\tYaw2: " << yaw2*180/M_PI << "\n" << cc.reset;
+  //std::cout << cc.green << "Yaw difference: " << yaw_diff*180/M_PI << "\n" << cc.reset;
   
   return yaw_diff;
 }

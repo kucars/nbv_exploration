@@ -39,26 +39,8 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
-// =========================
-// Colors for console window
-// =========================
-const std::string cc_black("\033[0;30m");
-const std::string cc_red("\033[0;31m");
-const std::string cc_green("\033[1;32m");
-const std::string cc_yellow("\033[1;33m");
-const std::string cc_blue("\033[1;34m");
-const std::string cc_magenta("\033[0;35m");
-const std::string cc_cyan("\033[0;36m");
-const std::string cc_white("\033[0;37m");
-
-const std::string cc_bold("\033[1m");
-const std::string cc_darken("\033[2m");
-const std::string cc_underline("\033[4m");
-const std::string cc_background("\033[7m");
-const std::string cc_strike("\033[9m");
-
-const std::string cc_erase_line("\033[2K");
-const std::string cc_reset("\033[0m");
+#include "utilities/console_utility.h"
+ConsoleUtility cc;
 
 
 // ===================
@@ -197,7 +179,7 @@ int main(int argc, char **argv)
   // >>>>>>>>>>>>>>>>>
   // Main function
   // >>>>>>>>>>>>>>>>>
-  std::cout << cc_magenta << "\nStarted\n" << cc_reset;
+  std::cout << cc.magenta << "\nStarted\n" << cc.reset;
   std::cout << "Listening for the following topics: \n";
   std::cout << "\t" << scan_topic << "\n";
   std::cout << "\t" << position_topic << "\n";
@@ -213,16 +195,16 @@ void scanCommandCallback(const std_msgs::UInt8& msg)
   {
     case 0:
       isScanning = false;
-      std::cout << cc_green << "Processing " << scan_vec.size() << " scans\n" << cc_reset;
+      std::cout << cc.green << "Processing " << scan_vec.size() << " scans\n" << cc.reset;
       processScans();
       break;
     case 1:
       isScanning = true;
-      std::cout << cc_green << "Starting scan\n" << cc_reset;
+      std::cout << cc.green << "Starting scan\n" << cc.reset;
       break;
     case 2:
       isScanning = false;
-      std::cout << cc_green << "Done profiling\n" << cc_reset;
+      std::cout << cc.green << "Done profiling\n" << cc.reset;
       ros::shutdown();
       break;
   }
@@ -233,7 +215,7 @@ void scanCallback(const sensor_msgs::LaserScan& laser_msg)
   if (!isScanning)
     return;
     
-  //std::cout << cc_green << "Got scan\n" << cc_reset;
+  //std::cout << cc.green << "Got scan\n" << cc.reset;
   
   // == Get transform
   tf::StampedTransform transform;
@@ -360,6 +342,6 @@ void processScans()
   pub_tree.publish(msg);
   
   t_end = ros::Time::now().toSec();
-  std::cout << cc_green << "Done processing.\n" << cc_reset;
+  std::cout << cc.green << "Done processing.\n" << cc.reset;
   std::cout << "   Total time: " << t_end-t_start << " sec\tTotal scan: " << count << "\t(" << (t_end-t_start)/count << " sec/scan)\n";
 }

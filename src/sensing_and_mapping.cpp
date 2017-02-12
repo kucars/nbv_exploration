@@ -39,26 +39,8 @@
 #include <pcl/registration/icp.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
-// =========================
-// Colors for console window
-// =========================
-const std::string cc_black("\033[0;30m");
-const std::string cc_red("\033[0;31m");
-const std::string cc_green("\033[1;32m");
-const std::string cc_yellow("\033[1;33m");
-const std::string cc_blue("\033[1;34m");
-const std::string cc_magenta("\033[0;35m");
-const std::string cc_cyan("\033[0;36m");
-const std::string cc_white("\033[0;37m");
-
-const std::string cc_bold("\033[1m");
-const std::string cc_darken("\033[2m");
-const std::string cc_underline("\033[4m");
-const std::string cc_background("\033[7m");
-const std::string cc_strike("\033[9m");
-
-const std::string cc_erase_line("\033[2K");
-const std::string cc_reset("\033[0m");
+#include "utilities/console_utility.h"
+ConsoleUtility cc;
 
 
 // ===================
@@ -139,7 +121,7 @@ void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pc
 
 void sigIntHandler(int sig)
 {
-  std::cout << cc_yellow << "Handling SIGINT exception\n" << cc_reset;
+  std::cout << cc.yellow << "Handling SIGINT exception\n" << cc.reset;
   
   // Forces ros::Rate::sleep() to end if it's stuck (for example, Gazebo isn't running)
   ros::shutdown();
@@ -150,7 +132,7 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     // Initialize ROS
     // >>>>>>>>>>>>>>>>>
-    std::cout << cc_red << "Begin Sensing\n" << cc_reset;
+    std::cout << cc.red << "Begin Sensing\n" << cc.reset;
 
     ros::init(argc, argv, "sensing_and_mapping", ros::init_options::NoSigintHandler);
     ros::NodeHandle ros_node;
@@ -209,7 +191,7 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     // Main function
     // >>>>>>>>>>>>>>>>>
-    std::cout << cc_magenta << "\nStarted\n" << cc_reset;
+    std::cout << cc.magenta << "\nStarted\n" << cc.reset;
     std::cout << "Listening for the following topics: \n";
     std::cout << "\t" << topic_depth << "\n";
     std::cout << "\t" << topic_position << "\n";
@@ -283,7 +265,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
   {
     case nbv_exploration::MappingSrv::Request::START_SCANNING:
       isScanning = true;
-      std::cout << cc_green << "Started scanning\n" << cc_reset;
+      std::cout << cc.green << "Started scanning\n" << cc.reset;
       
       response.data = response.ACK;
       break;
@@ -291,7 +273,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
     
     case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
       isScanning = false;
-      std::cout << cc_green << "Processing " << scan_vec.size() << " scans...\n" << cc_reset;
+      std::cout << cc.green << "Processing " << scan_vec.size() << " scans...\n" << cc.reset;
       
       if (is_batch_profiling)
         processScans();
@@ -301,7 +283,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
        
       
     case nbv_exploration::MappingSrv::Request::START_PROFILING:
-      std::cout << cc_green << "Started profiling\n" << cc_reset;
+      std::cout << cc.green << "Started profiling\n" << cc.reset;
     
       if (!tree)
       {
@@ -317,7 +299,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
       
     case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
       isScanning = false;
-      std::cout << cc_green << "Done profiling\n" << cc_reset;
+      std::cout << cc.green << "Done profiling\n" << cc.reset;
       
       response.data = response.ACK;
       break;
@@ -350,11 +332,11 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
         break;
       }
       
-      std::cout << cc_green << "Successfully saved map\n" << cc_reset;
+      std::cout << cc.green << "Successfully saved map\n" << cc.reset;
       
     case nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA:
       is_get_camera_data = true;
-      std::cout << cc_magenta << "Waiting for camera data\n" << cc_reset;
+      std::cout << cc.magenta << "Waiting for camera data\n" << cc.reset;
       
       for (int i=0; i<10 && ros::ok() && is_get_camera_data; i++)
       {
@@ -402,7 +384,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
           }
           tree->updateInnerOccupancy();
           
-          std::cout << cc_green << "Successfully scaled probabilities\n" << cc_reset;
+          std::cout << cc.green << "Successfully scaled probabilities\n" << cc.reset;
           response.data  = response.DONE;
           break;
           */
@@ -423,7 +405,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
         break;
       }
       
-      std::cout << cc_green << "Successfully loaded maps\n" << cc_reset;
+      std::cout << cc.green << "Successfully loaded maps\n" << cc.reset;
       response.data  = response.DONE;
       break;
   }
@@ -438,7 +420,7 @@ bool callbackCommand(nbv_exploration::MappingSrv::Request  &request,
 void callbackPosition(const geometry_msgs::PoseStamped& pose_msg)
 {
     if (isDebug && isDebugContinuousStates){
-        std::cout << cc_magenta << "Grabbing location\n" << cc_reset;
+        std::cout << cc.magenta << "Grabbing location\n" << cc.reset;
     }
     
     // Save UGV pose
@@ -447,7 +429,7 @@ void callbackPosition(const geometry_msgs::PoseStamped& pose_msg)
 
 void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   if (isDebug && isDebugContinuousStates){
-    std::cout << cc_magenta << "Scan readings\n" << cc_reset;
+    std::cout << cc.magenta << "Scan readings\n" << cc.reset;
   }
   
   if (!isScanning)
@@ -542,7 +524,7 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
 void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
     if (isDebug && isDebugContinuousStates){
-        std::cout << cc_green << "Depth sensing\n" << cc_reset;
+        std::cout << cc.green << "Depth sensing\n" << cc.reset;
     }
     
     if (!is_get_camera_data)
@@ -796,7 +778,7 @@ void processScans()
   
   // == Timing
   t_end = ros::Time::now().toSec();
-  std::cout << cc_green << "Done processing.\n" << cc_reset;
+  std::cout << cc.green << "Done processing.\n" << cc.reset;
   std::cout << "   Total time: " << t_end-t_start << " sec\tTotal scan: " << count << "\t(" << (t_end-t_start)/count << " sec/scan)\n";
 }
 
@@ -805,7 +787,7 @@ void processScans()
 
 void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter) {
     if (isDebug && isDebugContinuousStates){
-        std::cout << cc_green << "MAPPING\n" << cc_reset;
+        std::cout << cc.green << "MAPPING\n" << cc.reset;
     }
     
     // Initialize global cloud if not already done so
@@ -848,6 +830,6 @@ void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pc
     }
     
     if (isDebug && isDebugContinuousStates){
-        std::cout << cc_blue << "Number of points in global map: " << cloud_out->points.size() << "\n" << cc_reset;
+        std::cout << cc.blue << "Number of points in global map: " << cloud_out->points.size() << "\n" << cc.reset;
     }
 }

@@ -26,6 +26,9 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
+#include "utilities/console_utility.h"
+ConsoleUtility cc;
+
 /*
 #include <pcl/point_types.h>
 #include <pcl/visualization/cloud_viewer.h>
@@ -88,25 +91,6 @@ float initial_yaw;
 float voxelRes;
 */
 
-// Colors for console window
-const std::string cc_black("\033[0;30m");
-const std::string cc_red("\033[0;31m");
-const std::string cc_green("\033[1;32m");
-const std::string cc_yellow("\033[1;33m");
-const std::string cc_blue("\033[1;34m");
-const std::string cc_magenta("\033[0;35m");
-const std::string cc_cyan("\033[0;36m");
-const std::string cc_white("\033[0;37m");
-
-const std::string cc_bold("\033[1m");
-const std::string cc_darken("\033[2m");
-const std::string cc_underline("\033[4m");
-const std::string cc_background("\033[7m");
-const std::string cc_strike("\033[9m");
-
-const std::string cc_erase_line("\033[2K");
-const std::string cc_reset("\033[0m");
-
 /*
 double randomDouble(double min, double max) {
     return ((double) random()/RAND_MAX)*(max-min) + min;
@@ -150,7 +134,7 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     // Initialize ROS
     // >>>>>>>>>>>>>>>>>
-    std::cout << cc_red << "Begin wall_follower\n" << cc_reset;
+    std::cout << cc.red << "Begin wall_follower\n" << cc.reset;
 
     ros::init(argc, argv, "wall_follower");
     ros::NodeHandle ros_node;
