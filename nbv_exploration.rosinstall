@@ -1,0 +1,4 @@
+- git:
+    local-name: px4/Firmware
+    uri: https://github.com/kuri-kustar/Firmware.git
+    version:  24feea6346db3ea09391cfc0fb4d683748459f73
