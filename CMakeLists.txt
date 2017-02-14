@@ -65,6 +65,8 @@ include_directories(
     ${Eigen_INCLUDE_DIRS}
     ${OCTOMAP_INCLUDE_DIRS}
     include #Adds my own custom class headers
+    include/nbv_exploration
+    include/control
 )
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -74,20 +76,25 @@ link_libraries(${OCTOMAP_LIBRARIES})
 #add_dependencies(wall_follower ${catkin_EXPORTED_TARGETS})
 #target_link_libraries(wall_follower ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${OCTOMAP_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
-add_library(view_generator src/view_generator.cpp)
-add_library(view_selecter src/view_selecter.cpp)
-add_library(frustum_culling   src/culling/frustum_culling.cpp)
-add_library(occlusion_culling src/culling/occlusion_culling.cpp)
-add_library(vox_grid_occ_est  src/culling/voxel_grid_occlusion_estimation)
+add_executable(nbv_main
+  src/nbv_main.cpp
 
-add_executable(nbv_loop src/nbv_loop.cpp)
-add_dependencies(nbv_loop ${catkin_EXPORTED_TARGETS})
-target_link_libraries(nbv_loop
-    view_generator
-    view_selecter
-    frustum_culling
-    occlusion_culling
-    vox_grid_occ_est
+  src/model_profiler_base.cpp
+  src/model_profiler_circular_adaptive.cpp
+  src/nbv_loop.cpp
+  src/termination_check_base.cpp
+  src/view_generator.cpp
+  src/view_selecter.cpp
+
+  src/control/vehicle_control_base.cpp
+  src/control/vehicle_control_iris.cpp
+
+  src/culling/frustum_culling.cpp
+  src/culling/occlusion_culling.cpp
+  src/culling/voxel_grid_occlusion_estimation.cpp
+  )
+add_dependencies(nbv_main ${catkin_EXPORTED_TARGETS})
+target_link_libraries(nbv_main
     ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} 
     ${catkin_LIBRARIES} -lgmp -lmpfr
     ${Eigen_LIBRARIES}

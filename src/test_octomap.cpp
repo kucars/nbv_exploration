@@ -42,7 +42,6 @@
 #include "utilities/console_utility.h"
 ConsoleUtility cc;
 
-
 // ===================
 // === Variables  ====
 // ===================

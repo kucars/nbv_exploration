@@ -27,8 +27,6 @@
 #include <octomap/Pointcloud.h>
 #include <octomap_msgs/conversions.h>
 
-#include <nbv_exploration/pose_conversion.h>
-
 //PCL
 //#include <pcl/filters.hpp>
 #include <pcl/io/pcd_io.h>
@@ -39,6 +37,7 @@
 #include <pcl/registration/icp.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
+#include "utilities/pose_conversion.h"
 #include "utilities/console_utility.h"
 ConsoleUtility cc;
 

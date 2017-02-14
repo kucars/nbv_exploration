@@ -6,21 +6,16 @@
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/Float32.h>
 
-#include <nbv_exploration/view_generator.h>
-#include <nbv_exploration/view_selecter.h>
-#include <nbv_exploration/pose_conversion.h>
-
 #include <tf_conversions/tf_eigen.h>
-
 //#include <culling/occlusion_culling.h>
 
+#include "nbv_exploration/view_generator.h"
+#include "nbv_exploration/view_selecter.h"
+#include "nbv_exploration/common.h"
 
 // =======
 // Base
 // =======
-ros::Publisher marker_pub;
-ros::Publisher pose_pub;
-ros::Publisher ig_pub;
 
 ViewSelecterBase::ViewSelecterBase()
 {
@@ -31,6 +26,17 @@ ViewSelecterBase::ViewSelecterBase()
 	
 	last_max_utility_ = 1/.0;
 	is_debug_ = false;
+
+  // >>>>>>>>>>>>>>>>>
+  // Read parameters
+  // >>>>>>>>>>>>>>>>>
+  double fov_h, fov_v, r_max, r_min;
+  ros::param::param("~fov_horizontal", fov_h, 60.0);
+  ros::param::param("~fov_vertical", fov_v, 45.0);
+  ros::param::param("~depth_range_max", r_max, 5.0);
+  ros::param::param("~depth_range_min", r_min, 0.05);
+
+  setCameraSettings(fov_h, fov_v, r_max, r_min);
 }
 
 void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint)

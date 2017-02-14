@@ -7,8 +7,6 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#include <nbv_exploration/pose_conversion.h>
-
 #include "fcl/shape/geometric_shapes.h"
 #include "fcl/narrowphase/narrowphase.h"
 #include "fcl/collision.h"
@@ -21,6 +19,9 @@
 #include "fcl/broadphase/broadphase.h"
 #include "fcl/shape/geometric_shape_to_BVH_model.h"
 #include "fcl/math/transform.h"
+
+#include "nbv_exploration/view_generator.h"
+#include "nbv_exploration/common.h"
 
 // ==============
 // Base
@@ -36,6 +37,37 @@ ViewGeneratorBase::ViewGeneratorBase()
 	ros::NodeHandle n;
   marker_array_pub = n.advertise<visualization_msgs::MarkerArray>("generated_pose_marker_array", 10);
   visPub = n.advertise<visualization_msgs::Marker>("collision_marker", 10);
+
+  // Read parameters
+  double res_x, res_y, res_z, res_yaw;
+  ros::param::param("~uav_position_resolution_x", res_x, 1.0);
+  ros::param::param("~uav_position_resolution_y", res_y, 1.0);
+  ros::param::param("~uav_position_resolution_z", res_z, 1.0);
+  ros::param::param("~uav_position_resolution_yaw", res_yaw, M_PI_4);
+
+  double obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max;
+  ros::param::param("~object_bounds_x_min", obj_x_min,-1.0);
+  ros::param::param("~object_bounds_x_max", obj_x_max, 1.0);
+  ros::param::param("~object_bounds_y_min", obj_y_min,-1.0);
+  ros::param::param("~object_bounds_y_max", obj_y_max, 1.0);
+  ros::param::param("~object_bounds_z_min", obj_z_min, 0.0);
+  ros::param::param("~object_bounds_z_max", obj_z_max, 1.0);
+
+  double nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max;
+  ros::param::param("~nav_bounds_x_min", nav_x_min,-5.0);
+  ros::param::param("~nav_bounds_x_max", nav_x_max, 5.0);
+  ros::param::param("~nav_bounds_y_min", nav_y_min,-5.0);
+  ros::param::param("~nav_bounds_y_max", nav_y_max, 5.0);
+  ros::param::param("~nav_bounds_z_min", nav_z_min, 1.0);
+  ros::param::param("~nav_bounds_z_max", nav_z_max, 5.0);
+
+  double collision_radius;
+  ros::param::param("~uav_collision_radius", collision_radius, 1.0);
+
+  setResolution(res_x, res_y, res_z, res_yaw);
+  setObjectBounds(obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max);
+  setNavigationBounds(nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max);
+  setCollisionRadius(collision_radius);
 }
 
 void drawSphere(Pose p, double r)

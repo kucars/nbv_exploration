@@ -16,7 +16,7 @@
 #include <octomap/OcTree.h>
 #include <octomap/OcTreeNode.h>
 
-#include <nbv_exploration/view_generator.h>
+#include "nbv_exploration/view_generator.h"
 
 //typedef pcl::PointXYZRGBA PointT;
 typedef geometry_msgs::Pose Pose;
@@ -46,6 +46,11 @@ protected:
   std::vector<Eigen::Vector3d> rays_far_plane_;
   
   visualization_msgs::Marker line_list;
+
+  // Topic handlers
+  ros::Publisher marker_pub;
+  ros::Publisher pose_pub;
+  ros::Publisher ig_pub;
   
   
 public:

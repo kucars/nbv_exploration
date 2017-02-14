@@ -14,6 +14,8 @@
 
 #include <tf_conversions/tf_eigen.h>
 
+#include "nbv_exploration/common.h"
+
 typedef geometry_msgs::Pose Pose;
 
 
