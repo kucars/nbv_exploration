@@ -68,7 +68,6 @@ double uav_height_min, uav_height_max, uav_obstacle_distance_min;
 
 // == Publishers / Clients
 ros::Publisher pub_global_cloud;
-ros::Publisher pub_setpoint;
 ros::Publisher pub_scan_command;
 
 
@@ -106,9 +105,6 @@ NBVLoop::NBVLoop()
   // Sensor data
   ros::Subscriber sub_scan      = ros_node.subscribe(topic_scan_cloud, 1, &NBVLoop::callbackScan, this);
   ros::Subscriber sub_octomap   = ros_node.subscribe(topic_octree, 1, &NBVLoop::callbackOctomap, this);
-  
-  // Drone setpoints
-  pub_setpoint      = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
   
   
   // >>>>>>>>>>>>>>>>
@@ -222,7 +218,7 @@ void NBVLoop::generateViewpoints()
 
   view_generator_->setCloud(profile_cloud_ptr);
   view_generator_->setMap(global_octomap);
-  view_generator_->setCurrentPose(mobile_base_pose);
+  view_generator_->setCurrentPose(vehicle_->getPose());
   view_generator_->generateViews();
 
   state = NBVState::VIEWPOINT_GENERATION_COMPLETE;
@@ -250,6 +246,7 @@ void NBVLoop::evaluateViewpoints()
 void NBVLoop::initModelProfiler()
 {
   model_profiler_ = new ModelProfilerCircularAdaptive();
+  model_profiler_->setVehicle(vehicle_);
 }
 
 void NBVLoop::initParameters()
@@ -259,6 +256,9 @@ void NBVLoop::initParameters()
   // >>>>>>>>>>>>>>>>>
   is_terminating = false;
   iteration_count = 0;
+
+  grid_res = 0.1f;
+
 
   // >>>>>>>>>>>>>>>>>
   // Read params

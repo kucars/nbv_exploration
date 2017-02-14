@@ -9,13 +9,17 @@ VehicleControlIris::VehicleControlIris():
 {
   ros::NodeHandle ros_node;
 
+  // Parameters
   std::string topic_odometry;
   ros::param::param("~topic_odometry", topic_odometry, std::string("/iris/ground_truth/odometry") );
-  ros::param::param("~uav_height_min", uav_height_min_, 0.1 );
-  ros::param::param("~uav_height_max", uav_height_max_, 30.0);
+  ros::param::param("~nav_bounds_z_min", uav_height_min_, 0.1 );
+  ros::param::param("~nav_bounds_z_max", uav_height_max_, 10.0);
 
+  // Callbacks
   sub_odom = ros_node.subscribe(topic_odometry, 1, &VehicleControlIris::callbackOdometry, this);
+  pub_setpoint = ros_node.advertise<geometry_msgs::PoseStamped>("/iris/mavros/setpoint_position/local", 10);
 
+  getPose();
   std::cout << cc.yellow << "Warning: 'uav_height_max_' monitoring not implimented in the VehicleControlIris class\n" << cc.reset;
 }
 
@@ -25,6 +29,16 @@ void VehicleControlIris::callbackOdometry(const nav_msgs::Odometry& odom_msg)
   // Save pose and velocities
   vehicle_current_pose_ = odom_msg.pose.pose;
   vehicle_current_twist_= odom_msg.twist.twist;
+
+  if (isnan(vehicle_current_pose_.position.x) || isnan(vehicle_current_pose_.orientation.x))
+  {
+    std::cout << cc.red << "Current vehicle position not found..." << cc.reset;
+    is_ready_ = false;
+  }
+  else
+  {
+    is_ready_ = true;
+  }
 }
 
 
@@ -78,6 +92,12 @@ bool VehicleControlIris::isStationary(double threshold_sensitivity)
 
 void VehicleControlIris::moveVehicle(double threshold_sensitivity)
 {
+  // Publish pose
+  setpoint_.header.frame_id = "base_footprint";
+  setpoint_.header.stamp = ros::Time::now();
+  pub_setpoint.publish(setpoint_);
+
+
   // Convert setpoint to world frame
   geometry_msgs::Pose setpoint_world;
   setpoint_world = transformSetpoint2Global(setpoint_.pose);
@@ -103,7 +123,7 @@ void VehicleControlIris::moveVehicle(double threshold_sensitivity)
 
 void VehicleControlIris::setSpeed(double speed)
 {
-  std::cout << cc.yellow << "Warning: setWaypoint(double) not implimented in the VehicleControlIris class\n" << cc.reset;
+  std::cout << cc.yellow << "Warning: setSpeed(double) not implimented in the VehicleControlIris class\n" << cc.reset;
 }
 
 
@@ -151,6 +171,15 @@ void VehicleControlIris::setWaypointIncrement(double x, double y, double z, doub
 
 void VehicleControlIris::start()
 {
+  ros::Rate rate(10);
+  while(ros::ok() && !is_ready_)
+  {
+    std::cout << cc.yellow << "Iris not ready!\n" << cc.reset;
+
+    ros::spinOnce();
+    rate.sleep();
+  }
+
   // Take off
   std::cout << cc.green << "Taking off\n" << cc.reset;
 

@@ -62,10 +62,6 @@ public:
   bool skip_profiling;
   bool skip_profiling_load_map;
 
-  geometry_msgs::Pose  mobile_base_pose;
-  geometry_msgs::Twist mobile_base_twist;
-  geometry_msgs::PoseStamped setpoint;
-
   // CALLBACK VARIABLES
   std::string topic_depth;
   std::string topic_octree;
@@ -73,7 +69,6 @@ public:
   std::string topic_profile_cloud;
 
   ros::Publisher pub_global_cloud;
-  ros::Publisher pub_setpoint;
   ros::Publisher pub_scan_command;
   ros::ServiceClient srvclient_mapping;
 

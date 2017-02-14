@@ -2,7 +2,6 @@
 #define MODELPROFILERCIRCULARADAPTIVE_H
 
 #include "nbv_exploration/model_profiler_base.h"
-#include "control/vehicle_control_base.h"
 
 #include "nbv_exploration/common.h"
 
@@ -19,14 +18,10 @@ protected:
 
   bool is_sensor_rising_;
 
-  VehicleControlBase * vehicle_;
-
 public:
   ModelProfilerCircularAdaptive();
   bool run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr);
   void scan();
-
-  void setVehicle(VehicleControlBase* v);
 };
 
 #endif // MODELPROFILERCIRCULARADAPTIVE_H

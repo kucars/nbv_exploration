@@ -51,7 +51,7 @@ double VehicleControlBase::getDistance(geometry_msgs::Pose p1, geometry_msgs::Po
 double VehicleControlBase::getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
 {
   double yaw1 = pose_conversion::getYawFromQuaternion(p1.orientation);
-  double yaw2 = pose_conversion::getYawFromQuaternion(p1.orientation);
+  double yaw2 = pose_conversion::getYawFromQuaternion(p2.orientation);
 
   // Set differnce from -pi to pi
   double yaw_diff = fmod(yaw1 - yaw2, 2*M_PI);

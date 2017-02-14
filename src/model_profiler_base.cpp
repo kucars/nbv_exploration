@@ -60,6 +60,13 @@ bool ModelProfilerBase::callMappingService(int command)
   return false;
 }
 
+
+void ModelProfilerBase::setVehicle(VehicleControlBase* v)
+{
+  vehicle_ = v;
+}
+
+
 bool ModelProfilerBase::skipProfiling(bool load_map)
 {
   if (load_map)
@@ -90,6 +97,7 @@ bool ModelProfilerBase::skipProfiling(bool load_map)
 
   return true;
 }
+
 
 bool ModelProfilerBase::startProfiling()
 {
