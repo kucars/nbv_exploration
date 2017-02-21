@@ -119,3 +119,16 @@ add_executable(test_octomap src/test_octomap.cpp)
 add_dependencies(test_octomap ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
 
+
+
+add_executable(pcd2ply src/utility/pcd2ply.cpp)
+add_dependencies(pcd2ply ${catkin_EXPORTED_TARGETS})
+target_link_libraries(pcd2ply ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(ply2pcd src/utility/ply2pcd.cpp)
+add_dependencies(ply2pcd ${catkin_EXPORTED_TARGETS})
+target_link_libraries(ply2pcd ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable(pcd_cut_cuboid src/utility/pcd_cut_cuboid.cpp)
+add_dependencies(pcd_cut_cuboid ${catkin_EXPORTED_TARGETS})
+target_link_libraries(pcd_cut_cuboid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
