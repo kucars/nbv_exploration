@@ -119,6 +119,9 @@ add_executable(test_octomap src/test_octomap.cpp)
 add_dependencies(test_octomap ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
 
+add_executable(object_segmentation src/object_segmentation.cpp)
+add_dependencies(object_segmentation ${catkin_EXPORTED_TARGETS})
+target_link_libraries(object_segmentation ${catkin_LIBRARIES}  ${PCL_LIBRARIES})
 
 
 add_executable(pcd2ply src/utility/pcd2ply.cpp)
