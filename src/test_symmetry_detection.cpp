@@ -32,7 +32,7 @@ pcl::visualization::PCLVisualizer *p;
 int vp_1, vp_2;
 
 // segmentation variables
-int num_of_samples_ = 1000;
+int num_of_samples_ = 2000;
 
 std::vector<std::vector<double> > convertPlanesToVectors(std::vector<PlaneTransform> planes)
 {
@@ -106,7 +106,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     cloud_normals->points[i].z = cloud_in->points[i].z;
   }
 
-  printf("Normal estimation: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Normal estimation: %5.2lf ms\n", timer.getTime());
   timer.reset();
 
   // ==========
@@ -129,7 +129,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   sift.setInputCloud(cloud_normals);
   sift.compute(result);
 
-  printf("SIFT keypoints: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] SIFT keypoints: %5.2lf ms\n", timer.getTime());
   timer.reset();
 
   // Copying the pointwithscale to pointxyz so as to visualize the cloud
@@ -149,11 +149,12 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   rand_sample.setSample(num_of_samples_);
   rand_sample.filter(*cloud_random);
 
+  printf("[TIME] Random sampling: %5.2lf ms\n", timer.getTime());
+  timer.reset();
 
   // ==========
   // Fit plane for every pair of points
   // =========
-
   // @todo: handle all normals in one octant
 
   std::vector<PlaneTransform> plane_transforms;
@@ -203,6 +204,9 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     plane_transforms.push_back(pt);
   }
 
+  printf("[TIME] Plane fitting: %5.2lf ms\n", timer.getTime());
+  timer.reset();
+
   // ==========
   // Mean Shift Clustering
   // ==========
@@ -212,13 +216,15 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   // Perform clustering
   MeanShift *msp = new MeanShift();
-  double kernel_bandwidth = 3;
+  double kernel_bandwidth = 10;
 
-  int num_of_cluster_samples_ = 500;
+  int num_of_cluster_samples_ = 1000;
   std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth, num_of_cluster_samples_);
 
+  printf("[TIME] Clustering: %5.2lf ms\n", timer.getTime());
+  timer.reset();
+
   printf("Found %lu clusters\n", clusters.size());
-  //*/
 
 
 
@@ -255,7 +261,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   */
 
 
-  /*
+
   // ===========
   // Create point cloud representing plane obtained from clustering
   // ===========
@@ -268,6 +274,14 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     // Get plane perpendicular
     std::vector<double> u, v;
     {
+      /*
+      // normalize normals
+      double n_mag = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+      n[0] /= n_mag;
+      n[1] /= n_mag;
+      n[2] /= n_mag;
+      */
+
       // find smallest component
       int min=0;
       int i;
@@ -282,6 +296,12 @@ void findSymmetry(PointCloud::Ptr cloud_in)
       u.push_back(0);
       u.push_back( n[b] );
       u.push_back( -n[a] );
+
+      // Normalize
+      double u_mag = sqrt(u[0]*u[0] + u[1]*u[1] + u[2]*u[2]);
+      u[0] /= u_mag;
+      u[1] /= u_mag;
+      u[2] /= u_mag;
     }
 
     // Get cross product
@@ -289,6 +309,11 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     v.push_back(n[2]*u[0] - n[0]*u[2]);
     v.push_back(n[0]*u[1] - n[1]*u[0]);
 
+    // Normalize
+    double v_mag = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+    v[0] /= v_mag;
+    v[1] /= v_mag;
+    v[2] /= v_mag;
 
     // Find point on plane closest to origin
     double k, x_plane, y_plane, z_plane;
@@ -299,9 +324,10 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     z_plane = k*n[2];
 
     // Draw circles around the selected point on the plane
-    for (double r=1; r<30; r+=1)
+    for (double r=1; r<15; r+=1)
     {
-      for (double theta=0; theta<2*M_PI; theta+=M_PI_4/4)
+      double angle_inc = M_PI_4/(2*r);
+      for (double theta=0; theta<2*M_PI; theta+=angle_inc)
       {
         double x_circle = r*cos(theta);
         double y_circle = r*sin(theta);
@@ -316,7 +342,8 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     }
   }
 
-
+  printf("[TIME] Plane visualization: %5.2lf ms\n", timer.getTime());
+  timer.reset();
 
   // ==========
   // Visualize
@@ -324,7 +351,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   //printf("Points: %lf\n", cloud_random->points.size());
 
   // Create a PCLVisualizer object
-  p = new pcl::visualization::PCLVisualizer ("Object segmentation");
+  p = new pcl::visualization::PCLVisualizer ("Object symmetry");
   p->createViewPort (0.0, 0, 0.5, 1.0, vp_1);
   p->createViewPort (0.5, 0, 1.0, 1.0, vp_2);
 
@@ -337,31 +364,29 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   //65.3496,129.337/6.66135,-0.846776,0.509762/35.1704,-68.6111,63.8152/0.0329489,0.689653,0.72339/0.523599/960,540/65,52
 
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> handler1 (cloud_in, 255, 0, 0);
-  p->addPointCloud (cloud_in, handler1, "input_cloud", vp_1);
 
+  // Viewport 1
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_color_handler (cloud_in, 255, 0, 0);
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> keypoints_color_handler (cloud_keypoint, 0, 255, 0);
+  p->addPointCloud (cloud_in, cloud_color_handler, "input_cloud", vp_1);
+  p->addPointCloud (cloud_keypoint, keypoints_color_handler, "cloud_keypoint", vp_1);
+  p->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "cloud_keypoint");
+
+  // Viewport 2
   pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_random, 255, 0, 0);
-  p->addPointCloud (cloud_random, handler2, "random_cloud", vp_2);
-
   pcl::visualization::PointCloudColorHandlerCustom<PointT> handler3 (cloud_plane, 0, 255, 0);
+  p->addPointCloud (cloud_random, handler2, "random_cloud", vp_2);
   p->addPointCloud (cloud_plane, handler3, "plane", vp_2);
 
   p->spin();
-  */
 
-  // Visualization of keypoints along with the original cloud
-  pcl::visualization::PCLVisualizer viewer("PCL Viewer");
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> keypoints_color_handler (cloud_keypoint, 0, 255, 0);
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud_color_handler (cloud_in, 255, 0, 0);
-  viewer.setBackgroundColor( 0.0, 0.0, 0.0 );
-  viewer.addPointCloud(cloud_in, cloud_color_handler, "cloud");
-  viewer.addPointCloud(cloud_keypoint, keypoints_color_handler, "keypoints");
-  viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "keypoints");
 
-  while(!viewer.wasStopped ())
+  /*
+  while(!p->wasStopped ())
   {
-  viewer.spinOnce ();
+    p->spinOnce ();
   }
+  */
 }
 
 
