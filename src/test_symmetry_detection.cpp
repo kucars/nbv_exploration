@@ -29,7 +29,7 @@ struct PlaneTransform{
 
 // PCL Visualization
 pcl::visualization::PCLVisualizer *p;
-int vp_1, vp_2;
+int vp_1, vp_2, vp_3;
 
 // segmentation variables
 int num_of_samples_ = 2000;
@@ -227,40 +227,81 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   printf("Found %lu clusters\n", clusters.size());
 
 
+  // ==========
+  // Verify planes
+  // ==========
+  // @todo
 
-  /*
+  printf("[TIME] Verification: %5.2lf ms\n", timer.getTime());
+  timer.reset();
+
+
   // ==========
-  // Save results
+  // Mirror points in the input cloud
   // ==========
-  FILE *fp = fopen("result.csv", "w");
-  if(!fp){
-      perror("Couldn't write result.csv");
-      exit(0);
+
+  // Move the point p=[px, py, pz] into the plane along the normal with the paramter 't':
+  //   [x, y, z] = [px, py, pz] + t*[a, b, c]
+  //   ax + by + cz + d = 0
+  //
+  // t = -(a*px + b*py + c*pz + d)/(a^2 + b^2 + c^2)
+  // t = -(a*px + b*py + c*pz + d)/den
+  //
+  // The mirrored point lies at 2t:
+  //   mx = px + 2*t*a
+  //   my = py + 2*t*b
+  //   mz = pz + 2*t*c
+
+  // Copy cloud
+  PointCloud::Ptr cloud_mirrored (new PointCloud);
+  for (int i=0; i<cloud_in->points.size(); i++)
+  {
+    cloud_mirrored->points.push_back(cloud_in->points[i]);
   }
 
-  printf("\n====================\n");
-  printf("Found %lu clusters\n", clusters.size());
-  printf("====================\n\n");
-  for(int cluster = 0; cluster < clusters.size(); cluster++) {
-    printf("Cluster %i:\n", cluster);
-    for(int point = 0; point < clusters[cluster].original_points.size(); point++){
-      for(int dim = 0; dim < clusters[cluster].original_points[point].size(); dim++) {
-        printf("%f ", clusters[cluster].original_points[point][dim]);
-        fprintf(fp, dim?",%f":"%f", clusters[cluster].original_points[point][dim]);
-      }
-      printf(" -> ");
-      for(int dim = 0; dim < clusters[cluster].shifted_points[point].size(); dim++) {
-        printf("%f ", clusters[cluster].shifted_points[point][dim]);
-      }
-      printf("\n");
-      fprintf(fp, "\n");
+  for (int c = 0; c<clusters.size(); c++)
+  {
+    // Get plane equation
+    std::vector<double> n = clusters[c].shifted_points[0];
+
+    // PLANE REPRESENTATION
+    //    a*x +    b*y +    c*z + d    = 0
+    // n[0]*x + n[1]*y + n[2]*z + n[3] = 0
+
+    double den = n[0]*n[0] + n[1]*n[1] + n[2]*n[2];
+
+    // Mirror each point
+    for(size_t i = 0; i<cloud_in->points.size(); ++i)
+    {
+      PointT p = cloud_in->points[i];
+      // Find the parameter 't'
+      double t = -(n[0]*p.x + n[1]*p.y + n[2]*p.x + n[3])/den;
+
+      // Find mirrored point
+      PointT m;
+      m.x = p.x + 2*t*n[0];
+      m.y = p.y + 2*t*n[1];
+      m.z = p.z + 2*t*n[2];
+
+      // Push the point into the cloud
+      cloud_mirrored->points.push_back(m);
     }
-    printf("\n");
   }
-  fclose(fp);
+
+
+  // Voxel grid filtering to remove close points
+  /*
+  float leaf_size = 0.005f;
+
+  pcl::VoxelGrid<PointT> sor;
+  sor.setInputCloud (cloud_mirrored);
+  sor.setLeafSize (leaf_size, leaf_size, leaf_size);
+  sor.filter (*cloud_mirrored);
   */
 
 
+  printf("[TIME] Model Mirroring: %5.2lf ms\n", timer.getTime());
+  timer.reset();
 
   // ===========
   // Create point cloud representing plane obtained from clustering
@@ -271,16 +312,14 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     // Get cluster mean which represents a plane
     std::vector<double> n = clusters[cluster].shifted_points[0];
 
+    // PLANE REPRESENTATION
+    //    a*x +    b*y +    c*z + d    = 0
+    // n[0]*x + n[1]*y + n[2]*z + n[3] = 0
+
+
     // Get plane perpendicular
     std::vector<double> u, v;
     {
-      /*
-      // normalize normals
-      double n_mag = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
-      n[0] /= n_mag;
-      n[1] /= n_mag;
-      n[2] /= n_mag;
-      */
 
       // find smallest component
       int min=0;
@@ -316,6 +355,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     v[2] /= v_mag;
 
     // Find point on plane closest to origin
+    // This point is the center of the visual
     double k, x_plane, y_plane, z_plane;
 
     k = -n[3]/(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
@@ -347,13 +387,14 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   // ==========
   // Visualize
-  // =========
+  // ==========
   //printf("Points: %lf\n", cloud_random->points.size());
 
   // Create a PCLVisualizer object
   p = new pcl::visualization::PCLVisualizer ("Object symmetry");
-  p->createViewPort (0.0, 0, 0.5, 1.0, vp_1);
-  p->createViewPort (0.5, 0, 1.0, 1.0, vp_2);
+  p->createViewPort (0.00, 0, 0.33, 1.0, vp_1);
+  p->createViewPort (0.33, 0, 0.66, 1.0, vp_2);
+  p->createViewPort (0.66, 0, 1.00, 1.0, vp_3);
 
   p->setBackgroundColor(255, 255, 255);
   p->setCameraClipDistances(65.3496, 129.337);
@@ -378,15 +419,13 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   p->addPointCloud (cloud_random, handler2, "random_cloud", vp_2);
   p->addPointCloud (cloud_plane, handler3, "plane", vp_2);
 
+
+  // Viewport 3
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored, 255, 0, 0);
+  p->addPointCloud (cloud_mirrored, mirrored_color_handler, "mirrored_cloud", vp_3);
+
   p->spin();
 
-
-  /*
-  while(!p->wasStopped ())
-  {
-    p->spinOnce ();
-  }
-  */
 }
 
 
