@@ -172,11 +172,11 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // ==========
   // Pair keypoints based on curvature
   // =========
-  double pairing_threshold = 0.001;
+  double pairing_threshold = 0.0001;
   PointCloudN::Ptr cloud_pairs (new PointCloudN);
 
   int num_points_rem = result.points.size();
-  for (; num_points_rem>0; )
+  for (; result.points.size()>0; )
   {
     //Get last point in result cloud
     PointN p1 = result.points.back();
@@ -196,7 +196,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
         result.points.erase (result.points.end());
         result.points.erase (result.points.begin()+i);
 
-        num_points_rem -= 2;
         found_pair = true;
 
         break;
@@ -207,7 +206,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     if (!found_pair)
     {
       result.points.erase (result.points.end());
-      num_points_rem--;
     }
   }
 
@@ -250,8 +248,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     PointN p1 = cloud_pairs->points[i];
     PointN p2 = cloud_pairs->points[i+1];
 
-    printf("pair %d: diff: %f\n", i/2, fabs(p1.curvature - p2.curvature));
-
     // Reorder points to keep normals in one half of R^3
     if (p1.x < p2.x)
     {
@@ -289,7 +285,14 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     pt.d = -(nx*x_mid + ny*y_mid + nz*z_mid);
     pt.distance = dist;
 
-    plane_transforms.push_back(pt);
+    // Only append in the plane is not NaN
+    if (!isnan(pt.a))
+    {
+      plane_transforms.push_back(pt);
+
+      //printf("pair %d: curvature: %f, eqn=[%2.2f, %2.2f, %2.2f, %2.2f]\n", i/2, fabs(p1.curvature - p2.curvature), pt.a, pt.b, pt.c, pt.d);
+    }
+
   }
 
   printf("[TIME] Plane fitting: %5.2lf ms\n", timer.getTime());
@@ -452,7 +455,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     z_plane = k*n[2];
 
     // Draw circles around the selected point on the plane
-    for (double r=1; r<15; r+=1)
+    for (double r=1; r<30; r+=1)
     {
       double angle_inc = M_PI_4/(2*r);
       for (double theta=0; theta<2*M_PI; theta+=angle_inc)
@@ -501,9 +504,12 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   p->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "cloud_keypoint");
 
   // Viewport 2
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_pairs_xyz, 255, 0, 0);
+  //pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_pairs_xyz, 255, 0, 0);
+  //p->addPointCloud (cloud_pairs_xyz, handler2, "paired_cloud", vp_2);
+
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_in, 255, 0, 0);
   pcl::visualization::PointCloudColorHandlerCustom<PointT> handler3 (cloud_plane, 0, 255, 0);
-  p->addPointCloud (cloud_pairs_xyz, handler2, "paired_cloud", vp_2);
+  p->addPointCloud (cloud_in, handler2, "paired_cloud", vp_2);
   p->addPointCloud (cloud_plane, handler3, "plane", vp_2);
 
 
