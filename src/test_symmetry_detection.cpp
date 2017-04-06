@@ -4,6 +4,7 @@
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/keypoints/sift_keypoint.h>
+#include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/random_sample.h>
 #include <pcl/io/pcd_io.h>
@@ -119,8 +120,8 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   const float min_contrast = 0.0001f;
 
   // Estimate the sift interest points using normals values from xyz as the Intensity variants
-  pcl::SIFTKeypoint<pcl::PointNormal, pcl::PointWithScale> sift;
-  pcl::PointCloud<pcl::PointWithScale> result;
+  pcl::SIFTKeypoint<pcl::PointNormal, pcl::PointNormal> sift;
+  pcl::PointCloud<pcl::PointNormal> result;
 
   pcl::search::KdTree<pcl::PointNormal>::Ptr tree_sift(new pcl::search::KdTree<pcl::PointNormal> ());
   sift.setSearchMethod(tree_sift);
@@ -132,7 +133,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   printf("[TIME] SIFT keypoints: %5.2lf ms\n", timer.getTime());
   timer.reset();
 
-  // Copying the pointwithscale to pointxyz so as to visualize the cloud
+  // Copying the pointnormal to pointxyz so as to visualize the cloud
   PointCloud::Ptr cloud_keypoint (new PointCloud);
   copyPointCloud(result, *cloud_keypoint);
 
@@ -140,17 +141,102 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
   // ==========
+  // Find nearest corresponding point for each keypoint in original cloud and copy its curvature
+  // ==========
+  // K nearest neighbor search
+
+  pcl::KdTreeFLANN<pcl::PointNormal> kdtree;
+  kdtree.setInputCloud (cloud_normals);
+  int K = 1;
+
+  for (int i_keypoint=0; i_keypoint<result.points.size(); i_keypoint++)
+  {
+    pcl::PointNormal searchPoint = result.points[i_keypoint];
+
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    if ( kdtree.nearestKSearch (searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
+    {
+      // Copy curvature to result
+      int normal_idx = pointIdxNKNSearch[0];
+      result.points[i_keypoint].curvature = cloud_normals->points[normal_idx].curvature;
+    }
+    else
+    {
+      printf("NO CORRESPONDING POINT FOR KEYPOINT %d\n", i_keypoint);
+    }
+  }
+
+
+  // ==========
+  // Pair keypoints based on curvature
+  // =========
+  double pairing_threshold = 0.001;
+  PointCloudN::Ptr cloud_pairs (new PointCloudN);
+
+  int num_points_rem = result.points.size();
+  for (; num_points_rem>0; )
+  {
+    //Get last point in result cloud
+    PointN p1 = result.points.back();
+    bool found_pair = false;
+
+    //Find first point with similar curvature
+    for (int i=0; i<result.points.size()-1; i++)
+    {
+      PointN p2 = result.points[i];
+      //printf("num_points_rem: %d - diff: %f\n", num_points_rem, fabs(p1.curvature - p2.curvature));
+      if (fabs(p1.curvature - p2.curvature) <= pairing_threshold)
+      {
+        // Assign the two as a pair and delete them from the cloud
+        cloud_pairs->points.push_back(p1);
+        cloud_pairs->points.push_back(p2);
+
+        result.points.erase (result.points.end());
+        result.points.erase (result.points.begin()+i);
+
+        num_points_rem -= 2;
+        found_pair = true;
+
+        break;
+      }
+    }
+
+    //If no pair was found, delete the last point in the cloud anyway
+    if (!found_pair)
+    {
+      result.points.erase (result.points.end());
+      num_points_rem--;
+    }
+  }
+
+  printf("Found %lu pairs\n", cloud_pairs->points.size()/2);
+
+  printf("[TIME] Pairing: %5.2lf ms\n", timer.getTime());
+  timer.reset();
+
+  // Copying the pointnormal to pointxyz so as to visualize the cloud
+  PointCloud::Ptr cloud_pairs_xyz (new PointCloud);
+  copyPointCloud(*cloud_pairs, *cloud_pairs_xyz);
+
+
+
+  // ==========
   // Random sampling
   // =========
-  PointCloud::Ptr cloud_random (new PointCloud);
+  /*
+  PointCloud::Ptr cloud_pairs (new PointCloud);
 
   pcl::RandomSample<PointT> rand_sample;
   rand_sample.setInputCloud(cloud_in);
   rand_sample.setSample(num_of_samples_);
-  rand_sample.filter(*cloud_random);
+  rand_sample.filter(*cloud_pairs);
+
 
   printf("[TIME] Random sampling: %5.2lf ms\n", timer.getTime());
   timer.reset();
+  */
 
   // ==========
   // Fit plane for every pair of points
@@ -159,15 +245,17 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   std::vector<PlaneTransform> plane_transforms;
 
-  for (int i=0; i<num_of_samples_; i+=2)
+  for (int i=0; i<cloud_pairs->points.size(); i+=2)
   {
-    PointT p1 = cloud_random->points[i];
-    PointT p2 = cloud_random->points[i+1];
+    PointN p1 = cloud_pairs->points[i];
+    PointN p2 = cloud_pairs->points[i+1];
+
+    printf("pair %d: diff: %f\n", i/2, fabs(p1.curvature - p2.curvature));
 
     // Reorder points to keep normals in one half of R^3
     if (p1.x < p2.x)
     {
-      PointT temp = p1;
+      PointN temp = p1;
       p1 = p2;
       p2 = temp;
     }
@@ -218,7 +306,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   MeanShift *msp = new MeanShift();
   double kernel_bandwidth = 10;
 
-  int num_of_cluster_samples_ = 1000;
+  int num_of_cluster_samples_ = cloud_pairs->points.size()/2;
   std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth, num_of_cluster_samples_);
 
   printf("[TIME] Clustering: %5.2lf ms\n", timer.getTime());
@@ -388,7 +476,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // ==========
   // Visualize
   // ==========
-  //printf("Points: %lf\n", cloud_random->points.size());
 
   // Create a PCLVisualizer object
   p = new pcl::visualization::PCLVisualizer ("Object symmetry");
@@ -414,9 +501,9 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   p->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "cloud_keypoint");
 
   // Viewport 2
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_random, 255, 0, 0);
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_pairs_xyz, 255, 0, 0);
   pcl::visualization::PointCloudColorHandlerCustom<PointT> handler3 (cloud_plane, 0, 255, 0);
-  p->addPointCloud (cloud_random, handler2, "random_cloud", vp_2);
+  p->addPointCloud (cloud_pairs_xyz, handler2, "paired_cloud", vp_2);
   p->addPointCloud (cloud_plane, handler3, "plane", vp_2);
 
 
