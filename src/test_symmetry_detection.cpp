@@ -8,6 +8,7 @@
 #include <pcl/features/fpfh.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/random_sample.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
@@ -104,6 +105,21 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   pcl::StopWatch timer; //start timer
 
   // ==========
+  // Filter input
+  // ==========
+  PointCloud::Ptr cloud_temp (new PointCloud);
+
+  float leaf = 0.1f;
+  int tree_K = 50;
+
+  pcl::VoxelGrid<PointT> sor;
+  sor.setInputCloud (cloud_in);
+  sor.setLeafSize (leaf, leaf, leaf);
+  sor.filter (*cloud_temp);
+
+  cloud_in = cloud_temp;
+
+  // ==========
   // Estimate points normals (parallelized)
   // ==========
   PointCloudN::Ptr cloud_normals (new PointCloudN);
@@ -112,7 +128,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   norm_est.setSearchMethod (tree);
   norm_est.setInputCloud (cloud_in);
-  norm_est.setKSearch (50);
+  norm_est.setKSearch (tree_K);
   norm_est.compute (*cloud_normals);
 
   // Copy the xyz info from cloud_xyz and add it to cloud_normals as the xyz field in PointNormals estimation is zero
@@ -136,7 +152,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   // Use the same KdTree from the normal estimation
   fpfhEstimation.setSearchMethod (tree);
-  fpfhEstimation.setKSearch (50);
+  fpfhEstimation.setKSearch (tree_K);
 
   // Compute features
   fpfhEstimation.compute (*fpfhFeatures);
@@ -217,7 +233,10 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
   // ==========
-  // Pair keypoints based on curvature
+  // Pair keypoints based on feature similarity
+  //
+  // Do an exhaustive search, only eliminating a point from consideration
+  // after considering how well it matches with all other keypoints
   // =========
   double pairing_threshold = 15;
   PointCloudN::Ptr cloud_pairs (new PointCloudN);
@@ -226,9 +245,8 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   {
     //Get last point in result cloud
     KeypointFeature p1 = keypoint_features.back();
-    bool found_pair = false;
 
-    //Find first point with similar curvature
+    //Find keypoints with similar features
     for (int i=0; i<keypoint_features.size(); i++)
     {
       KeypointFeature p2 = keypoint_features[i];
@@ -240,28 +258,18 @@ void findSymmetry(PointCloud::Ptr cloud_in)
         continue;
 
       float feat_dist = getFeatureDistance(p1.feature, p2.feature);
-      //printf("Distance [%d]: %f\n", i, feat_dist);
 
       if (feat_dist <= pairing_threshold)
       {
-        // Assign the two as a pair and delete them from the cloud
+        // Assign the two as a pair
         cloud_pairs->points.push_back(p1.point);
         cloud_pairs->points.push_back(p2.point);
-
-        keypoint_features.erase (keypoint_features.end());
-        keypoint_features.erase (keypoint_features.begin()+i);
-
-        found_pair = true;
-
         break;
       }
     }
 
-    //If no pair was found, delete the last point in the cloud anyway
-    if (!found_pair)
-    {
-      keypoint_features.erase (keypoint_features.end());
-    }
+    // Remove the considered keypoint from the list and continue
+    keypoint_features.erase (keypoint_features.end());
   }
 
   printf("Found %lu pairs\n", cloud_pairs->points.size()/2);
