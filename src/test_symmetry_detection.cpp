@@ -5,6 +5,7 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/keypoints/sift_keypoint.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/features/fpfh.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/random_sample.h>
 #include <pcl/io/pcd_io.h>
@@ -14,7 +15,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
-#include "lib/MeanShift_cpp/MeanShift.h"
+#include "lib/MeanShift/MeanShift.h"
 
 //convenient typedefs
 typedef pcl::PointXYZ PointT;
@@ -28,12 +29,14 @@ struct PlaneTransform{
   double distance;
 };
 
+struct KeypointFeature{
+  PointN point;
+  pcl::FPFHSignature33 feature;
+};
+
 // PCL Visualization
 pcl::visualization::PCLVisualizer *p;
 int vp_1, vp_2, vp_3;
-
-// segmentation variables
-int num_of_samples_ = 2000;
 
 std::vector<std::vector<double> > convertPlanesToVectors(std::vector<PlaneTransform> planes)
 {
@@ -73,6 +76,17 @@ std::vector<PlaneTransform> convertVectorsToPlanes(std::vector<std::vector<doubl
   return final;
 }
 
+float getFeatureDistance(pcl::FPFHSignature33 p1, pcl::FPFHSignature33 p2)
+{
+  // Euclidian distance
+  float sum = 0;
+
+  for (int i=0; i<33; i++)
+    sum += pow(p1.histogram[i] - p2.histogram[i], 2);
+
+  return sqrt(sum);
+}
+
 void findSymmetry(PointCloud::Ptr cloud_in)
 {
   /* Based on a simplified method proposed by N. J. Mitra (2003) in
@@ -89,7 +103,9 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   pcl::StopWatch timer; //start timer
 
+  // ==========
   // Estimate points normals (parallelized)
+  // ==========
   PointCloudN::Ptr cloud_normals (new PointCloudN);
   pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT> ());
   pcl::NormalEstimationOMP<PointT, PointN> norm_est;
@@ -108,6 +124,24 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   }
 
   printf("[TIME] Normal estimation: %5.2lf ms\n", timer.getTime());
+  timer.reset();
+
+  // ==========
+  // Compute FPFH features
+  // ==========
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhFeatures(new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::FPFHEstimation<PointT, PointN, pcl::FPFHSignature33> fpfhEstimation;
+  fpfhEstimation.setInputCloud  (cloud_in);
+  fpfhEstimation.setInputNormals(cloud_normals);
+
+  // Use the same KdTree from the normal estimation
+  fpfhEstimation.setSearchMethod (tree);
+  fpfhEstimation.setKSearch (50);
+
+  // Compute features
+  fpfhEstimation.compute (*fpfhFeatures);
+
+  printf("[TIME] Feature calculation: %5.2lf ms\n", timer.getTime());
   timer.reset();
 
   // ==========
@@ -141,9 +175,16 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
   // ==========
-  // Find nearest corresponding point for each keypoint in original cloud and copy its curvature
+  // Find nearest corresponding point for each keypoint in original cloud and its associated feature vector
+  //
+  // SIFT keypoints are computed by downscaling the cloud multiple times.
+  // When returning to the original scale, sometimes the keypoint doesn't
+  // coincide with a point in the original cloud. Here, we find the nearest
+  // point in the original cloud and assign the keypoint to that location
   // ==========
+
   // K nearest neighbor search
+  std::vector<KeypointFeature> keypoint_features;
 
   pcl::KdTreeFLANN<pcl::PointNormal> kdtree;
   kdtree.setInputCloud (cloud_normals);
@@ -158,9 +199,15 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
     if ( kdtree.nearestKSearch (searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
     {
-      // Copy curvature to result
-      int normal_idx = pointIdxNKNSearch[0];
-      result.points[i_keypoint].curvature = cloud_normals->points[normal_idx].curvature;
+      // Find closest point in original cloud
+      int idx = pointIdxNKNSearch[0];
+
+      // Add feature to vector
+      KeypointFeature f;
+      f.point   = cloud_normals->points[idx]; //searchPoint;
+      f.feature = fpfhFeatures->points[idx];
+
+      keypoint_features.push_back(f);
     }
     else
     {
@@ -172,29 +219,37 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // ==========
   // Pair keypoints based on curvature
   // =========
-  double pairing_threshold = 0.0001;
+  double pairing_threshold = 15;
   PointCloudN::Ptr cloud_pairs (new PointCloudN);
 
-  int num_points_rem = result.points.size();
-  for (; result.points.size()>0; )
+  for (; keypoint_features.size()>0; )
   {
     //Get last point in result cloud
-    PointN p1 = result.points.back();
+    KeypointFeature p1 = keypoint_features.back();
     bool found_pair = false;
 
     //Find first point with similar curvature
-    for (int i=0; i<result.points.size()-1; i++)
+    for (int i=0; i<keypoint_features.size(); i++)
     {
-      PointN p2 = result.points[i];
-      //printf("num_points_rem: %d - diff: %f\n", num_points_rem, fabs(p1.curvature - p2.curvature));
-      if (fabs(p1.curvature - p2.curvature) <= pairing_threshold)
+      KeypointFeature p2 = keypoint_features[i];
+
+      // Don't pair a point with itself
+      if (p1.point.x == p2.point.x &&
+          p1.point.y == p2.point.y &&
+          p1.point.z == p2.point.z)
+        continue;
+
+      float feat_dist = getFeatureDistance(p1.feature, p2.feature);
+      //printf("Distance [%d]: %f\n", i, feat_dist);
+
+      if (feat_dist <= pairing_threshold)
       {
         // Assign the two as a pair and delete them from the cloud
-        cloud_pairs->points.push_back(p1);
-        cloud_pairs->points.push_back(p2);
+        cloud_pairs->points.push_back(p1.point);
+        cloud_pairs->points.push_back(p2.point);
 
-        result.points.erase (result.points.end());
-        result.points.erase (result.points.begin()+i);
+        keypoint_features.erase (keypoint_features.end());
+        keypoint_features.erase (keypoint_features.begin()+i);
 
         found_pair = true;
 
@@ -205,7 +260,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     //If no pair was found, delete the last point in the cloud anyway
     if (!found_pair)
     {
-      result.points.erase (result.points.end());
+      keypoint_features.erase (keypoint_features.end());
     }
   }
 
@@ -218,23 +273,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   PointCloud::Ptr cloud_pairs_xyz (new PointCloud);
   copyPointCloud(*cloud_pairs, *cloud_pairs_xyz);
 
-
-
-  // ==========
-  // Random sampling
-  // =========
-  /*
-  PointCloud::Ptr cloud_pairs (new PointCloud);
-
-  pcl::RandomSample<PointT> rand_sample;
-  rand_sample.setInputCloud(cloud_in);
-  rand_sample.setSample(num_of_samples_);
-  rand_sample.filter(*cloud_pairs);
-
-
-  printf("[TIME] Random sampling: %5.2lf ms\n", timer.getTime());
-  timer.reset();
-  */
 
   // ==========
   // Fit plane for every pair of points
@@ -287,11 +325,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
     // Only append in the plane is not NaN
     if (!isnan(pt.a))
-    {
       plane_transforms.push_back(pt);
-
-      //printf("pair %d: curvature: %f, eqn=[%2.2f, %2.2f, %2.2f, %2.2f]\n", i/2, fabs(p1.curvature - p2.curvature), pt.a, pt.b, pt.c, pt.d);
-    }
 
   }
 
@@ -309,8 +343,9 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   MeanShift *msp = new MeanShift();
   double kernel_bandwidth = 10;
 
-  int num_of_cluster_samples_ = cloud_pairs->points.size()/2;
-  std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth, num_of_cluster_samples_);
+  //int num_of_cluster_samples_ = cloud_pairs->points.size()/2;
+  //std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth, num_of_cluster_samples_);
+  std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth);
 
   printf("[TIME] Clustering: %5.2lf ms\n", timer.getTime());
   timer.reset();
@@ -319,7 +354,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
   // ==========
-  // Verify planes
+  // Verify planes of symmetry
   // ==========
   // @todo
 
@@ -493,9 +528,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   p->setSize(960, 540);
   p->setPosition(0, 500);
 
-  //65.3496,129.337/6.66135,-0.846776,0.509762/35.1704,-68.6111,63.8152/0.0329489,0.689653,0.72339/0.523599/960,540/65,52
-
-
   // Viewport 1
   pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_color_handler (cloud_in, 255, 0, 0);
   pcl::visualization::PointCloudColorHandlerCustom<PointT> keypoints_color_handler (cloud_keypoint, 0, 255, 0);
@@ -508,8 +540,9 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   //p->addPointCloud (cloud_pairs_xyz, handler2, "paired_cloud", vp_2);
 
   pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_in, 255, 0, 0);
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> handler3 (cloud_plane, 0, 255, 0);
   p->addPointCloud (cloud_in, handler2, "paired_cloud", vp_2);
+
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> handler3 (cloud_plane, 0, 255, 0);
   p->addPointCloud (cloud_plane, handler3, "plane", vp_2);
 
 
@@ -533,9 +566,6 @@ int main (int argc, char** argv)
     return (-1);
   }
   std::string file_in (argv[1]);
-
-  if (argc > 2)
-    num_of_samples_ = atoi(argv[2]); //convert string to int
 
 
   // ===================

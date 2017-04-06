@@ -123,7 +123,9 @@ add_executable(test_octomap src/test_octomap.cpp)
 add_dependencies(test_octomap ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
 
-add_executable(test_symmetry_detection src/test_symmetry_detection.cpp src/lib/MeanShift_cpp/MeanShift.cpp)
+add_executable(test_symmetry_detection
+  src/test_symmetry_detection.cpp
+  src/lib/MeanShift/MeanShift.cpp)
 add_dependencies(test_symmetry_detection ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_symmetry_detection ${catkin_LIBRARIES}  ${PCL_LIBRARIES})
 
