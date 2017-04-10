@@ -48,7 +48,8 @@ ConsoleUtility cc;
 bool isDebug = !true; //Set to true to see debug text
 bool isDebugContinuousStates = !true;
 bool is_get_camera_data = false;
-bool is_batch_profiling = true;
+bool is_batch_profiling = false;
+bool is_filling_octomap = false;
 
 // Config
 double max_range;
@@ -439,7 +440,8 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   Eigen::Matrix4d tf_eigen;
   
   try{
-    tf_listener->lookupTransform("world", "/iris/hokuyo_laser_link", ros::Time(0), transform);
+    // "/iris/hokuyo_laser_link"
+    tf_listener->lookupTransform("world", laser_msg.header.frame_id, ros::Time(0), transform);
     tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
   }
   catch (tf::TransformException ex){
@@ -515,7 +517,8 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   }
   else
   {
-    addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, sensor_dir, laser_range);
+    if(is_filling_octomap)
+      addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, sensor_dir, laser_range);
   }
 }
 
