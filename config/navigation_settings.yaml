@@ -6,10 +6,10 @@ object_bounds_y_min: -5
 object_bounds_z_max: 5
 object_bounds_z_min: 0
 
-nav_bounds_x_max: 7
-nav_bounds_x_min: -7
-nav_bounds_y_max: 7
-nav_bounds_y_min: -7
+nav_bounds_x_max: 20
+nav_bounds_x_min: -20
+nav_bounds_y_max: 20
+nav_bounds_y_min: -20
 nav_bounds_z_max: 7
 nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may collide with the floor
 

@@ -1,9 +1,8 @@
 #ifndef MODELPROFILERCIRCULARADAPTIVE_H
 #define MODELPROFILERCIRCULARADAPTIVE_H
 
-#include "nbv_exploration/model_profiler_base.h"
-
 #include "nbv_exploration/common.h"
+#include "nbv_exploration/model_profiler_base.h"
 
 class ModelProfilerCircularAdaptive : public ModelProfilerBase
 {

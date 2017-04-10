@@ -80,7 +80,9 @@ add_executable(nbv_main
   src/nbv_main.cpp
 
   src/model_profiler_base.cpp
+  src/model_profiler_bounded_box.cpp
   src/model_profiler_circular_adaptive.cpp
+
   src/nbv_loop.cpp
   src/termination_check_base.cpp
   src/view_generator.cpp

@@ -20,7 +20,8 @@ bool ModelProfilerCircularAdaptive::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr p
 {
   profile_angle_ += angle_inc_;
 
-  if (profile_angle_ > 2*M_PI + angle_inc_){
+  if (profile_angle_ > 2*M_PI + angle_inc_)
+  {
     std::cout << cc.green << "Profiling complete\n" << cc.reset;
 
     callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
@@ -99,7 +100,7 @@ bool ModelProfilerCircularAdaptive::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr p
     yaw_move = theta-M_PI; //towards the center of the circle
 
     std::cout << cc.magenta << "Moving along\n" << cc.reset;
-    vehicle_->setWaypointIncrement(x_move, y_move, z_move, yaw_move);
+    vehicle_->setWaypoint(x_move, y_move, z_move, yaw_move);
     vehicle_->moveVehicle(1.5);
   }
   else
@@ -113,7 +114,7 @@ bool ModelProfilerCircularAdaptive::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr p
       yaw_move = theta-M_PI; //towards the center of the circle
 
       std::cout << cc.magenta << "Moving along\n" << cc.reset;
-      vehicle_->setWaypointIncrement(x_move, y_move, z_move, yaw_move);
+      vehicle_->setWaypoint(x_move, y_move, z_move, yaw_move);
       vehicle_->moveVehicle(1.5); // Be less picky about position, just move around quickly
     }
   }

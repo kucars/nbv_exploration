@@ -8,6 +8,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include "nbv_exploration/model_profiler_base.h"
+#include "nbv_exploration/model_profiler_bounded_box.h"
 #include "nbv_exploration/model_profiler_circular_adaptive.h"
 #include "nbv_exploration/view_generator.h"
 #include "nbv_exploration/view_selecter.h"
