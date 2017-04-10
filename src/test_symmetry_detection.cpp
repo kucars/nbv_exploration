@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <ros/ros.h>
+
 #include <pcl/common/time.h>
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d_omp.h>
@@ -38,6 +40,30 @@ struct KeypointFeature{
 // PCL Visualization
 pcl::visualization::PCLVisualizer *p;
 int vp_1, vp_2, vp_3;
+
+
+// Symmetry Detection Parameters
+bool use_exhaustive_pairing = false;
+bool use_prefilter = false;
+bool use_sift_points = false;
+
+
+double mean_shift_kernel_bandwidth;
+int mean_shift_num_points;
+
+double pairing_subset_percent;
+double pairing_threshold;
+double prefilter_leaf_size;
+double sift_min_contrast;
+double sift_min_scale;
+int sift_num_octaves;
+int sift_num_scales_per_octave;
+int tree_K; //Number of neighbors in KD trees
+
+std::string filename_pcd;
+
+
+
 
 std::vector<std::vector<double> > convertPlanesToVectors(std::vector<PlaneTransform> planes)
 {
@@ -88,77 +114,12 @@ float getFeatureDistance(pcl::FPFHSignature33 p1, pcl::FPFHSignature33 p2)
   return sqrt(sum);
 }
 
-void findSymmetry(PointCloud::Ptr cloud_in)
+
+
+
+std::vector<KeypointFeature> getKeypointFeatures(PointCloudN::Ptr cloud_normals, pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhFeatures)
 {
-  /* Based on a simplified method proposed by N. J. Mitra (2003) in
-   *  "Approximate Symmetry Detection and Symmetrization"
-   *
-   * This method does the following:
-   * 1- Randomly sample two points
-   * 2- Find line connecting the points and midpoint
-   * 3- Construct perpendicular plane at midpoint
-   * 4- Record plane parameters (phi) and distance of points to plane (d)
-   * 5- Repeat for N random pairs
-   * 6- Perform clustering on transform space to find planes of symmetry
-   */
-
   pcl::StopWatch timer; //start timer
-
-  // ==========
-  // Filter input
-  // ==========
-  PointCloud::Ptr cloud_temp (new PointCloud);
-
-  float leaf = 0.1f;
-  int tree_K = 50;
-
-  pcl::VoxelGrid<PointT> sor;
-  sor.setInputCloud (cloud_in);
-  sor.setLeafSize (leaf, leaf, leaf);
-  sor.filter (*cloud_temp);
-
-  cloud_in = cloud_temp;
-
-  // ==========
-  // Estimate points normals (parallelized)
-  // ==========
-  PointCloudN::Ptr cloud_normals (new PointCloudN);
-  pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT> ());
-  pcl::NormalEstimationOMP<PointT, PointN> norm_est;
-
-  norm_est.setSearchMethod (tree);
-  norm_est.setInputCloud (cloud_in);
-  norm_est.setKSearch (tree_K);
-  norm_est.compute (*cloud_normals);
-
-  // Copy the xyz info from cloud_xyz and add it to cloud_normals as the xyz field in PointNormals estimation is zero
-  for(size_t i = 0; i<cloud_normals->points.size(); ++i)
-  {
-    cloud_normals->points[i].x = cloud_in->points[i].x;
-    cloud_normals->points[i].y = cloud_in->points[i].y;
-    cloud_normals->points[i].z = cloud_in->points[i].z;
-  }
-
-  printf("[TIME] Normal estimation: %5.2lf ms\n", timer.getTime());
-  timer.reset();
-
-  // ==========
-  // Compute FPFH features
-  // ==========
-  pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhFeatures(new pcl::PointCloud<pcl::FPFHSignature33>);
-  pcl::FPFHEstimation<PointT, PointN, pcl::FPFHSignature33> fpfhEstimation;
-  fpfhEstimation.setInputCloud  (cloud_in);
-  fpfhEstimation.setInputNormals(cloud_normals);
-
-  // Use the same KdTree from the normal estimation
-  fpfhEstimation.setSearchMethod (tree);
-  fpfhEstimation.setKSearch (tree_K);
-
-  // Compute features
-  fpfhEstimation.compute (*fpfhFeatures);
-
-  printf("[TIME] Feature calculation: %5.2lf ms\n", timer.getTime());
-  timer.reset();
 
   // ==========
   // Determine keypoints
@@ -175,8 +136,8 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   pcl::search::KdTree<pcl::PointNormal>::Ptr tree_sift(new pcl::search::KdTree<pcl::PointNormal> ());
   sift.setSearchMethod(tree_sift);
-  sift.setScales(min_scale, n_octaves, n_scales_per_octave);
-  sift.setMinimumContrast(min_contrast);
+  sift.setScales(sift_min_scale, sift_num_octaves, sift_num_scales_per_octave);
+  sift.setMinimumContrast(sift_min_contrast);
   sift.setInputCloud(cloud_normals);
   sift.compute(result);
 
@@ -187,7 +148,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   PointCloud::Ptr cloud_keypoint (new PointCloud);
   copyPointCloud(result, *cloud_keypoint);
 
-  printf("Cloud: %lu, Keypoints: %lu\n", cloud_in->points.size(), cloud_keypoint->points.size());
+  printf("Cloud: %lu, Keypoints: %lu\n", cloud_normals->points.size(), cloud_keypoint->points.size());
 
 
   // ==========
@@ -231,6 +192,115 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     }
   }
 
+  return keypoint_features;
+}
+
+
+void findSymmetry(PointCloud::Ptr cloud_in)
+{
+  /* Based on a simplified method proposed by N. J. Mitra (2003) in
+   *  "Approximate Symmetry Detection and Symmetrization"
+   *
+   * This method does the following:
+   * 1- Randomly sample two points
+   * 2- Find line connecting the points and midpoint
+   * 3- Construct perpendicular plane at midpoint
+   * 4- Record plane parameters (phi) and distance of points to plane (d)
+   * 5- Repeat for N random pairs
+   * 6- Perform clustering on transform space to find planes of symmetry
+   */
+
+  pcl::StopWatch timer; //start timer
+
+  // ==========
+  // Filter input
+  // ==========
+  if (use_prefilter)
+  {
+    PointCloud::Ptr cloud_temp (new PointCloud);
+
+    pcl::VoxelGrid<PointT> sor;
+    sor.setInputCloud (cloud_in);
+    sor.setLeafSize (prefilter_leaf_size, prefilter_leaf_size, prefilter_leaf_size);
+    sor.filter (*cloud_temp);
+
+    cloud_in = cloud_temp;
+
+    printf("[TIME] Voxel Grid Filter: %5.2lf ms\n", timer.getTime());
+    printf("Points: %lu\n", cloud_in->points.size() );
+    timer.reset();
+  }
+
+  // ==========
+  // Estimate points normals (parallelized)
+  // ==========
+  PointCloudN::Ptr cloud_normals (new PointCloudN);
+  pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT> ());
+  pcl::NormalEstimationOMP<PointT, PointN> norm_est;
+
+  norm_est.setSearchMethod (tree);
+  norm_est.setInputCloud (cloud_in);
+  norm_est.setKSearch (tree_K);
+  norm_est.compute (*cloud_normals);
+
+  // Copy the xyz info from cloud_xyz and add it to cloud_normals as the xyz field in PointNormals estimation is zero
+  for(size_t i = 0; i<cloud_normals->points.size(); ++i)
+  {
+    cloud_normals->points[i].x = cloud_in->points[i].x;
+    cloud_normals->points[i].y = cloud_in->points[i].y;
+    cloud_normals->points[i].z = cloud_in->points[i].z;
+  }
+
+  printf("[TIME] Normal estimation: %5.2lf ms\n", timer.getTime());
+  timer.reset();
+
+  // ==========
+  // Compute FPFH features
+  // ==========
+  pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhFeatures(new pcl::PointCloud<pcl::FPFHSignature33>);
+  pcl::FPFHEstimation<PointT, PointN, pcl::FPFHSignature33> fpfhEstimation;
+  fpfhEstimation.setInputCloud  (cloud_in);
+  fpfhEstimation.setInputNormals(cloud_normals);
+
+  // Use the same KdTree from the normal estimation
+  fpfhEstimation.setSearchMethod (tree);
+  fpfhEstimation.setKSearch (tree_K);
+
+  // Compute features
+  fpfhEstimation.compute (*fpfhFeatures);
+
+  printf("[TIME] Feature calculation: %5.2lf ms\n", timer.getTime());
+  timer.reset();
+
+  // ==========
+  // Get features of keypoints (if applicable)
+  // ==========
+  std::vector<KeypointFeature> feature_vec;
+  if (use_sift_points)
+  {
+    // Get the features of only a few keypoints
+    printf("Using SIFT features\n");
+    feature_vec = getKeypointFeatures(cloud_normals, fpfhFeatures);
+  }
+  else
+  {
+    // Get the features of a subset of all points
+    printf("Using all points (subset)\n");
+
+    //int total_features = pairing_subset_percent*fpfhFeatures->points.size();
+    double increment = 1/pairing_subset_percent;
+
+    for (double i_point=0; i_point < fpfhFeatures->points.size(); i_point += increment)
+    {
+      KeypointFeature f;
+      int idx = floor(i_point);
+      f.point   = cloud_normals->points[idx]; //searchPoint;
+      f.feature = fpfhFeatures->points[idx];
+
+      feature_vec.push_back(f);
+    }
+  }
+
 
   // ==========
   // Pair keypoints based on feature similarity
@@ -238,18 +308,19 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // Do an exhaustive search, only eliminating a point from consideration
   // after considering how well it matches with all other keypoints
   // =========
-  double pairing_threshold = 15;
   PointCloudN::Ptr cloud_pairs (new PointCloudN);
 
-  for (; keypoint_features.size()>0; )
+  long total_features = feature_vec.size();
+  for (; feature_vec.size()>0; )
   {
+    printf("\r Points remaining for pairing: %ld/%ld [%3.1lf\%]       ", feature_vec.size(), total_features, (1-1.0*feature_vec.size()/total_features)*100.0 );
     //Get last point in result cloud
-    KeypointFeature p1 = keypoint_features.back();
+    KeypointFeature p1 = feature_vec.back();
 
     //Find keypoints with similar features
-    for (int i=0; i<keypoint_features.size(); i++)
+    for (int i=0; i<feature_vec.size(); i++)
     {
-      KeypointFeature p2 = keypoint_features[i];
+      KeypointFeature p2 = feature_vec[i];
 
       // Don't pair a point with itself
       if (p1.point.x == p2.point.x &&
@@ -264,15 +335,21 @@ void findSymmetry(PointCloud::Ptr cloud_in)
         // Assign the two as a pair
         cloud_pairs->points.push_back(p1.point);
         cloud_pairs->points.push_back(p2.point);
-        break;
+
+        if (!use_exhaustive_pairing)
+        {
+          // Not exhaustive, remove matched point and run next point
+          feature_vec.erase (feature_vec.begin()+i);
+          break;
+        }
       }
     }
 
     // Remove the considered keypoint from the list and continue
-    keypoint_features.erase (keypoint_features.end());
+    feature_vec.erase (feature_vec.end());
   }
 
-  printf("Found %lu pairs\n", cloud_pairs->points.size()/2);
+  printf("\nFound %lu pairs\n", cloud_pairs->points.size()/2);
 
   printf("[TIME] Pairing: %5.2lf ms\n", timer.getTime());
   timer.reset();
@@ -349,11 +426,10 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   // Perform clustering
   MeanShift *msp = new MeanShift();
-  double kernel_bandwidth = 10;
 
   //int num_of_cluster_samples_ = cloud_pairs->points.size()/2;
   //std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth, num_of_cluster_samples_);
-  std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth);
+  std::vector<Cluster> clusters = msp->run(features, mean_shift_kernel_bandwidth, mean_shift_num_points);
 
   printf("[TIME] Clustering: %5.2lf ms\n", timer.getTime());
   timer.reset();
@@ -366,8 +442,8 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // ==========
   // @todo
 
-  printf("[TIME] Verification: %5.2lf ms\n", timer.getTime());
-  timer.reset();
+  //printf("[TIME] Verification: %5.2lf ms\n", timer.getTime());
+  //timer.reset();
 
 
   // ==========
@@ -422,16 +498,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     }
   }
 
-
-  // Voxel grid filtering to remove close points
-  /*
-  float leaf_size = 0.005f;
-
-  pcl::VoxelGrid<PointT> sor;
-  sor.setInputCloud (cloud_mirrored);
-  sor.setLeafSize (leaf_size, leaf_size, leaf_size);
-  sor.filter (*cloud_mirrored);
-  */
 
 
   printf("[TIME] Model Mirroring: %5.2lf ms\n", timer.getTime());
@@ -538,10 +604,11 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   // Viewport 1
   pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_color_handler (cloud_in, 255, 0, 0);
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> keypoints_color_handler (cloud_keypoint, 0, 255, 0);
   p->addPointCloud (cloud_in, cloud_color_handler, "input_cloud", vp_1);
-  p->addPointCloud (cloud_keypoint, keypoints_color_handler, "cloud_keypoint", vp_1);
-  p->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "cloud_keypoint");
+
+  //pcl::visualization::PointCloudColorHandlerCustom<PointT> keypoints_color_handler (cloud_keypoint, 0, 255, 0);
+  //p->addPointCloud (cloud_keypoint, keypoints_color_handler, "cloud_keypoint", vp_1);
+  //p->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "cloud_keypoint");
 
   // Viewport 2
   //pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_pairs_xyz, 255, 0, 0);
@@ -559,29 +626,51 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   p->addPointCloud (cloud_mirrored, mirrored_color_handler, "mirrored_cloud", vp_3);
 
   p->spin();
+}
 
+
+int readRosParams ()
+{
+  ros::param::param<std::string>("~filename_pcd", filename_pcd, "-1");
+
+  ros::param::param<bool>("~use_prefilter", use_prefilter, false);
+  ros::param::param("~prefilter_leaf_size", prefilter_leaf_size, 0.1);
+
+  ros::param::param<bool>("~use_sift_points", use_sift_points, false);
+  ros::param::param("~sift_min_contrast", sift_min_contrast, 0.0001);
+  ros::param::param("~sift_min_scale", sift_min_scale, 0.1);
+  ros::param::param("~sift_num_octaves", sift_num_octaves, 3);
+  ros::param::param("~sift_num_scales_per_octave", sift_num_scales_per_octave, 4);
+
+  ros::param::param<bool>("~use_exhaustive_pairing", use_exhaustive_pairing, false);
+  ros::param::param("~mean_shift_kernel_bandwidth", mean_shift_kernel_bandwidth, 10.0);
+  ros::param::param<int>("~mean_shift_num_points", mean_shift_num_points, -1);
+  ros::param::param("~pairing_subset_percent", pairing_subset_percent, 0.2);
+  ros::param::param("~pairing_threshold", pairing_threshold, 20.0);
+  ros::param::param("~tree_K", tree_K, 50);
 }
 
 
 int main (int argc, char** argv)
 {
   // ===================
-  // Read input arguments
+  // Read config parameters
   // ===================
-  if (argc < 2)
-  {
-    printf("Not enough input arguments. Specify the filename of the .pcd file\n");
-    return (-1);
-  }
-  std::string file_in (argv[1]);
+  ros::init(argc, argv, "test_symmetry_detection");
+  readRosParams();
 
+  if (filename_pcd == "-1")
+  {
+    printf("Could not read rosparam 'filename_pcd' from config files.\n");
+    return -1;
+  }
 
   // ===================
   // Read input file
   // ===================
   PointCloud::Ptr cloud (new PointCloud);
 
-  if (pcl::io::loadPCDFile<PointT> (file_in, *cloud) == -1)
+  if (pcl::io::loadPCDFile<PointT> (filename_pcd, *cloud) == -1)
   {
     PCL_ERROR ("Couldn't read PCD file\n");
     return (-1);

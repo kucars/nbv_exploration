@@ -50,13 +50,28 @@ vector<double> MeanShift::shift_point(const vector<double> &point, const vector<
     return shifted_point;
 }
 
-vector<vector<double> > MeanShift::meanshift(const vector<vector<double> > & points, double kernel_bandwidth){
+vector<vector<double> > MeanShift::meanshift(const vector<vector<double> > & points, double kernel_bandwidth, int num_points){
     vector<bool> stop_moving(points.size(), false);
-    vector<vector<double> > shifted_points = points;
+
+    vector<vector<double> > shifted_points;
+    if (points.size() == num_points)
+    {
+      // Use all points
+      shifted_points = points;
+    }
+    else
+    {
+      // Copy first few points
+      for (int i = 0; i<num_points; i++)
+        shifted_points.push_back( points[i] );
+    }
+
+
+
     double max_shift_distance;
     do {
         max_shift_distance = 0;
-        for(int i=0; i<shifted_points.size(); i++){
+        for(int i=0; i<num_points; i++){
             if (!stop_moving[i]) {
                 vector<double>point_new = shift_point(shifted_points[i], points, kernel_bandwidth);
                 double shift_distance = euclidean_distance(point_new, shifted_points[i]);
@@ -69,18 +84,30 @@ vector<vector<double> > MeanShift::meanshift(const vector<vector<double> > & poi
                 shifted_points[i] = point_new;
             }
         }
-        //printf("max_shift_distance: %f\n", max_shift_distance);
+
+        printf("\rmax_shift_distance: %f", max_shift_distance);
+        fflush(stdout); // Print everything in output buffer
     } while (max_shift_distance > EPSILON);
+
+    printf("\n");
+
     return shifted_points;
+}
+
+
+vector<vector<double> > MeanShift::meanshift(const vector<vector<double> > & points, double kernel_bandwidth)
+{
+  return meanshift(points, kernel_bandwidth, points.size() );
 }
 
 vector<Cluster> MeanShift::cluster(
     const vector<vector<double> > & points, 
-    const vector<vector<double> > & shifted_points)
+    const vector<vector<double> > & shifted_points,
+    int num_points)
 {
     vector<Cluster> clusters;
 
-    for (int i = 0; i < shifted_points.size(); i++) {
+    for (int i = 0; i < num_points; i++) {
 
         int c = 0;
         for (; c < clusters.size(); c++) {
@@ -102,7 +129,30 @@ vector<Cluster> MeanShift::cluster(
     return clusters;
 }
 
-vector<Cluster> MeanShift::cluster(const vector<vector<double> > & points, double kernel_bandwidth){
+
+vector<Cluster> MeanShift::cluster(
+    const vector<vector<double> > & points,
+    const vector<vector<double> > & shifted_points)
+{
+  return cluster(points, shifted_points, shifted_points.size() );
+}
+
+
+vector<Cluster> MeanShift::run(const vector<vector<double> > & points, double kernel_bandwidth){
     vector<vector<double> > shifted_points = meanshift(points, kernel_bandwidth);
     return cluster(points, shifted_points);
+}
+
+vector<Cluster> MeanShift::run(const vector<vector<double> > & points, double kernel_bandwidth, int num_points)
+{
+  // Use all points if input is -1
+  if (num_points == -1)
+    num_points = points.size();
+
+  // Use the smaller of the two counts
+  if (num_points > points.size())
+    num_points = points.size();
+
+  vector<vector<double> > shifted_points = meanshift(points, kernel_bandwidth, num_points);
+  return cluster(points, shifted_points);
 }
