@@ -39,6 +39,7 @@ void ModelProfilerBoundedBox::createWaypoints()
   w = createSingleWaypoint(bounds.x_min, bounds.y_min, bounds.z_max, x_center, y_center);
   waypoints_temp.push_back(w);
 
+
   w = createSingleWaypoint(x_center, bounds.y_min, bounds.z_max, x_center, y_center);
   waypoints_temp.push_back(w);
 
@@ -59,7 +60,6 @@ void ModelProfilerBoundedBox::createWaypoints()
 
   w = createSingleWaypoint(bounds.x_min, y_center, bounds.z_max, x_center, y_center);
   waypoints_temp.push_back(w);
-
 
   // Find closest corner
   geometry_msgs::Point current_position = vehicle_->getPosition();
@@ -116,7 +116,7 @@ bool ModelProfilerBoundedBox::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile
 
 
   // Check if all waypoints are complete
-  if (waypoint_counter_ > waypoints.size())
+  if (waypoint_counter_ >= waypoints.size())
   {
     std::cout << cc.green << "Profiling complete\n" << cc.reset;
 

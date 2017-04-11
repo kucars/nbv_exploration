@@ -26,10 +26,14 @@
 
   <!-- Mount a laser-sensor above the iris. -->
   <xacro:hokuyo_laser
-    namespace="${namespace}"
+    namespace="${namespace}/hokuyo_laser"
     parent_link="base_link"
   >
-    <origin xyz="0.1 0.0 0.1" rpy="0.0 0.2 0.0" />
+    <!-- Horizontal -->
+    <origin xyz="0.1 0.0 0.1" rpy="0.0 0.2 0.0" />-->
+
+    <!-- Tilted -->
+    <!--<origin xyz="0.1 0 0.1" rpy="0.18 0.19 0.01" />-->
   </xacro:hokuyo_laser>
   
    <!-- Mount a Xtion sensor under IRIS  -->

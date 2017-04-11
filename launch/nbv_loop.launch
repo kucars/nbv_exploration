@@ -36,10 +36,10 @@
 	    <arg name="enable_ground_truth" value="true" />
 	    <arg name="log_file" value="$(arg ns)"/>
 	    
-	    <!-- Half sized scenario spawn point -->
-	    <arg name="Y" value="0"/><!-- Yaw -->
-	    <arg name="y" value="-6"/>
-	    <arg name="x" value="-6"/>
+            <!-- Debug box UAV start location -->
+            <arg name="Y" value="1.5707"/><!-- Yaw -->
+            <arg name="y" value="-20"/>
+            <arg name="x" value="0"/>
 	</include>
 	
 	<!-- If we're using the aircraft -->
@@ -83,8 +83,28 @@
 
 
     <!-- Publish static transporms -->
-    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster"  args="0.05 0.022 -0.055    -0.5 0.5     -0.5 0.5     /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />
-    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="0.10 0.0    0.10      0   0.05234  0   0.99863 /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/hokuyo_laser_link 500" />
+    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster"  args="0.05 0.022 -0.055    -0.5 0.5     -0.5 0.5     /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />    
+
+    <!-- Find (180-roll) degrees before computing quaternion -->
+    <!-- Find (pitch-5.459) degrees before before computing quaternion -->
+
+    <!-- Horizontal scan -->
+    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="
+      0.10  0.0  0.10
+      0  0.05234  0   0.99863
+      /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link
+      /iris/hokuyo_laser_link 500"
+    />
+
+    <!-- Tilted scan -->
+    <!--
+    <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="
+      0.1  0  0.1
+      0.08706  0.0478  0.00418  0.99505
+      /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link
+      /iris/hokuyo_laser_link 500"
+    />
+    -->
     
     <!-- Start RVIZ -->
     <node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/rviz/nbv_rtabmap.rviz" required="true" />
@@ -106,10 +126,10 @@
 	<remap from="rgb/camera_info" to="/iris/xtion_sensor/iris/xtion_sensor_camera/rgb/camera_info"/>
 	<remap from="scan"            to="$(arg scan_topic)"/>
 
-	<param name="queue_size" type="int" value="10"/>
+        <param name="queue_size" type="int" value="10"/>
 
 	<!-- RTAB-Map's parameters: do "rosrun rtabmap_ros rtabmap (double-dash)params" to see the list of available parameters. -->
-	<param name="RGBD/NeighborLinkRefining" type="string" value="false"/>  <!-- Do odometry correction with consecutive laser scans -->
+        <param name="RGBD/NeighborLinkRefining" type="string" value="false"/>  <!-- Do odometry correction with consecutive laser scans -->
 	<param name="RGBD/ProximityBySpace"     type="string" value="true"/>  <!-- Local loop closure detection (using estimated position) with locations in WM -->
 	<param name="RGBD/ProximityByTime"      type="string" value="false"/> <!-- Local loop closure detection with locations in STM -->
 	<param name="RGBD/OptimizeFromGraphEnd" type="string" value="true"/>
