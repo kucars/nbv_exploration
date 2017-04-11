@@ -12,6 +12,7 @@
 #include <pcl/filters/random_sample.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/registration/icp.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/region_growing.h>
@@ -141,7 +142,7 @@ std::vector<KeypointFeature> getKeypointFeatures(PointCloudN::Ptr cloud_normals,
   sift.setInputCloud(cloud_normals);
   sift.compute(result);
 
-  printf("[TIME] SIFT keypoints: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] SIFT keypoints: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
   // Copying the pointnormal to pointxyz so as to visualize the cloud
@@ -226,7 +227,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
     cloud_in = cloud_temp;
 
-    printf("[TIME] Voxel Grid Filter: %5.2lf ms\n", timer.getTime());
+    printf("[TIME] Voxel Grid Filter: %5.0lf ms\n", timer.getTime());
     printf("Points: %lu\n", cloud_in->points.size() );
     timer.reset();
   }
@@ -251,7 +252,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     cloud_normals->points[i].z = cloud_in->points[i].z;
   }
 
-  printf("[TIME] Normal estimation: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Normal estimation: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
   // ==========
@@ -269,7 +270,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // Compute features
   fpfhEstimation.compute (*fpfhFeatures);
 
-  printf("[TIME] Feature calculation: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Feature calculation: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
   // ==========
@@ -351,7 +352,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   printf("\nFound %lu pairs\n", cloud_pairs->points.size()/2);
 
-  printf("[TIME] Pairing: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Pairing: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
   // Copying the pointnormal to pointxyz so as to visualize the cloud
@@ -414,7 +415,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   }
 
-  printf("[TIME] Plane fitting: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Plane fitting: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
   // ==========
@@ -431,10 +432,11 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   //std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth, num_of_cluster_samples_);
   std::vector<Cluster> clusters = msp->run(features, mean_shift_kernel_bandwidth, mean_shift_num_points);
 
-  printf("[TIME] Clustering: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Clustering: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
   printf("Found %lu clusters\n", clusters.size());
+
 
 
   // ==========
@@ -442,7 +444,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // ==========
   // @todo
 
-  //printf("[TIME] Verification: %5.2lf ms\n", timer.getTime());
+  //printf("[TIME] Verification: %5.0lf ms\n", timer.getTime());
   //timer.reset();
 
 
@@ -464,10 +466,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   // Copy cloud
   PointCloud::Ptr cloud_mirrored (new PointCloud);
-  for (int i=0; i<cloud_in->points.size(); i++)
-  {
-    cloud_mirrored->points.push_back(cloud_in->points[i]);
-  }
 
   for (int c = 0; c<clusters.size(); c++)
   {
@@ -500,8 +498,27 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
 
-  printf("[TIME] Model Mirroring: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Model Mirroring: %5.0lf ms\n", timer.getTime());
   timer.reset();
+
+
+  // ==========
+  // Correct the plane of symmetry
+  // ==========
+  PointCloud::Ptr cloud_mirrored_corrected (new PointCloud);
+
+  pcl::IterativeClosestPoint<PointT, PointT> icp;
+  icp.setInputSource(cloud_mirrored);
+  icp.setInputTarget(cloud_in);
+
+  icp.align(*cloud_mirrored_corrected);
+  std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+  icp.getFitnessScore() << std::endl;
+  std::cout << icp.getFinalTransformation() << std::endl;
+
+  printf("[TIME] Realignment: %5.0lf ms\n", timer.getTime());
+  timer.reset();
+
 
   // ===========
   // Create point cloud representing plane obtained from clustering
@@ -582,7 +599,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     }
   }
 
-  printf("[TIME] Plane visualization: %5.2lf ms\n", timer.getTime());
+  printf("[TIME] Plane visualization: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
   // ==========
@@ -622,14 +639,22 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
   // Viewport 3
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored, 255, 0, 0);
-  p->addPointCloud (cloud_mirrored, mirrored_color_handler, "mirrored_cloud", vp_3);
+
+  //Mirror
+  //pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored, 255, 0, 0);
+  //p->addPointCloud (cloud_mirrored, mirrored_color_handler, "mirrored_cloud", vp_3);
+
+  // Mirror Corrected
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_corrected_color_handler (cloud_mirrored_corrected, 0, 255, 0);
+  p->addPointCloud (cloud_mirrored_corrected, mirrored_corrected_color_handler, "mirrored_corrected_cloud", vp_3);
+
+  p->addPointCloud (cloud_in, cloud_color_handler, "input_cloud_vp3", vp_3);
 
   p->spin();
 }
 
 
-int readRosParams ()
+void readRosParams ()
 {
   ros::param::param<std::string>("~filename_pcd", filename_pcd, "-1");
 

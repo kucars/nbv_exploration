@@ -245,7 +245,8 @@ void NBVLoop::evaluateViewpoints()
 
 void NBVLoop::initModelProfiler()
 {
-  model_profiler_ = new ModelProfilerCircularAdaptive();
+  model_profiler_ = new ModelProfilerBoundedBox();
+  //model_profiler_ = new ModelProfilerCircularAdaptive();
   model_profiler_->setVehicle(vehicle_);
 }
 

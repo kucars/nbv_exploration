@@ -1,8 +1,11 @@
-filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud.pcd'
+filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_box_00_deg_tilt.pcd'
+#filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_box_10_deg_tilt.pcd'
+#filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_circular_00_deg_tilt.pcd'
+#filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_circular_10_deg_tilt.pcd'
 
 ## Prefilter input
-use_prefilter: true
-prefilter_leaf_size: 0.1
+use_prefilter: false
+prefilter_leaf_size: 0.05
 
 ## Keypoint settings
 use_sift_points: true
@@ -11,14 +14,15 @@ sift_min_scale: 0.1
 sift_num_octaves: 3
 sift_num_scales_per_octave: 4
 
+pairing_subset_percent: 0.2 #Percent of all points to sample, when SIFT is not used
+
 ## Pairing settings
 use_exhaustive_pairing: true
-pairing_subset_percent: 0.2 #Percent of all points to sample, when SIFT is not used
-pairing_threshold: 20.0
+pairing_threshold: 10.0
 
 ## Other settings
 tree_K: 50
-mean_shift_kernel_bandwidth: 3.0
+mean_shift_kernel_bandwidth: 10.0
 mean_shift_num_points: 50 #-1 for all
 
 
