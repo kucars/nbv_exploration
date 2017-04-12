@@ -663,8 +663,8 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
   // Viewport 3 - Mirrored without correction
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored_corrected, 0, 255, 0);
-  p->addPointCloud (cloud_mirrored_corrected, mirrored_color_handler, "mirrored_cloud", vp_3);
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored, 0, 255, 0);
+  p->addPointCloud (cloud_mirrored, mirrored_color_handler, "mirrored_cloud", vp_3);
 
   p->addPointCloud (cloud_in, cloud_color_handler, "input_cloud_vp3", vp_3);
 
