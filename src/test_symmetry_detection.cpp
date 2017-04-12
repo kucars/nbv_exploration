@@ -40,7 +40,7 @@ struct KeypointFeature{
 
 // PCL Visualization
 pcl::visualization::PCLVisualizer *p;
-int vp_1, vp_2, vp_3;
+int vp_1, vp_2, vp_3, vp_4, vp_5;
 
 
 // Symmetry Detection Parameters
@@ -60,6 +60,7 @@ double sift_min_scale;
 int sift_num_octaves;
 int sift_num_scales_per_octave;
 int tree_K; //Number of neighbors in KD trees
+double subtraction_search_radius;
 
 std::string filename_pcd;
 
@@ -355,11 +356,6 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   printf("[TIME] Pairing: %5.0lf ms\n", timer.getTime());
   timer.reset();
 
-  // Copying the pointnormal to pointxyz so as to visualize the cloud
-  PointCloud::Ptr cloud_pairs_xyz (new PointCloud);
-  copyPointCloud(*cloud_pairs, *cloud_pairs_xyz);
-
-
   // ==========
   // Fit plane for every pair of points
   // =========
@@ -603,34 +599,62 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   timer.reset();
 
   // ==========
+  // Get Final Clouds for visualization
+  // ==========
+  // Copying the pointnormal to pointxyz so as to visualize the cloud
+  PointCloud::Ptr cloud_pairs_xyz (new PointCloud);
+  copyPointCloud(*cloud_pairs, *cloud_pairs_xyz);
+
+  // Final result with original and corrected mirror points
+  PointCloud::Ptr cloud_final (new PointCloud);
+  *cloud_final = *cloud_in + *cloud_mirrored_corrected;
+
+  // Determine what new points were added to the input cloud due to the method
+  // Go through each point in the output and determine if any input points are near it
+  PointCloud::Ptr cloud_fill (new PointCloud);
+
+  pcl::KdTreeFLANN<PointT> tree_filled_pts;
+  tree_filled_pts.setInputCloud (cloud_in);
+
+  for (int i_pt = 0; i_pt < cloud_mirrored_corrected->points.size(); i_pt++)
+  {
+    PointT p = cloud_mirrored_corrected->points[i_pt];
+
+    std::vector<int>   in_indices;
+    std::vector<float> sqr_distances;
+
+    // No original points found, so this point was added newly
+    if ( tree_filled_pts.radiusSearch (p, subtraction_search_radius, in_indices, sqr_distances) == 0 )
+      cloud_fill->points.push_back( p );
+  }
+
+  printf("[TIME] Subtract clouds: %5.0lf ms\n", timer.getTime());
+  timer.reset();
+
+  // ==========
   // Visualize
   // ==========
 
   // Create a PCLVisualizer object
   p = new pcl::visualization::PCLVisualizer ("Object symmetry");
-  p->createViewPort (0.00, 0, 0.33, 1.0, vp_1);
-  p->createViewPort (0.33, 0, 0.66, 1.0, vp_2);
-  p->createViewPort (0.66, 0, 1.00, 1.0, vp_3);
+  p->createViewPort (0.0, 0, 0.2, 1.0, vp_1);
+  p->createViewPort (0.2, 0, 0.4, 1.0, vp_2);
+  p->createViewPort (0.4, 0, 0.6, 1.0, vp_3);
+  p->createViewPort (0.6, 0, 0.8, 1.0, vp_4);
+  p->createViewPort (0.8, 0, 1.0, 1.0, vp_5);
 
   p->setBackgroundColor(255, 255, 255);
   p->setCameraClipDistances(65.3496, 129.337);
   p->setCameraPosition(35.1704, -68.6111, 63.8152,       0.0329489, 0.689653, 0.72339, 1);//, 0.0427789, -0.185814, 0.0496169, -0.0956887, -0.992963, 0.0697719);
   p->setCameraFieldOfView(0.523599);
-  p->setSize(960, 540);
-  p->setPosition(0, 500);
+  p->setSize(1366, 700);
+  p->setPosition(0, 300);
 
-  // Viewport 1
+  // Viewport 1 - Original Cloud
   pcl::visualization::PointCloudColorHandlerCustom<PointT> cloud_color_handler (cloud_in, 255, 0, 0);
   p->addPointCloud (cloud_in, cloud_color_handler, "input_cloud", vp_1);
 
-  //pcl::visualization::PointCloudColorHandlerCustom<PointT> keypoints_color_handler (cloud_keypoint, 0, 255, 0);
-  //p->addPointCloud (cloud_keypoint, keypoints_color_handler, "cloud_keypoint", vp_1);
-  //p->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 7, "cloud_keypoint");
-
-  // Viewport 2
-  //pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_pairs_xyz, 255, 0, 0);
-  //p->addPointCloud (cloud_pairs_xyz, handler2, "paired_cloud", vp_2);
-
+  // Viewport 2 - Line of Symmetry
   pcl::visualization::PointCloudColorHandlerCustom<PointT> handler2 (cloud_in, 255, 0, 0);
   p->addPointCloud (cloud_in, handler2, "paired_cloud", vp_2);
 
@@ -638,17 +662,21 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   p->addPointCloud (cloud_plane, handler3, "plane", vp_2);
 
 
-  // Viewport 3
-
-  //Mirror
-  //pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored, 255, 0, 0);
-  //p->addPointCloud (cloud_mirrored, mirrored_color_handler, "mirrored_cloud", vp_3);
-
-  // Mirror Corrected
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_corrected_color_handler (cloud_mirrored_corrected, 0, 255, 0);
-  p->addPointCloud (cloud_mirrored_corrected, mirrored_corrected_color_handler, "mirrored_corrected_cloud", vp_3);
+  // Viewport 3 - Mirrored without correction
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored_corrected, 0, 255, 0);
+  p->addPointCloud (cloud_mirrored_corrected, mirrored_color_handler, "mirrored_cloud", vp_3);
 
   p->addPointCloud (cloud_in, cloud_color_handler, "input_cloud_vp3", vp_3);
+
+  // Viewport 4 - Final Result
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> final_color_handler (cloud_final, 255, 0, 0);
+  p->addPointCloud (cloud_final, final_color_handler, "final_cloud", vp_4);
+
+
+  // Viewport 5 - What was added to original
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> fill_color_handler (cloud_fill, 255, 0, 0);
+  p->addPointCloud (cloud_fill, fill_color_handler, "fill_cloud", vp_5);
+
 
   p->spin();
 }
@@ -673,6 +701,8 @@ void readRosParams ()
   ros::param::param("~pairing_subset_percent", pairing_subset_percent, 0.2);
   ros::param::param("~pairing_threshold", pairing_threshold, 20.0);
   ros::param::param("~tree_K", tree_K, 50);
+
+  ros::param::param("~subtraction_search_radius", subtraction_search_radius, 0.05);
 }
 
 

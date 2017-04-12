@@ -14,7 +14,8 @@ sift_min_scale: 0.1
 sift_num_octaves: 3
 sift_num_scales_per_octave: 4
 
-pairing_subset_percent: 0.2 #Percent of all points to sample, when SIFT is not used
+#Percent of all points to sample, when SIFT is not used
+pairing_subset_percent: 0.2
 
 ## Pairing settings
 use_exhaustive_pairing: true
@@ -23,6 +24,7 @@ pairing_threshold: 10.0
 ## Other settings
 tree_K: 50
 mean_shift_kernel_bandwidth: 10.0
-mean_shift_num_points: 50 #-1 for all
+mean_shift_num_points: 50 #-1 to use all points in clustering
 
-
+#Radius to use when determining which points were newly added
+subtraction_search_radius: 0.1
