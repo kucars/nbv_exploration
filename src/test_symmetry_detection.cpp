@@ -47,6 +47,7 @@ int vp_1, vp_2, vp_3, vp_4, vp_5;
 bool use_exhaustive_pairing = false;
 bool use_prefilter = false;
 bool use_sift_points = false;
+bool icp_with_normals = false;
 
 
 double mean_shift_kernel_bandwidth;
@@ -448,21 +449,32 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // Mirror points in the input cloud
   // ==========
 
-  // Move the point p=[px, py, pz] into the plane along the normal with the paramter 't':
-  //   [x, y, z] = [px, py, pz] + t*[a, b, c]
-  //   ax + by + cz + d = 0
+  // Notation:
+  //   plane            n  = [ a,  b,  c] -> ax + by + cz + d = 0
+  //   point            p  = [px, py, pz]
+  //   normals          r  = [rx, ry, rz]
+  //   mirrored point   P  = [Px, Py, Pz]
+  //   mirrored normals R  = [Rx, Ry, Rz]
   //
+  // Move the point 'p' into the plane along the normal with the paramter 't':
+  //           P = p + t*n
+  //   [x, y, z] = [px, py, pz] + t*[a, b, c]
+  //
+  // t = -(dot(n,p)+d) / ||n||^2
   // t = -(a*px + b*py + c*pz + d)/(a^2 + b^2 + c^2)
-  // t = -(a*px + b*py + c*pz + d)/den
+  // t = -(a*px + b*py + c*pz + d)/norm_sqr
   //
   // The mirrored point lies at 2t:
-  //   mx = px + 2*t*a
-  //   my = py + 2*t*b
-  //   mz = pz + 2*t*c
+  //   P = p + 2*t*n
+  //
+  // The normals are vectors and are mirrored as follows:
+  //   k = -dot(n,r) / ||n||^2
+  //   R = r + 2*n*k
 
   // Copy cloud
-  PointCloud::Ptr cloud_mirrored (new PointCloud);
+  PointCloudN::Ptr cloud_mirrored (new PointCloudN);
 
+  // Do for each plane of symmetry
   for (int c = 0; c<clusters.size(); c++)
   {
     // Get plane equation
@@ -472,20 +484,28 @@ void findSymmetry(PointCloud::Ptr cloud_in)
     //    a*x +    b*y +    c*z + d    = 0
     // n[0]*x + n[1]*y + n[2]*z + n[3] = 0
 
-    double den = n[0]*n[0] + n[1]*n[1] + n[2]*n[2];
+    double norm_sqr = n[0]*n[0] + n[1]*n[1] + n[2]*n[2];
 
     // Mirror each point
     for(size_t i = 0; i<cloud_in->points.size(); ++i)
     {
-      PointT p = cloud_in->points[i];
+      PointN p = cloud_normals->points[i];
       // Find the parameter 't'
-      double t = -(n[0]*p.x + n[1]*p.y + n[2]*p.x + n[3])/den;
+      double t = -(n[0]*p.x + n[1]*p.y + n[2]*p.x + n[3])/norm_sqr;
 
       // Find mirrored point
-      PointT m;
+      PointN m;
       m.x = p.x + 2*t*n[0];
       m.y = p.y + 2*t*n[1];
       m.z = p.z + 2*t*n[2];
+
+      // Find parameter 'k'
+      double k = -(n[0]*p.normal_x + n[1]*p.normal_y + n[2]*p.normal_z) / norm_sqr;
+
+      // Find mirrored normals
+      m.normal_x = p.normal_x + 2*n[0]*k;
+      m.normal_y = p.normal_y + 2*n[1]*k;
+      m.normal_z = p.normal_z + 2*n[2]*k;
 
       // Push the point into the cloud
       cloud_mirrored->points.push_back(m);
@@ -501,16 +521,22 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   // ==========
   // Correct the plane of symmetry
   // ==========
-  PointCloud::Ptr cloud_mirrored_corrected (new PointCloud);
+  PointCloudN::Ptr cloud_mirrored_corrected (new PointCloudN);
 
-  pcl::IterativeClosestPoint<PointT, PointT> icp;
-  icp.setInputSource(cloud_mirrored);
-  icp.setInputTarget(cloud_in);
+  pcl::IterativeClosestPoint<PointN, PointN>* icp;
 
-  icp.align(*cloud_mirrored_corrected);
-  std::cout << "has converged:" << icp.hasConverged() << " score: " <<
-  icp.getFitnessScore() << std::endl;
-  std::cout << icp.getFinalTransformation() << std::endl;
+  if (icp_with_normals)
+    icp = new pcl::IterativeClosestPointWithNormals<PointN, PointN>;
+  else
+    icp = new pcl::IterativeClosestPoint<PointN, PointN>;
+
+  icp->setInputSource(cloud_mirrored);
+  icp->setInputTarget(cloud_normals);
+
+  icp->align(*cloud_mirrored_corrected);
+  std::cout << "has converged:" << icp->hasConverged() << " score: " <<
+  icp->getFitnessScore() << std::endl;
+  std::cout << icp->getFinalTransformation() << std::endl;
 
   printf("[TIME] Realignment: %5.0lf ms\n", timer.getTime());
   timer.reset();
@@ -605,9 +631,17 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   PointCloud::Ptr cloud_pairs_xyz (new PointCloud);
   copyPointCloud(*cloud_pairs, *cloud_pairs_xyz);
 
+  // Copy PointN to PointT before ICP
+  PointCloud::Ptr cloud_mirrored_xyz (new PointCloud);
+  copyPointCloud(*cloud_mirrored, *cloud_mirrored_xyz);
+
+  // Copy PointN to PointT after ICP
+  PointCloud::Ptr cloud_mirrored_corrected_xyz (new PointCloud);
+  copyPointCloud(*cloud_mirrored_corrected, *cloud_mirrored_corrected_xyz);
+
   // Final result with original and corrected mirror points
   PointCloud::Ptr cloud_final (new PointCloud);
-  *cloud_final = *cloud_in + *cloud_mirrored_corrected;
+  *cloud_final = *cloud_in + *cloud_mirrored_corrected_xyz;
 
   // Determine what new points were added to the input cloud due to the method
   // Go through each point in the output and determine if any input points are near it
@@ -618,7 +652,7 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
   for (int i_pt = 0; i_pt < cloud_mirrored_corrected->points.size(); i_pt++)
   {
-    PointT p = cloud_mirrored_corrected->points[i_pt];
+    PointT p = cloud_mirrored_corrected_xyz->points[i_pt];
 
     std::vector<int>   in_indices;
     std::vector<float> sqr_distances;
@@ -663,8 +697,8 @@ void findSymmetry(PointCloud::Ptr cloud_in)
 
 
   // Viewport 3 - Mirrored without correction
-  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored, 0, 255, 0);
-  p->addPointCloud (cloud_mirrored, mirrored_color_handler, "mirrored_cloud", vp_3);
+  pcl::visualization::PointCloudColorHandlerCustom<PointT> mirrored_color_handler (cloud_mirrored_xyz, 0, 255, 0);
+  p->addPointCloud (cloud_mirrored_xyz, mirrored_color_handler, "mirrored_cloud", vp_3);
 
   p->addPointCloud (cloud_in, cloud_color_handler, "input_cloud_vp3", vp_3);
 
@@ -702,6 +736,8 @@ void readRosParams ()
   ros::param::param("~pairing_threshold", pairing_threshold, 20.0);
   ros::param::param("~tree_K", tree_K, 50);
 
+
+  ros::param::param("~icp_with_normals", icp_with_normals, false);
   ros::param::param("~subtraction_search_radius", subtraction_search_radius, 0.05);
 }
 
