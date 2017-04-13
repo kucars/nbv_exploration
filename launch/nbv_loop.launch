@@ -58,14 +58,14 @@
         <arg name="Y" value="1.5707" if="$(arg world_type_debug_box)"/>
 
         <!-- Full sized scenario spawn point -->
-        <arg name="x" value="18.3"   if="$(arg world_type_full_size)" />
-        <arg name="y" value="-1.15"  if="$(arg world_type_full_size)" />
+        <arg name="x" value="0"   if="$(arg world_type_full_size)" />
+        <arg name="y" value="-38"  if="$(arg world_type_full_size)" />
         <arg name="Y" value="1.5707" if="$(arg world_type_full_size)" />
 
         <!-- Half sized scenario spawn point -->
         <arg name="x" value="0"      if="$(arg world_type_half_size)" />
         <arg name="y" value="-20"    if="$(arg world_type_half_size)" />
-        <arg name="Y" value="3.14"   if="$(arg world_type_half_size)" />
+        <arg name="Y" value="1.5707" if="$(arg world_type_half_size)" />
       </include>
     </group>
     
