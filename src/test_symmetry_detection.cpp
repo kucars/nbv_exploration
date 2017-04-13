@@ -12,6 +12,7 @@
 #include <pcl/filters/random_sample.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/registration/correspondence_estimation_normal_shooting.h>
 #include <pcl/registration/icp.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
@@ -530,8 +531,29 @@ void findSymmetry(PointCloud::Ptr cloud_in)
   else
     icp = new pcl::IterativeClosestPoint<PointN, PointN>;
 
+  /*
+  pcl::registration::CorrespondenceEstimationNormalShooting<PointN, PointN, PointN>::Ptr ce (new pcl::registration::CorrespondenceEstimationNormalShooting<PointN, PointN, PointN>);
+  ce->setInputSource (cloud_mirrored);
+  ce->setInputTarget (cloud_normals);
+  ce->setSourceNormals (cloud_mirrored);
+  //ce->setTargetNormals (cloud_normals);
+  ce->setKSearch (5);
+  icp->setCorrespondenceEstimation (ce);
+  */
+
   icp->setInputSource(cloud_mirrored);
   icp->setInputTarget(cloud_normals);
+
+  /*
+  double max_euclid, max_transform, max_distance;
+  ros::param::param<double>("~icp_max_euclid", max_euclid, 0.1);
+  ros::param::param<double>("~icp_max_transform", max_transform, 10);
+  ros::param::param<double>("~icp_max_distance", max_distance, 1);
+
+  icp->setMaxCorrespondenceDistance (max_distance);
+  icp->setEuclideanFitnessEpsilon (max_euclid);
+  icp->setTransformationEpsilon (max_transform);
+  */
 
   icp->align(*cloud_mirrored_corrected);
   std::cout << "has converged:" << icp->hasConverged() << " score: " <<

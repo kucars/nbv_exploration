@@ -22,7 +22,10 @@ use_exhaustive_pairing: true
 pairing_threshold: 10.0
 
 ## ICP (mirror image correction)
-icp_with_normals: false
+icp_with_normals: true
+icp_max_euclid: 0.01
+icp_max_transform: 0.001
+icp_max_distance: 1
 
 ## Other settings
 tree_K: 50
