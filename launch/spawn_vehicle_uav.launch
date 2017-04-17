@@ -1,0 +1,81 @@
+<?xml version="1.0" ?>
+<launch>
+  <!-- Vehicle settings -->
+  <arg name="ns" default="iris"/>
+  <arg name="rtab_ns" default="rtabmap"/>
+  <arg name="mav_name" default="iris"/>
+  <env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
+  <arg name="vehicle_model" value="$(find nbv_exploration)/urdf/$(arg mav_name)_nbv_exploration.gazebo"/>
+
+
+  <!-- Spawn UAV -->
+  <include file="$(find rotors_gazebo)/launch/spawn_iris.launch">
+    <arg name="model" value="$(arg vehicle_model)" />
+    <arg name="enable_logging" value="false" />
+    <arg name="enable_ground_truth" value="true" />
+    <arg name="log_file" value="$(arg ns)"/>
+
+    <!-- Debug box UAV start location -->
+    <arg name="x" value="0"      if="$(arg world_type_debug_box)"/>
+    <arg name="y" value="-20"    if="$(arg world_type_debug_box)"/>
+    <arg name="Y" value="1.5707" if="$(arg world_type_debug_box)"/>
+
+    <!-- Full sized scenario spawn point -->
+    <arg name="x" value="0"      if="$(arg world_type_full_size)" />
+    <arg name="y" value="-38"    if="$(arg world_type_full_size)" />
+    <arg name="Y" value="1.5707" if="$(arg world_type_full_size)" />
+
+    <!-- Half sized scenario spawn point -->
+    <arg name="x" value="0"      if="$(arg world_type_half_size)" />
+    <arg name="y" value="-20"    if="$(arg world_type_half_size)" />
+    <arg name="Y" value="1.5707" if="$(arg world_type_half_size)" />
+  </include>
+
+  <!-- Set up autopilot (?) -->
+  <include file="$(find px4)/launch/iris.launch">
+      <arg name="ns" value="$(arg ns)"/>
+  </include>
+
+  <include file="$(find px4)/launch/mavros_sitl.launch">
+      <arg name="ns" value="$(arg ns)"/>
+  </include>
+
+  <param name="MPP_XY_VEL_MAX" type="double" value="20.0" />
+  <param name="MPP_TILTMAX_AIR" type="double" value="10" />
+  <param name="MPP_TILTMAX_LND" type="double" value="0.3" />
+
+  <!-- See more at:
+  https://webcache.googleusercontent.com/search?q=cache:ggjDnnSZyqIJ:https://pixhawk.ethz.ch/docs/multiplatform_2mc__pos__control__params_8c.html+&cd=1&hl=en&ct=clnk&gl=ae&client=ubuntu
+  -->
+
+
+  <!-- Publish static transporms -->
+  <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster"  args="0.05 0.022 -0.055    -0.5 0.5     -0.5 0.5     /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link /iris/xtion_sensor/camera_depth_optical_frame 500" />
+
+  <!-- Find (180-roll) degrees before computing quaternion -->
+  <!-- Find (pitch-5.459) degrees before before computing quaternion -->
+
+  <!--
+  frame:  4.00861 -30 0.090762  0 -0.093 3.14
+  odom:   4.00351 -30 0.036     0 -0     3.14
+  offset: 0.00510   0 0.054762  0 -0.093 0
+  -->
+
+  <!-- Horizontal scan -->
+  <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="
+    0.10  0.0  0.10
+    0  0.05234  0   0.99863
+    /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link
+    /iris/hokuyo_laser_link 500"
+  />
+
+  <!-- Tilted scan -->
+  <!--
+  <node pkg="tf" type="static_transform_publisher" name="nbv_launch_link1_broadcaster2" args="
+    0.1  0  0.1
+    0.08706  0.0478  0.00418  0.99505
+    /iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link
+    /iris/hokuyo_laser_link 500"
+  />
+  -->
+</launch>

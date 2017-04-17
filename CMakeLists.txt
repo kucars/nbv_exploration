@@ -1,31 +1,33 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(nbv_exploration)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_definitions(-D__PX4_ROS)
 add_definitions(-D__EXPORT=)
 add_definitions(-DMAVLINK_DIALECT=common)
 
 find_package(catkin REQUIRED COMPONENTS
+  cmake_modules
+  eigen_conversions
+  gazebo_msgs
+  gazebo_ros
+  geometry_msgs
+  keyboard
+  libmavconn
+  mav_msgs
+  message_generation
   roscpp
   rospy
-  std_msgs
-  geometry_msgs
-  message_generation
-  cmake_modules
-  gazebo_msgs
   sensor_msgs
-  mav_msgs
-  libmavconn
+  std_msgs
   tf
   tf_conversions
-  eigen_conversions
-  keyboard
 )
 
 find_package(Boost REQUIRED)
 find_package(Eigen REQUIRED)
 find_package(fcl REQUIRED)
+find_package(gazebo REQUIRED)
 find_package(octomap REQUIRED)
 find_package(PCL REQUIRED)
 
@@ -60,10 +62,12 @@ catkin_package(
   #DEPENDS system_lib
 )
 
+
 include_directories(
-    ${PCL_INCLUDE_DIRS}
     ${Eigen_INCLUDE_DIRS}
+    ${GAZEBO_INCLUDE_DIRS}
     ${OCTOMAP_INCLUDE_DIRS}
+    ${PCL_INCLUDE_DIRS}
     include #Adds my own custom class headers
     include/nbv_exploration
     include/control
@@ -71,6 +75,24 @@ include_directories(
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 link_libraries(${OCTOMAP_LIBRARIES})
+
+
+####
+# Gazebo plugins
+####
+
+add_library(floating_sensor_position_plugin src/vehicle/floating_sensor_position_plugin.cpp)
+target_link_libraries(floating_sensor_position_plugin ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+install(TARGETS
+  floating_sensor_position_plugin
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  )
+
+####
+# Executables
+####
 
 #add_executable(wall_follower src/wall_follower.cpp)
 #add_dependencies(wall_follower ${catkin_EXPORTED_TARGETS})

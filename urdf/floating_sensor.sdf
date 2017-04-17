@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<sdf version="1.4">
+
+<model name="floating_sensor">
+  <plugin name="floating_sensor_position_plugin" filename="libfloating_sensor_position_plugin.so">
+    <topic_base>floating_sensor</topic_base>
+  </plugin>
+
+  <pose>0 0 0 0 0 0</pose>
+  <static>true</static>
+  <link name="base_link">
+    <!--
+    <collision name="collision">
+      <geometry>
+        <box>
+          <size>1 1 1</size>
+        </box>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <geometry>
+        <box>
+          <size>1 1 1</size>
+        </box>
+      </geometry>
+    </visual>
+    -->
+  </link>
+
+  <!-- LIDAR scanner. Simulates Hokuyo scanner -->
+  <link name="laser_link">
+    <pose>0 0 0 0 0 0</pose>
+    <collision name="camera_collision">
+      <geometry>
+        <box>
+          <size>0.2 0.1 0.1</size>
+        </box>
+      </geometry>
+    </collision>
+
+    <visual name="laser_visual">
+      <geometry>
+        <box>
+          <size>0.2 0.1 0.1</size>
+        </box>
+        <!--
+        <mesh>
+          <scale>1 1 1</scale>
+          <uri>model://rotors_description/meshes/hokuyo.dae</uri>
+        </mesh>
+        -->
+      </geometry>
+      <material>
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1</diffuse>
+          <specular>1 0 0 1</specular>
+      </material>
+    </visual>
+
+    <sensor type="ray" name="sensor_laser">
+      <pose>0.1 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>40</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>720</samples>
+            <resolution>1</resolution>
+            <min_angle>-1.570796</min_angle>
+            <max_angle>1.570796</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.10</min>
+          <max>30.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <!-- Noise parameters based on published spec for Hokuyo laser
+               achieving "+-30mm" accuracy at range < 10m.  A mean of 0.0m and
+               stddev of 0.01m will put 99.7% of samples within 0.03m of the true
+               reading. -->
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <plugin name="gazebo_ros_laser_scanner" filename="libgazebo_ros_laser.so">
+        <gaussianNoise>0.005</gaussianNoise>
+        <alwaysOn>true</alwaysOn>
+        <topicName>scan</topicName>
+        <frameName>laser_link</frameName>
+      </plugin>
+    </sensor>
+  </link>
+</model>
+</sdf>
