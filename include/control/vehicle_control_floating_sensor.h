@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Twist.h>
 
 #include "control/vehicle_control_base.h"
 #include "nbv_exploration/common.h"
@@ -12,6 +13,7 @@ class VehicleControlFloatingSensor : public VehicleControlBase
 private:
   ros::Subscriber sub_pose;
   ros::Publisher  pub_pose;
+  ros::Publisher  pub_twist;
 
 public:
   VehicleControlFloatingSensor();

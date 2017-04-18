@@ -17,7 +17,9 @@
 #include <ros/ros.h>
 #include <ros/subscribe_options.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Twist.h>
 #include <thread>
+#include <mutex>          // std::mutex
 
 namespace gazebo
 {
@@ -32,11 +34,13 @@ protected:
   virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
   virtual void Update();
   virtual void Reset();
-  virtual void OnRosMsg(const geometry_msgs::PoseConstPtr &msg);
+  virtual void OnRosMsgPose(const geometry_msgs::PoseConstPtr &msg);
+  virtual void OnRosMsgTwist(const geometry_msgs::TwistConstPtr &msg);
   virtual void QueueThread();
   virtual void GetCurrentPose();
 
 private:
+  std::mutex mtx_pose_;           // mutex for critical section
 
   physics::WorldPtr world_;
   physics::LinkPtr link_;
@@ -54,6 +58,7 @@ private:
 
   /// \brief A ROS subscriber
   ros::Subscriber rosSub;
+  ros::Subscriber rosSub2;
 
   /// \brief A ROS callbackqueue that helps process messages
   ros::CallbackQueue rosQueue;
@@ -65,7 +70,15 @@ private:
   std::string topic_base_;
 
   ros::Publisher pub_pose_;
-  geometry_msgs::Pose current_pose_;
+  geometry_msgs::Pose  current_pose_;
+  geometry_msgs::Twist current_twist_;
+
+  double current_pos_x_;
+  double current_pos_y_;
+  double current_pos_z_;
+  double current_pos_roll_;
+  double current_pos_pitch_;
+  double current_pos_yaw_;
 };
 
 }
