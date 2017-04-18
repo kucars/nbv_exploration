@@ -3,10 +3,10 @@
   <arg name="name" default="floating_sensor"/>
   <arg name="model" default="$(find nbv_exploration)/urdf/floating_sensor.sdf"/>
   <arg name="tf_prefix" default="$(optenv ROS_NAMESPACE)"/>
-  <arg name="x" default="3.0"/>
-  <arg name="y" default="0.0"/>
-  <arg name="z" default="2"/>
-  <arg name="Y" default="0.0"/>
+  <arg name="vehicle_starting_x" default="3.0"/>
+  <arg name="vehicle_starting_y" default="0"/>
+  <arg name="vehicle_starting_z" default="2.0"/>
+  <arg name="vehicle_starting_Y" default="0"/>
   <arg name="enable_logging" default="false"/>
   <arg name="enable_ground_truth" default="true"/>
   <arg name="log_file" default="iris"/>
@@ -19,10 +19,10 @@
   <node name="spawn_floating_sensor" pkg="gazebo_ros" type="spawn_model"
    args="-param robot_description
          -sdf
-         -x $(arg x)
-         -y $(arg y)
-         -z $(arg z)
-         -Y $(arg Y)
+         -x $(arg vehicle_starting_x)
+         -y $(arg vehicle_starting_y)
+         -z $(arg vehicle_starting_z)
+         -Y $(arg vehicle_starting_Y)
          -model $(arg name)"
    respawn="false" output="screen">
   </node>

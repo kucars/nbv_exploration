@@ -2,8 +2,8 @@
 <launch>
     <!-- World types are mutually exclusive. Only set ONE of them to "1" -->
     <arg name="world_type_debug_box" default="0"/>
-    <arg name="world_type_full_size" default="1"/>
-    <arg name="world_type_half_size" default="0"/>
+    <arg name="world_type_full_size" default="0"/>
+    <arg name="world_type_half_size" default="1"/>
 
     <!-- Vehicle settings -->
     <arg name="use_floating_sensor" default="true"/>
@@ -14,6 +14,27 @@
     <arg name="mav_name" default="iris"/>
     <env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
     <arg name="vehicle_model" value="$(find nbv_exploration)/urdf/$(arg mav_name)_nbv_exploration.gazebo"/>
+
+
+    <!-- Starting position -->
+    <!-- Debug box UAV start location -->
+    <arg name="vehicle_starting_x" value="0"      if="$(arg world_type_debug_box)"/>
+    <arg name="vehicle_starting_y" value="-20"    if="$(arg world_type_debug_box)"/>
+    <arg name="vehicle_starting_z" value="0.5"    if="$(arg world_type_debug_box)"/>
+    <arg name="vehicle_starting_Y" value="1.5707" if="$(arg world_type_debug_box)"/>
+
+    <!-- Full sized scenario spawn point -->
+    <arg name="vehicle_starting_x" value="0"      if="$(arg world_type_full_size)"/>
+    <arg name="vehicle_starting_y" value="-38"    if="$(arg world_type_full_size)"/>
+    <arg name="vehicle_starting_z" value="0.5"    if="$(arg world_type_full_size)"/>
+    <arg name="vehicle_starting_Y" value="1.5707" if="$(arg world_type_full_size)"/>
+
+    <!-- Half sized scenario spawn point -->
+    <arg name="vehicle_starting_x" value="0"      if="$(arg world_type_half_size)"/>
+    <arg name="vehicle_starting_y" value="-20"    if="$(arg world_type_half_size)"/>
+    <arg name="vehicle_starting_z" value="0.5"    if="$(arg world_type_half_size)"/>
+    <arg name="vehicle_starting_Y" value="1.5707" if="$(arg world_type_half_size)"/>
+
 
     <!-- Misc settings -->
     <arg name="enable_rtab" default="false"/>
@@ -48,10 +69,19 @@
     </include>
 
     <!-- Spawn vehicle -->
-    <include if="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_floating_sensor.launch"/>
-    <group ns="$(arg mav_name)" unless="$(arg use_floating_sensor)">
-      <include file="$(find nbv_exploration)/launch/spawn_vehicle_uav.launch"/>
-    </group>
+    <include if="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_floating_sensor.launch">
+      <arg name="vehicle_starting_x" value="$(arg vehicle_starting_x)"/>
+      <arg name="vehicle_starting_y" value="$(arg vehicle_starting_y)"/>
+      <arg name="vehicle_starting_z" value="$(arg vehicle_starting_z)"/>
+      <arg name="vehicle_starting_Y" value="$(arg vehicle_starting_Y)"/>
+    </include>
+
+    <include unless="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_uav.launch" ns="$(arg mav_name)">
+      <arg name="vehicle_starting_x" value="$(arg vehicle_starting_x)"/>
+      <arg name="vehicle_starting_y" value="$(arg vehicle_starting_y)"/>
+      <arg name="vehicle_starting_z" value="$(arg vehicle_starting_z)"/>
+      <arg name="vehicle_starting_Y" value="$(arg vehicle_starting_Y)"/>
+    </include>
     
     <!-- Start RVIZ -->
     <node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/rviz/nbv_rtabmap.rviz" required="true" />
@@ -111,7 +141,16 @@
     
     <!-- Run nodes -->    
     <!-- correct the laser scan points near the max and min range -->
-    <node pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
+    <node if="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
+      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+
+      <remap from="scan_in"  to="/floating_sensor/scan"/>
+      <remap from="scan_out" to="$(arg scan_topic)"/>
+      <remap from="depth_in"  to="/floating_sensor/camera/depth/points"/>
+      <remap from="depth_out" to="$(arg depth_topic)"/>
+    </node>
+
+    <node unless="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
       
       <remap from="scan_in"  to="/iris/scan"/>

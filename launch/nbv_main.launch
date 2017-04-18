@@ -1,7 +1,5 @@
 <?xml version="1.0" ?>
 <launch>
-    <arg name="skip_profiling" default=""/>
-  
     <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/navigation_settings.yaml" command="load" />
