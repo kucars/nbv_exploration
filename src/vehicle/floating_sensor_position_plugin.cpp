@@ -1,5 +1,7 @@
 #include <vehicle/floating_sensor_position_plugin.h>
 #include <string>
+#include <ctime>
+#include <tf/transform_broadcaster.h>
 
 #if GAZEBO_MAJOR_VERSION >= 6
 #include <ignition/math/Pose3.hh>
@@ -55,22 +57,25 @@ void FloatingSensorPosition::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf
   }
   else
   {
-    topic_base_ = "/" + _sdf->GetElement("topic_base")->Get<std::string>();
+    topic_base_ = "/" + _sdf->GetElement("namespace")->Get<std::string>();
   }
 
+  // Initialize variables
+  GetCurrentPose();
+  math::Quaternion q = math::Quaternion(
+        current_pose_.orientation.w,
+        current_pose_.orientation.x,
+        current_pose_.orientation.y,
+        current_pose_.orientation.z
+      );
+  math::Vector3 rpy = q.GetAsEuler();
 
-  // Make sure the ROS node for Gazebo has already been initialized
-  /*
-  if (!ros::isInitialized())
-  {
-    ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
-                     << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
-    return;
-  }
-  */
-
-  update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&FloatingSensorPosition::Update, this));
-
+  current_pos_x_    = current_pose_.position.x;
+  current_pos_y_    = current_pose_.position.y;
+  current_pos_z_    = current_pose_.position.z;
+  current_pos_roll_ = rpy.x;
+  current_pos_pitch_= rpy.y;
+  current_pos_yaw_  = rpy.z;
 
 
   // Initialize ros, if it has not already initialized.
@@ -85,21 +90,34 @@ void FloatingSensorPosition::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf
   // Create our ROS node. This acts in a similar manner to the Gazebo node
   this->rosNode = new ros::NodeHandle("floating_sensor_position_interface");
 
-  // Create a named topic, and subscribe to it.
+  // Subscribe to "set_pose"
   ros::SubscribeOptions so =
     ros::SubscribeOptions::create<geometry_msgs::Pose>(
         this->topic_base_ + "/set_pose",
         1,
-        boost::bind(&FloatingSensorPosition::OnRosMsg, this, _1),
+        boost::bind(&FloatingSensorPosition::OnRosMsgPose, this, _1),
         ros::VoidPtr(), &this->rosQueue);
 
   this->rosSub = this->rosNode->subscribe(so);
+
+  // Subscribe to "set_twist"
+  ros::SubscribeOptions so_twist =
+    ros::SubscribeOptions::create<geometry_msgs::Twist>(
+        this->topic_base_ + "/set_twist",
+        1,
+        boost::bind(&FloatingSensorPosition::OnRosMsgTwist, this, _1),
+        ros::VoidPtr(), &this->rosQueue);
+
+  this->rosSub2 = this->rosNode->subscribe(so_twist);
 
   // Create a publisher
   pub_pose_ = this->rosNode->advertise<geometry_msgs::Pose>(this->topic_base_ + "/pose", 10);
 
   // Spin up the queue helper thread.
   this->rosQueueThread = std::thread(std::bind(&FloatingSensorPosition::QueueThread, this));
+
+  // Start update
+  update_connection_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&FloatingSensorPosition::Update, this));
 }
 
 
@@ -107,6 +125,53 @@ void FloatingSensorPosition::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf
 // Update the controller
 void FloatingSensorPosition::Update()
 {
+  static std::clock_t previous_time = std::clock();
+
+  // Get time difference since last iteration
+  std::clock_t current_time = std::clock();
+  double duration_sec = ( current_time - previous_time ) / (double) CLOCKS_PER_SEC;
+  previous_time = current_time;
+
+  // Lock critical section
+  mtx_pose_.lock();
+
+  // Update position with set speed
+  // pos += speed*dt
+  current_pos_x_     += current_twist_.linear.x*duration_sec;
+  current_pos_y_     += current_twist_.linear.y*duration_sec;
+  current_pos_z_     += current_twist_.linear.z*duration_sec;
+  current_pos_roll_  += current_twist_.angular.x*duration_sec;
+  current_pos_pitch_ += current_twist_.angular.y*duration_sec;
+  current_pos_yaw_   += current_twist_.angular.z*duration_sec;
+
+  // Set angles between 0 to 2*PI
+  current_pos_roll_  = fmod(current_pos_roll_,  2*M_PI);
+  current_pos_pitch_ = fmod(current_pos_pitch_, 2*M_PI);
+  current_pos_yaw_   = fmod(current_pos_yaw_,   2*M_PI);
+
+  // Update model position in gazebo
+  model_->SetLinkWorldPose(
+    math::Pose(current_pos_x_, current_pos_y_, current_pos_z_,
+               current_pos_roll_, current_pos_pitch_, current_pos_yaw_)
+    , link_);
+
+  // Unlock critical section
+  mtx_pose_.unlock();
+
+  // Get current pose
+  GetCurrentPose();
+
+  // Publish current pose
+  pub_pose_.publish(current_pose_);
+
+  // Broadcast tf
+  static tf::TransformBroadcaster br;
+  tf::Transform transform;
+  transform.setOrigin( tf::Vector3(current_pos_x_, current_pos_y_, current_pos_z_) );
+  tf::Quaternion q;
+  q.setRPY(current_pos_roll_, current_pos_pitch_, current_pos_yaw_);
+  transform.setRotation(q);
+  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "floating_sensor/base_link"));
 }
 
 
@@ -114,28 +179,39 @@ void FloatingSensorPosition::Update()
 /// \brief Handle an incoming message from ROS
 /// \param[in] _msg A float value that is used to set the velocity
 /// of the Velodyne.
-void FloatingSensorPosition::OnRosMsg(const geometry_msgs::PoseConstPtr &msg)
+void FloatingSensorPosition::OnRosMsgPose(const geometry_msgs::PoseConstPtr &msg)
 {
-  double x, y, z;
+  // Lock critical section
+  mtx_pose_.lock();
 
-  x = msg->position.x;
-  y = msg->position.y;
-  z = msg->position.z;
+  // Set twist to zeros
+  current_twist_.linear.x = 0;
+  current_twist_.linear.y = 0;
+  current_twist_.linear.z = 0;
+  current_twist_.angular.x= 0;
+  current_twist_.angular.y= 0;
+  current_twist_.angular.z= 0;
+
+  // Update positions
+  current_pos_x_ = msg->position.x;
+  current_pos_y_ = msg->position.y;
+  current_pos_z_ = msg->position.z;
 
   // Convert quaternion to Euler angles (w,x,y,z notation)
   math::Quaternion q = math::Quaternion(msg->orientation.w, msg->orientation.x, msg->orientation.y, msg->orientation.z);
   math::Vector3 rpy = q.GetAsEuler();
 
-  double roll, pitch, yaw;
-  roll  = rpy.x;
-  pitch = rpy.y;
-  yaw   = rpy.z;
+  current_pos_roll_  = rpy.x;
+  current_pos_pitch_ = rpy.y;
+  current_pos_yaw_   = rpy.z;
 
-  // Update model position
-  model_->SetLinkWorldPose(math::Pose(x, y, z, roll, pitch, yaw), link_);
+  // Unlock critical section
+  mtx_pose_.unlock();
+}
 
-  // Save current pose
-  //current_pose_ = *msg;
+void FloatingSensorPosition::OnRosMsgTwist(const geometry_msgs::TwistConstPtr &msg)
+{
+  current_twist_ = *msg;
 }
 
 
@@ -147,10 +223,7 @@ void FloatingSensorPosition::QueueThread()
   static const double timeout = 0.01;
   while (this->rosNode->ok())
   {
-    // Publish current pose
-    GetCurrentPose();
-    pub_pose_.publish(current_pose_);
-
+    // Check ros callbacks
     this->rosQueue.callAvailable(ros::WallDuration(timeout));
   }
 }

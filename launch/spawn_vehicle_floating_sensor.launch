@@ -26,4 +26,19 @@
          -model $(arg name)"
    respawn="false" output="screen">
   </node>
+
+
+  <node pkg="tf" type="static_transform_publisher" name="floating_sensor_laser_tf" args="
+    0.10  0.0  0.0
+    0.99619 0 -0.08716 0
+    /floating_sensor/base_link
+    /floating_sensor/laser_frame 500"
+  />
+
+  <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbd_tf" args="
+    0.05  0.0  0.1
+    0.5 -0.5 0.5 -0.5
+    /floating_sensor/base_link
+    /floating_sensor/camera_depth_optical_frame 500"
+  />
 </launch>
