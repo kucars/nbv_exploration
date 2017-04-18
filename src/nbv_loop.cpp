@@ -35,52 +35,8 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
-// Custom classes
 #include <nbv_exploration/nbv_loop.h>
-#include <nbv_exploration/model_profiler_base.h>
-#include <nbv_exploration/model_profiler_circular_adaptive.h>
-#include <nbv_exploration/view_generator.h>
-#include <nbv_exploration/view_selecter.h>
-#include <nbv_exploration/termination_check_base.h>
 
-#include "control/vehicle_control_base.h"
-#include "control/vehicle_control_iris.h"
-
-
-// ===================
-// === Variables  ====
-// ===================
-bool is_debug = true; //Set to true to see debug text
-bool is_debug_states = true;
-bool is_debug_callbacks = !true;
-
-bool is_done_profiling = false;
-bool is_scan_empty = false;
-bool is_flying_up = false;
-
-bool waiting_for_profile_cloud = false;
-bool waiting_for_profile_octomap = false;
-
-
-double profile_angle = 0;
-double uav_height_min, uav_height_max, uav_obstacle_distance_min;
-
-
-// == Publishers / Clients
-ros::Publisher pub_global_cloud;
-ros::Publisher pub_scan_command;
-
-
-// == Point clouds
-float grid_res = 0.1f; //Voxel grid resolution
-
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_projected_cloud_ptr  (new pcl::PointCloud<pcl::PointXYZRGB>);
-octomap::OcTree* global_octomap;
-
-// ================
-// Functions
-// ================
 
 NBVLoop::NBVLoop()
 {
@@ -258,6 +214,15 @@ void NBVLoop::initParameters()
   is_terminating = false;
   iteration_count = 0;
 
+  is_debug           = true;
+  is_debug_states    = true;
+  is_debug_callbacks = !true;
+
+  is_done_profiling  = false;
+
+  waiting_for_profile_cloud = false;
+  waiting_for_profile_octomap = false;
+
   grid_res = 0.1f;
 
 
@@ -296,7 +261,8 @@ void NBVLoop::initViewSelecter()
 
 void NBVLoop::initVehicle()
 {
-   vehicle_ = new VehicleControlIris();
+  //vehicle_ = new VehicleControlIris();
+  vehicle_ = new VehicleControlFloatingSensor();
 }
 
 void NBVLoop::profilingProcessing(){

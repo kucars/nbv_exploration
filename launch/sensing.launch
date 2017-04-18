@@ -2,12 +2,7 @@
 <launch>
     <arg name="scan_topic" default="/nbv_exploration/scan"/>
     <arg name="debug" default="false"/>
-    <!--
-    <node pkg="nbv_exploration" name="test_octomap" type="test_octomap" args="" required="true" output="screen">
-      <remap from="scan_in"  to="$(arg scan_topic)"/>
-    </node>
-    -->
-    
+
     <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" if="$(arg debug)" launch-prefix="gdb -ex run --args" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
     

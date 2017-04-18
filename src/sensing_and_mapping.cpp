@@ -70,9 +70,9 @@ double laser_range = -1;
 std::string filename_pcl = "profile_cloud.pcd";
 std::string filename_octree = "profile_octree.ot";
 
-std::string topic_depth        = "/nbv_exploration/depth"; //"/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points";
+std::string topic_depth        = "/nbv_exploration/depth";
 std::string topic_position     = "/iris/ground_truth/pose";
-std::string topic_scan_in      = "/nbv_exploration/scan"; //"scan_in";
+std::string topic_scan_in      = "/nbv_exploration/scan";
 std::string topic_scan_command = "/nbv_exploration/scan_command";
 
 std::string topic_map          = "/nbv_exploration/global_map_cloud";
@@ -440,7 +440,6 @@ void callbackScan(const sensor_msgs::LaserScan& laser_msg){
   Eigen::Matrix4d tf_eigen;
   
   try{
-    // "/iris/hokuyo_laser_link"
     tf_listener->lookupTransform("world", laser_msg.header.frame_id, ros::Time(0), transform);
     tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
   }
@@ -553,7 +552,7 @@ void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
     tf::StampedTransform transform;
     try{
         // Listen for transform
-        tf_listener->lookupTransform("world", "iris/xtion_sensor/camera_depth_optical_frame", ros::Time(0), transform);
+        tf_listener->lookupTransform("world", cloud_msg->header.frame_id, ros::Time(0), transform);
     }
     catch (tf::TransformException ex){
         ROS_ERROR("%s",ex.what());

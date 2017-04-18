@@ -50,6 +50,9 @@ bool ModelProfilerBase::callMappingService(int command)
     case nbv_exploration::MappingSrv::Request::LOAD_MAP:
       cmd_name = "LOAD_MAP";
       break;
+    case nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA:
+      cmd_name = "GET_CAMERA_DATA";
+      break;
     default:
       cmd_name = "UNKNOWN";
       break;

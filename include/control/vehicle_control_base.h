@@ -20,7 +20,7 @@ public:
 
   geometry_msgs::Pose  vehicle_current_pose_;
   geometry_msgs::Twist vehicle_current_twist_;
-  geometry_msgs::PoseStamped setpoint_;
+  geometry_msgs::Pose setpoint_;
 
   VehicleControlBase();
   virtual void initialize(){};
@@ -40,6 +40,8 @@ public:
 
   double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
   double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
+  bool   isNear(double p1, double p2, double threshold_sensitivity );
+  bool   isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current, double threshold_sensitivity);
 };
 
 #endif // VEHICLECONTROLBASE_H

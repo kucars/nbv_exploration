@@ -64,3 +64,24 @@ double VehicleControlBase::getAngularDistance(geometry_msgs::Pose p1, geometry_m
 
   return yaw_diff;
 }
+
+bool VehicleControlBase::isNear(double p1, double p2, double threshold_sensitivity )
+{
+  if (fabs(p1-p2)< distance_threshold_*threshold_sensitivity)
+  {
+    return true;
+  }
+
+  return false;
+}
+
+bool VehicleControlBase::isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current, double threshold_sensitivity){
+  if (
+    getDistance(p_target, p_current) < distance_threshold_*threshold_sensitivity &&
+    fabs(getAngularDistance(p_target, p_current)) < angular_threshold_*threshold_sensitivity )
+  {
+    return true;
+  }
+
+  return false;
+}

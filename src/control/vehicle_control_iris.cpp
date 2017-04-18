@@ -42,29 +42,6 @@ void VehicleControlIris::callbackOdometry(const nav_msgs::Odometry& odom_msg)
 }
 
 
-bool VehicleControlIris::isNear(double p1, double p2, double threshold_sensitivity )
-{
-  if (fabs(p1-p2)< distance_threshold_*threshold_sensitivity)
-  {
-    return true;
-  }
-
-  return false;
-}
-
-
-bool VehicleControlIris::isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current, double threshold_sensitivity){
-  if (
-    getDistance(p_target, p_current) < distance_threshold_*threshold_sensitivity &&
-    fabs(getAngularDistance(p_target, p_current)) < angular_threshold_*threshold_sensitivity )
-  {
-    return true;
-  }
-
-  return false;
-}
-
-
 bool VehicleControlIris::isReady()
 {
   return is_ready_;
@@ -92,15 +69,18 @@ bool VehicleControlIris::isStationary(double threshold_sensitivity)
 
 void VehicleControlIris::moveVehicle(double threshold_sensitivity)
 {
-  // Publish pose
-  setpoint_.header.frame_id = "base_footprint";
-  setpoint_.header.stamp = ros::Time::now();
-  pub_setpoint.publish(setpoint_);
+  // Create stamped pose
+  geometry_msgs::PoseStamped ps;
+  ps.header.frame_id = "base_footprint";
+  ps.header.stamp = ros::Time::now();
+  ps.pose = setpoint_;
+
+  pub_setpoint.publish(ps);
 
 
   // Convert setpoint to world frame
   geometry_msgs::Pose setpoint_world;
-  setpoint_world = transformSetpoint2Global(setpoint_.pose);
+  setpoint_world = transformSetpoint2Global(setpoint_);
 
   // Wait till we've reached the waypoint
   ros::Rate rate(30);
@@ -140,14 +120,14 @@ void VehicleControlIris::setWaypoint(double x, double y, double z, double yaw)
   setpoint_world.orientation = pose_conversion::getQuaternionFromYaw(yaw);
 
   // Transform to setpoint frame
-  setpoint_.pose = transformGlobal2Setpoint(setpoint_world);
+  setpoint_ = transformGlobal2Setpoint(setpoint_world);
 }
 
 
 void VehicleControlIris::setWaypoint(geometry_msgs::Pose p)
 {
   // Transform to setpoint frame
-  setpoint_.pose = transformGlobal2Setpoint(p);
+  setpoint_ = transformGlobal2Setpoint(p);
 }
 
 
@@ -165,7 +145,7 @@ void VehicleControlIris::setWaypointIncrement(double x, double y, double z, doub
   setpoint_world.orientation =  pose_conversion::getQuaternionFromYaw(yaw_current + yaw);
 
   // Transform to setpoint frame
-  setpoint_.pose = transformGlobal2Setpoint(setpoint_world);
+  setpoint_ = transformGlobal2Setpoint(setpoint_world);
 }
 
 

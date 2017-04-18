@@ -21,9 +21,6 @@ public:
   VehicleControlIris();
 
   void callbackOdometry(const nav_msgs::Odometry& odom_msg);
-
-  bool isNear(double p1, double p2, double threshold_sensitivity = 1);
-  bool isNear(const geometry_msgs::Pose p_target, const geometry_msgs::Pose p_current, double threshold_sensitivity = 1);
   bool isReady();
   bool isStationary(double threshold_sensitivity = 1);
 

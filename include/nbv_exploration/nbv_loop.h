@@ -15,6 +15,7 @@
 #include "nbv_exploration/termination_check_base.h"
 
 #include "control/vehicle_control_base.h"
+#include "control/vehicle_control_floating_sensor.h"
 #include "control/vehicle_control_iris.h"
 
 namespace NBVState
