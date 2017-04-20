@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(nbv_exploration)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+#PCL fails in debug mode with c++11. Set to release mode
+set(CMAKE_BUILD_TYPE Release)
+
+
+
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_definitions(-D__PX4_ROS)
 add_definitions(-D__EXPORT=)
@@ -111,6 +116,7 @@ add_executable(nbv_main
   src/view_selecter.cpp
 
   src/control/vehicle_control_base.cpp
+  src/control/vehicle_control_floating_sensor.cpp
   src/control/vehicle_control_iris.cpp
 
   src/culling/frustum_culling.cpp

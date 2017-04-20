@@ -107,6 +107,7 @@ bool ModelProfilerBoundedBox::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile
   printf("Target position : [%lf, %lf, %lf]\n", w.x, w.y, w.z);
 
   vehicle_->setWaypoint(w.x, w.y, w.z, w.yaw);
+  vehicle_->setSpeed(0.1);
   vehicle_->moveVehicle(1.5);
 
 

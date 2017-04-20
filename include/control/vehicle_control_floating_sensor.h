@@ -15,10 +15,13 @@ private:
   ros::Publisher  pub_pose;
   ros::Publisher  pub_twist;
 
+  double speed_;
+  geometry_msgs::Twist twist_;
+
 public:
   VehicleControlFloatingSensor();
 
-  void callbackOdometry(const nav_msgs::Odometry& odom_msg);
+  void callbackPose(const geometry_msgs::Pose& pose_msg);
 
   bool isReady();
 
@@ -28,6 +31,7 @@ public:
   void setWaypoint(geometry_msgs::Pose p);
   void setWaypointIncrement(double x, double y, double z, double yaw);
   void start();
+  void updateTwist();
 };
 
 #endif // VEHICLECONTROLIRIS_H

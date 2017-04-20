@@ -11,8 +11,9 @@ VehicleControlFloatingSensor::VehicleControlFloatingSensor():
   ros::NodeHandle ros_node;
 
   // Callbacks
-  sub_odom = ros_node.subscribe("/floating_sensor/pose", 1, &VehicleControlFloatingSensor::callbackPose, this);
-  pub_pose = ros_node.advertise<geometry_msgs::Pose>("/floating_sensor/set_pose", 10);
+  sub_pose  = ros_node.subscribe("/floating_sensor/pose", 1, &VehicleControlFloatingSensor::callbackPose, this);
+  pub_twist = ros_node.advertise<geometry_msgs::Twist>("/floating_sensor/set_twist", 10);
+  pub_pose  = ros_node.advertise<geometry_msgs::Pose>("/floating_sensor/set_pose", 10);
 
   getPose();
 }
@@ -44,35 +45,33 @@ bool VehicleControlFloatingSensor::isReady()
 
 void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
 {
-  // Publish pose
-  setpoint_.header.frame_id = "base_footprint";
-  setpoint_.header.stamp = ros::Time::now();
-  pub_setpoint.publish(setpoint_);
+  updateTwist();
 
-  // Wait till we've reached the waypoint
-  ros::Rate rate(30);
-  while(ros::ok())
+  // Set up variables for motion
+  geometry_msgs::Pose p = vehicle_current_pose_;
+  double dt = 1.0/30;
+  ros::Rate rate(1/dt);
+
+  // Continue moving util we've reached the setpoint
+  while(ros::ok() && !isNear(setpoint_, vehicle_current_pose_, threshold_sensitivity) )
   {
-    /*
-    if (is_debug && is_debug_callbacks)
-    {
-      std::cout << cc.green << "Moving to destination. " <<
-        "Distance to target: " << getDistance(setpoint_world, vehicle_current_pose_) <<
-        "\tAngle to target: " << getAngularDistance(setpoint_world, vehicle_current_pose_) << "\n" << cc.reset;
-    }
-    */
+    p.position.x += twist_.linear.x * dt;
+    p.position.y += twist_.linear.y * dt;
+    p.position.z += twist_.linear.z * dt;
+
+    // Publish pose
+    pub_pose.publish(p);
 
     ros::spinOnce();
     rate.sleep();
-
-    break;
   }
 }
 
 
 void VehicleControlFloatingSensor::setSpeed(double speed)
 {
-  std::cout << cc.yellow << "Warning: setSpeed(double) not implimented in the VehicleControlFloatingSensor class\n" << cc.reset;
+  speed_ = speed;
+  //std::cout << cc.yellow << "Warning: setSpeed(double) not implimented in the VehicleControlFloatingSensor class\n" << cc.reset;
 }
 
 
@@ -90,7 +89,7 @@ void VehicleControlFloatingSensor::setWaypoint(double x, double y, double z, dou
 
 void VehicleControlFloatingSensor::setWaypoint(geometry_msgs::Pose p)
 {
-  setpoint_.pose = p;
+  setpoint_ = p;
 }
 
 
@@ -112,11 +111,29 @@ void VehicleControlFloatingSensor::start()
   ros::Rate rate(10);
   while(ros::ok() && !is_ready_)
   {
-    std::cout << cc.yellow << "Sensor not ready!\n" << cc.reset;
+    std::cout << cc.yellow << "Vehicle (floating sensor) not ready!\n" << cc.reset;
 
     ros::spinOnce();
     rate.sleep();
   }
 
   is_ready_ = true;
+}
+
+
+void VehicleControlFloatingSensor::updateTwist()
+{
+  // Find direction vector (end point - start point)
+  twist_.linear.x = setpoint_.position.x - vehicle_current_pose_.position.x;
+  twist_.linear.y = setpoint_.position.y - vehicle_current_pose_.position.y;
+  twist_.linear.z = setpoint_.position.z - vehicle_current_pose_.position.z;
+
+  // Normalize and set speed accordingly
+  double norm = sqrt(twist_.linear.x*twist_.linear.x + twist_.linear.y*twist_.linear.y + twist_.linear.z*twist_.linear.z);
+
+  twist_.linear.x = twist_.linear.x / norm * speed_;
+  twist_.linear.y = twist_.linear.y / norm * speed_;
+  twist_.linear.z = twist_.linear.z / norm * speed_;
+
+  printf("Update Twist z: %lf, norm: %lf\n", twist_.linear.z, norm);
 }
