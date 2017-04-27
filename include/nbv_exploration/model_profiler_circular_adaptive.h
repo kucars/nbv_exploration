@@ -19,7 +19,7 @@ protected:
 
 public:
   ModelProfilerCircularAdaptive();
-  bool run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr);
+  bool run(PointCloudXYZ::Ptr profile_cloud_ptr);
   void scan();
 };
 

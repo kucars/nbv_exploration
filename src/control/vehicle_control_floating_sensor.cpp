@@ -70,20 +70,20 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
   // Compute new velocities
   updateTwist();
 
-  // Publish speed
+  // Publish speed so vehicle will move
   pub_twist.publish(twist_);
 
   // Sleep until we arrive at destination
   ros::Duration(time_to_target_).sleep();
 
-  /*
-  ros::Rate r(30);
-  while(ros::ok() && !isNear(vehicle_current_pose_, setpoint_, threshold_sensitivity) )
-  {
-    ros::spinOnce();
-    r.sleep();
-  }
-  */
+  // Stop vehicle
+  twist_.linear.x = 0;
+  twist_.linear.y = 0;
+  twist_.linear.z = 0;
+  twist_.angular.x = 0;
+  twist_.angular.y = 0;
+  twist_.angular.z = 0;
+  pub_twist.publish(twist_);
 
   // Done, publish setpoint to make sure we're in target location
   pub_pose.publish(setpoint_);
@@ -144,6 +144,16 @@ void VehicleControlFloatingSensor::start()
 
 void VehicleControlFloatingSensor::updateTwist()
 {
+  if (speed_ <= 0)
+  {
+    printf("Stopping floating sensor vehicle\n");
+    time_to_target_ = 0;
+    twist_.linear.x = 0;
+    twist_.linear.y = 0;
+    twist_.linear.z = 0;
+    return;
+  }
+
   // Find direction vector (end point - start point)
   twist_.linear.x = setpoint_.position.x - vehicle_current_pose_.position.x;
   twist_.linear.y = setpoint_.position.y - vehicle_current_pose_.position.y;
@@ -157,5 +167,5 @@ void VehicleControlFloatingSensor::updateTwist()
   twist_.linear.y = twist_.linear.y / time_to_target_;
   twist_.linear.z = twist_.linear.z / time_to_target_;
 
-  printf("Update Twist z: %lf, norm: %lf\n", twist_.linear.z, norm);
+  //printf("Update Twist z: %lf, norm: %lf\n", twist_.linear.z, norm);
 }

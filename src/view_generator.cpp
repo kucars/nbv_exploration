@@ -39,6 +39,8 @@ ViewGeneratorBase::ViewGeneratorBase()
   visPub = n.advertise<visualization_msgs::Marker>("collision_marker", 10);
 
   // Read parameters
+  ros::param::param("~debug_view_generator", is_debug_, false);
+
   double res_x, res_y, res_z, res_yaw;
   ros::param::param("~uav_position_resolution_x", res_x, 1.0);
   ros::param::param("~uav_position_resolution_y", res_y, 1.0);

@@ -4,15 +4,11 @@
 
 // catkin_make -DCATKIN_WHITELIST_PACKAGES="aircraft_inspection" && rosrun aircraft_inspection wall_follower
 
-#include "nbv_exploration/sensing_and_mapping.h"
-
-#include "utilities/pose_conversion.h"
-#include "utilities/console_utility.h"
-ConsoleUtility cc;
+#include "nbv_exploration/mapping_module.h"
 
 MappingModule::MappingModule()
-  : cloud_ptr_rgbd_ (new pcl::PointCloud<pcl::PointXYZRGB>),
-    cloud_ptr_profile_ (new pcl::PointCloud<pcl::PointXYZRGB>),
+  : cloud_ptr_rgbd_ (new PointCloudXYZ),
+    cloud_ptr_profile_ (new PointCloudXYZ),
     octree_(NULL)
 {
   // >>>>>>>>>>>>>>>>>
@@ -83,7 +79,7 @@ void MappingModule::run()
   }
 }
 
-void MappingModule::addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar)
+void MappingModule::addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar)
 {
   // Note that "range" is the perpendicular distance to the end of the camera plane
 
@@ -140,8 +136,8 @@ void MappingModule::addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_
   */
 }
 
-void MappingModule::addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter) {
-    if (is_debugging_ && is_debugging_continuous_states_){
+void MappingModule::addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter) {
+    if (is_debugging_){
         std::cout << cc.green << "MAPPING\n" << cc.reset;
     }
 
@@ -160,9 +156,9 @@ void MappingModule::addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Pt
     if (should_filter)
     {
       // == Voxel grid filter
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr voxel_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+      PointCloudXYZ::Ptr voxel_filtered(new PointCloudXYZ);
 
-      pcl::VoxelGrid<pcl::PointXYZRGB> vox_sor;
+      pcl::VoxelGrid<PointXYZ> vox_sor;
       vox_sor.setInputCloud (cloud_out);
       vox_sor.setLeafSize (profile_grid_res_, profile_grid_res_, profile_grid_res_);
       vox_sor.filter (*voxel_filtered);
@@ -172,9 +168,9 @@ void MappingModule::addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Pt
 
       // == Statistical outlier removal
       /*
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr stat_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+      PointCloudXYZ::Ptr stat_filtered(new PointCloudXYZ);
 
-      pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> stat_sor;
+      pcl::StatisticalOutlierRemoval<PointXYZ> stat_sor;
       stat_sor.setInputCloud (voxel_filtered);
       stat_sor.setMeanK (10);
       stat_sor.setStddevMulThresh (0.5);
@@ -184,14 +180,14 @@ void MappingModule::addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Pt
       */
     }
 
-    if (is_debugging_ && is_debugging_continuous_states_){
+    if (is_debugging_){
         std::cout << cc.blue << "Number of points in global map: " << cloud_out->points.size() << "\n" << cc.reset;
     }
 }
 
 
 void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
-  if (is_debugging_ && is_debugging_continuous_states_){
+  if (is_debugging_){
     std::cout << cc.magenta << "Scan readings\n" << cc.reset;
   }
 
@@ -215,8 +211,8 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   }
 
   // == Add scan to point cloud
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_far_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+  PointCloudXYZ::Ptr scan_ptr(new PointCloudXYZ);
+  PointCloudXYZ::Ptr scan_far_ptr(new PointCloudXYZ);
 
   int steps = (laser_msg.angle_max - laser_msg.angle_min)/laser_msg.angle_increment;
   float step_size = (laser_msg.angle_max - laser_msg.angle_min)/steps;
@@ -236,7 +232,7 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
     }
 
     // Add scan point to temporary point cloud
-    pcl::PointXYZRGB p;
+    PointXYZ p;
 
     p.x = r*cos(angle);
     p.y = r*sin(angle);
@@ -253,7 +249,7 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   pcl::transformPointCloud(*scan_far_ptr, *scan_far_ptr, tf_eigen);
 
   // == Discard points close to the ground
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr scan_ptr_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+  PointCloudXYZ::Ptr scan_ptr_filtered(new PointCloudXYZ);
 
   for (int i=0; i<scan_ptr->points.size(); i++)
   {
@@ -289,7 +285,7 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
 
 void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
-    if (is_debugging_ && is_debugging_continuous_states_){
+    if (is_debugging_){
         std::cout << cc.green << "Depth sensing\n" << cc.reset;
     }
 
@@ -300,14 +296,14 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     }
 
     // == Convert to pcl pointcloud
-    pcl::PointCloud<pcl::PointXYZRGB> cloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_raw_ptr;
+    PointCloudXYZ cloud;
+    PointCloudXYZ::Ptr cloud_raw_ptr;
 
     pcl::fromROSMsg (*cloud_msg, cloud);
     cloud_raw_ptr = cloud.makeShared();
 
     // == Create cloud without points that are too far
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_distance_ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+    PointCloudXYZ::Ptr cloud_distance_ptr(new PointCloudXYZ);
 
     for (int i=0; i<cloud.points.size(); i++)
       if (cloud.points[i].z <= max_rgbd_range_)
@@ -464,10 +460,18 @@ void MappingModule::computeTreeUpdatePlanar(const octomap::Pointcloud& scan, con
   }
 }
 
+octomap::OcTree* MappingModule::getOctomap()
+{
+  return octree_;
+}
+
+PointCloudXYZ::Ptr MappingModule::getPointCloud()
+{
+  return cloud_ptr_profile_;
+}
+
 void MappingModule::initializeParameters()
 {
-  is_debugging_ = !true; //Set to true to see debug text
-  is_debugging_continuous_states_ = !true;
   is_get_camera_data_ = false;
   is_batch_profiling_ = false;
   is_filling_octomap_ = false;
@@ -483,6 +487,7 @@ void MappingModule::initializeParameters()
   topic_rgbd_out_     = "/nbv_exploration/rgbd_cloud";
   topic_tree_         = "/nbv_exploration/output_tree";
 
+  ros::param::param("~debug_mapping", is_debugging_, false);
 
   ros::param::param("~depth_range_max", max_rgbd_range_, 5.0);
   ros::param::param("~octree_resolution", octree_res_, 0.2);
@@ -626,7 +631,7 @@ bool MappingModule::processCommand(int command)
     case nbv_exploration::MappingSrv::Request::LOAD_MAP:
       // Point cloud
       std::cout << "Reading " << filename_pcl_ << "\n";
-      if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (filename_pcl_, *cloud_ptr_profile_) == -1) //* load the file
+      if (pcl::io::loadPCDFile<PointXYZ> (filename_pcl_, *cloud_ptr_profile_) == -1) //* load the file
       {
         std::cout << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_ << ".Exiting node.\n" << cc.reset;
         success = false;
@@ -690,7 +695,7 @@ void MappingModule::processScans()
   {
     octomap::point3d sensor_origin = pose_vec_[i];
     octomap::point3d sensor_dir = dir_vec_[i];
-    pcl::PointCloud<pcl::PointXYZRGB> scan = scan_vec_[i];
+    PointCloudXYZ scan = scan_vec_[i];
 
     addPointCloudToTree(scan_vec_[i], sensor_origin, sensor_dir, laser_range_);
 

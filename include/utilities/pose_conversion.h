@@ -5,6 +5,8 @@
 #include <tf_conversions/tf_eigen.h>
 #include <tf/transform_datatypes.h>
 
+#include <nbv_exploration/common.h>
+
 namespace pose_conversion{
   // ================
   // Point conversion

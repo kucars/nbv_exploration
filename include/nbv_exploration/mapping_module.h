@@ -6,6 +6,8 @@
 #include <ros/package.h>
 
 #include <nbv_exploration/MappingSrv.h>
+#include <nbv_exploration/common.h>
+
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -41,12 +43,15 @@ public:
   void run();
   bool processCommand(int command);
 
+  octomap::OcTree* getOctomap();
+  PointCloudXYZ::Ptr getPointCloud();
+
 private:
   // =========
   // Methods
   // =========
-  void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
-  void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter = true);
+  void addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
+  void addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter = true);
 
   void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
   void callbackScan(const sensor_msgs::LaserScan& laser_msg);
@@ -81,20 +86,19 @@ private:
   // == Booleans
   bool is_batch_profiling_;
   bool is_debugging_; //Set to true to see debug text
-  bool is_debugging_continuous_states_;
   bool is_filling_octomap_;
   bool is_get_camera_data_;
   bool is_scanning_;
 
   // == Profiling
   std::vector<octomap::point3d> pose_vec_, dir_vec_;
-  std::vector< pcl::PointCloud<pcl::PointXYZRGB> > scan_vec_;
+  std::vector< PointCloudXYZ > scan_vec_;
   double laser_range_;
 
 
   // == Point clouds and octrees
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_rgbd_;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ptr_profile_;
+  PointCloudXYZ::Ptr cloud_ptr_rgbd_;
+  PointCloudXYZ::Ptr cloud_ptr_profile_;
   octomap::OcTree* octree_;
 
   // == Strings

@@ -7,7 +7,7 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 
-#include "nbv_exploration/sensing_and_mapping.h"
+#include "nbv_exploration/mapping_module.h"
 #include "nbv_exploration/model_profiler_base.h"
 #include "nbv_exploration/model_profiler_bounded_box.h"
 #include "nbv_exploration/model_profiler_circular_adaptive.h"
@@ -41,17 +41,15 @@ public:
    * VARIABLES
    * ========= */
   // MODULES
-  MappingModule* mapping_module_;
-  ModelProfilerBase * model_profiler_;
-  TerminationCheckBase * termination_check_module_;
-  ViewGeneratorBase* view_generator_;
-  ViewSelecterBase* view_selecter_;
-  VehicleControlBase * vehicle_;
+  MappingModule*        mapping_module_;
+  ModelProfilerBase*    model_profiler_;
+  TerminationCheckBase* termination_check_module_;
+  VehicleControlBase*   vehicle_;
+  ViewGeneratorBase*    view_generator_;
+  ViewSelecterBase*     view_selecter_;
 
   // DEBUG
-  bool is_debug;
   bool is_debug_states;
-  bool is_debug_callbacks;
 
   // STATE VARIABLES
   NBVState::State state;
@@ -60,21 +58,8 @@ public:
   bool is_scan_empty;
   bool is_flying_up;
 
-  bool waiting_for_profile_cloud;
-  bool waiting_for_profile_octomap;
-
   bool skip_profiling;
   bool skip_profiling_load_map;
-
-  // CALLBACK VARIABLES
-  std::string topic_depth;
-  std::string topic_octree;
-  std::string topic_scan_cloud;
-  std::string topic_profile_cloud;
-
-  ros::Publisher pub_global_cloud;
-  ros::Publisher pub_scan_command;
-  ros::ServiceClient srvclient_mapping;
 
   // TERMINATION VARIABLES
   bool is_terminating;
@@ -91,15 +76,6 @@ public:
   double profile_angle;
   double uav_height_min, uav_height_max, uav_obstacle_distance_min;
 
-  // MAP VARIABLES
-  float grid_res; //Voxel grid resolution
-
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_projected_cloud_ptr;
-  octomap::OcTree* global_octomap;
-
-
-
   /* =========
    * METHODS
    * ========= */
@@ -113,10 +89,6 @@ public:
   void initVehicle();
   void runStateMachine();
   void sigIntHandler(int sig);
-
-  // CALLBACKS
-  void callbackScan(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-  void callbackOctomap(const octomap_msgs::Octomap& octomap_msg);
 
   // FSM functions
   void terminationCheck();

@@ -18,7 +18,6 @@
 
 #include "nbv_exploration/view_generator.h"
 
-//typedef pcl::PointXYZRGBA PointT;
 typedef geometry_msgs::Pose Pose;
 
 class ViewSelecterBase
@@ -26,7 +25,7 @@ class ViewSelecterBase
 protected:
   ViewGeneratorBase* view_gen_;
   
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
+  PointCloudXYZ::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
   
   Pose current_pose_;

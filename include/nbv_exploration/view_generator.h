@@ -35,7 +35,7 @@ public:
   double obj_bounds_x_max_, obj_bounds_y_max_, obj_bounds_z_max_; //Made public for viewselector. May benefit from getter
   double obj_bounds_x_min_, obj_bounds_y_min_, obj_bounds_z_min_;
   
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_occupied_ptr_;
+  PointCloudXYZ::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
   Pose current_pose_;
   std::vector<Pose> generated_poses;
@@ -48,7 +48,7 @@ public:
   // == Setters
   void setCollisionRadius(double r){collision_radius_ = r;}
   
-  void setCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& in_occ_cloud){cloud_occupied_ptr_ = in_occ_cloud;}
+  void setCloud(PointCloudXYZ::Ptr in_occ_cloud){cloud_occupied_ptr_ = in_occ_cloud;}
   
   void setCurrentPose(Pose p){current_pose_ = p;}
   

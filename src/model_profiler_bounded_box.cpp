@@ -4,6 +4,7 @@
 #include "nbv_exploration/common.h"
 
 ModelProfilerBoundedBox::ModelProfilerBoundedBox():
+  ModelProfilerBase(), //call base class constructor
   is_sensor_rising_(false),
   waypoints_exist_(false)
 {
@@ -92,7 +93,7 @@ void ModelProfilerBoundedBox::createWaypoints()
 }
 
 
-bool ModelProfilerBoundedBox::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr)
+bool ModelProfilerBoundedBox::run(PointCloudXYZ::Ptr profile_cloud_ptr)
 {
   if (!waypoints_exist_)
     createWaypoints();
@@ -108,7 +109,8 @@ bool ModelProfilerBoundedBox::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile
   printf("Target position: [%lf, %lf, %lf]\n", w.x, w.y, w.z);
 
   vehicle_->setWaypoint(w.x, w.y, w.z, w.yaw);
-  vehicle_->setSpeed(-1);
+  vehicle_->setSpeed(1);
+  vehicle_->setSpeed(-1); //Allow floating sensor to teleport, ignored by other vehicles
   vehicle_->moveVehicle(0);
 
   current_position = vehicle_->getPosition();
@@ -162,9 +164,9 @@ void ModelProfilerBoundedBox::scan()
 
     while (ros::ok() && vehicle_->getPosition().z < bounds.z_max)
     {
-      vehicle_->setSpeed(1.0);
+      vehicle_->setSpeed(scan_speed_);
       vehicle_->setWaypointIncrement(0, 0, bounds.z_max - vehicle_->getPosition().z, 0);
-      vehicle_->moveVehicle(0.25); // Scan slowly
+      vehicle_->moveVehicle(0.25);
       ros::spinOnce();
     }
   }
@@ -174,7 +176,7 @@ void ModelProfilerBoundedBox::scan()
 
     while (ros::ok() && vehicle_->getPosition().z > bounds.z_min)
     {
-      vehicle_->setSpeed(1.0);
+      vehicle_->setSpeed(scan_speed_);
       vehicle_->setWaypointIncrement(0, 0, bounds.z_min - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25);
       ros::spinOnce();

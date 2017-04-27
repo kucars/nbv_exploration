@@ -25,11 +25,12 @@ ViewSelecterBase::ViewSelecterBase()
 	ig_pub     = n.advertise<std_msgs::Float32>("nbv_exploration/total_ig", 10);
 	
 	last_max_utility_ = 1/.0;
-	is_debug_ = false;
 
   // >>>>>>>>>>>>>>>>>
   // Read parameters
   // >>>>>>>>>>>>>>>>>
+  ros::param::param("~debug_view_selecter", is_debug_, false);
+
   double fov_h, fov_v, r_max, r_min;
   ros::param::param("~fov_horizontal", fov_h, 60.0);
   ros::param::param("~fov_vertical", fov_v, 45.0);
@@ -424,7 +425,7 @@ void ViewSelecterBase::evaluate()
   cloud_occupied_ptr_ = view_gen_->cloud_occupied_ptr_;
   current_pose_ = view_gen_->current_pose_;
   
-  double maxUtility = -1/.0; //-inf
+  double maxUtility = - std::numeric_limits<float>::infinity(); //-inf
   
   ros::Duration sleep_duration(1);
   for (int i=0; i<view_gen_->generated_poses.size() && ros::ok(); i++)

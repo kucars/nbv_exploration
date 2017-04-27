@@ -158,20 +158,4 @@
       <remap from="depth_in"  to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points"/>
       <remap from="depth_out" to="$(arg depth_topic)"/>
     </node>
-    
-    
-    <!-- profiler and mapper -->
-    <!--
-    <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" args="" required="true" output="screen">
-      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
-   
-      <remap from="scan_in"  to="$(arg scan_topic)"/>
-    </node>
-    -->
-    
-    <!--
-    <node pkg="nbv_exploration" name="sensing_and_mapping" type="sensing_and_mapping" args="" required="true" output="screen" >
-      <remap from="scan_in"  to="$(arg scan_topic)"/>
-    </node>
-    -->
 </launch>

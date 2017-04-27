@@ -20,7 +20,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
-#include "lib/MeanShift/MeanShift.h"
+#include "../lib/MeanShift/MeanShift.h"
 
 //convenient typedefs
 typedef pcl::PointXYZ PointT;

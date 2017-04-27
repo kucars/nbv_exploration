@@ -1,11 +1,10 @@
-## Scenario settings
-object_bounds_x_max: 5
-object_bounds_x_min: -5
-object_bounds_y_max: 5
-object_bounds_y_min: -5
-object_bounds_z_max: 5
-object_bounds_z_min: 0
+## Debug settings
+debug_nbv_main_states: true
+debug_mapping: false
+debug_view_selecter: true
+debug_view_generator: true
 
+## Scenario settings
 nav_bounds_x_max: 20
 nav_bounds_x_min: -20
 nav_bounds_y_max: 20
@@ -17,7 +16,7 @@ nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may
 uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
 
-## Motion planner settings
+## View generation settings
 uav_position_resolution_x: 1.0
 uav_position_resolution_y: 1.0
 uav_position_resolution_z: 1.0

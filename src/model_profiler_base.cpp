@@ -3,9 +3,11 @@
 #include "nbv_exploration/model_profiler_base.h"
 #include "nbv_exploration/common.h"
 
-ModelProfilerBase::ModelProfilerBase()
+ModelProfilerBase::ModelProfilerBase():
+  mapping_module_(NULL),
+  vehicle_(NULL),
+  scan_speed_(0.1)
 {
-  ros::NodeHandle ros_node;
 }
 
 bool ModelProfilerBase::callMappingService(int command)
@@ -58,6 +60,11 @@ void ModelProfilerBase::setMappingModule(MappingModule* m)
 void ModelProfilerBase::setVehicle(VehicleControlBase* v)
 {
   vehicle_ = v;
+}
+
+void ModelProfilerBase::setScanSpeed(double speed)
+{
+  scan_speed_ = speed;
 }
 
 

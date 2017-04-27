@@ -86,15 +86,6 @@ void VehicleControlIris::moveVehicle(double threshold_sensitivity)
   ros::Rate rate(30);
   while(ros::ok() && (!isNear(setpoint_world, vehicle_current_pose_, threshold_sensitivity) || !isStationary(threshold_sensitivity) ) )
   {
-    /*
-    if (is_debug && is_debug_callbacks)
-    {
-      std::cout << cc.green << "Moving to destination. " <<
-        "Distance to target: " << getDistance(setpoint_world, vehicle_current_pose_) <<
-        "\tAngle to target: " << getAngularDistance(setpoint_world, vehicle_current_pose_) << "\n" << cc.reset;
-    }
-    */
-
     ros::spinOnce();
     rate.sleep();
   }

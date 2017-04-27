@@ -4,19 +4,20 @@
 #include "nbv_exploration/common.h"
 
 ModelProfilerCircularAdaptive::ModelProfilerCircularAdaptive():
+  ModelProfilerBase(), //call base class constructor
   profile_angle_(0),
-  waypoint_count_(5),
   is_sensor_rising_(false)
 {
-  angle_inc_ = 2*M_PI/waypoint_count_;
-
   ros::param::param("~uav_obstacle_distance_min_", uav_obstacle_distance_min_, 1.0);
   ros::param::param("~nav_bounds_z_min", uav_height_min_, 0.1);
   ros::param::param("~nav_bounds_z_max", uav_height_max_, 10.0);
+  ros::param::param("~profiling_circular_waypoints", waypoint_count_, 5);
+
+  angle_inc_ = 2*M_PI/waypoint_count_;
 }
 
 
-bool ModelProfilerCircularAdaptive::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile_cloud_ptr)
+bool ModelProfilerCircularAdaptive::run(PointCloudXYZ::Ptr profile_cloud_ptr)
 {
   profile_angle_ += angle_inc_;
 
@@ -82,6 +83,8 @@ bool ModelProfilerCircularAdaptive::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr p
   double yaw_move = theta-M_PI; //towards the center of the circle
 
   std::cout << cc.magenta << "Moving back\n" << cc.reset;
+  vehicle_->setSpeed(0.2);
+  vehicle_->setSpeed(-1); //Allows floating sensor to move instantly, ignored by real vehicles
   vehicle_->setWaypoint(x_move, y_move, current_position.z, yaw_move);
   vehicle_->moveVehicle();
 
@@ -139,9 +142,9 @@ void ModelProfilerCircularAdaptive::scan()
 
     while (ros::ok() && vehicle_->getPosition().z < uav_height_max_)
     {
-      vehicle_->setSpeed(0.1);
-      vehicle_->setWaypointIncrement(0, 0, 0.3, 0);
-      vehicle_->moveVehicle(0.25); // Scan slowly
+      vehicle_->setSpeed(scan_speed_);
+      vehicle_->setWaypointIncrement(0, 0, uav_height_max_ - vehicle_->getPosition().z, 0);
+      vehicle_->moveVehicle(0.25);
       ros::spinOnce();
     }
   }
@@ -151,8 +154,8 @@ void ModelProfilerCircularAdaptive::scan()
 
     while (ros::ok() && vehicle_->getPosition().z > uav_height_min_)
     {
-      vehicle_->setSpeed(0.1);
-      vehicle_->setWaypointIncrement(0, 0, -0.3, 0);
+      vehicle_->setSpeed(scan_speed_);
+      vehicle_->setWaypointIncrement(0, 0, uav_height_min_ - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25);
       ros::spinOnce();
     }
