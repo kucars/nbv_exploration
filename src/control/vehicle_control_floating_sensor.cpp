@@ -71,11 +71,11 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
 
   // Set up variables for motion
   geometry_msgs::Pose p = vehicle_current_pose_;
-  double dt = 1.0/30;
-  ros::Rate rate(1/dt);
   double calibration_constant = 11; //scale speed to match reality
-
   double time_elapsed = 0;
+
+  double dt = 1.0/30;
+  ros::Duration dur(dt);
 
   // Continue moving util we've reached the setpoint
   while(ros::ok() && time_elapsed < time_to_target_)
@@ -89,7 +89,7 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
     pub_pose.publish(p);
 
     ros::spinOnce();
-    rate.sleep();
+    dur.sleep();
   }
 
   // Done, publish setpoint to make sure we're in target location

@@ -7,6 +7,7 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 
+#include "nbv_exploration/sensing_and_mapping.h"
 #include "nbv_exploration/model_profiler_base.h"
 #include "nbv_exploration/model_profiler_bounded_box.h"
 #include "nbv_exploration/model_profiler_circular_adaptive.h"
@@ -40,6 +41,7 @@ public:
    * VARIABLES
    * ========= */
   // MODULES
+  MappingModule* mapping_module_;
   ModelProfilerBase * model_profiler_;
   TerminationCheckBase * termination_check_module_;
   ViewGeneratorBase* view_generator_;
@@ -104,6 +106,7 @@ public:
   NBVLoop();
   void initParameters();
 
+  void initMappingModule();
   void initModelProfiler();
   void initViewGenerator();
   void initViewSelecter();

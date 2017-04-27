@@ -11,22 +11,10 @@ ModelProfilerBase::ModelProfilerBase()
 
 bool ModelProfilerBase::callMappingService(int command)
 {
-  nbv_exploration::MappingSrv srv;
-  srv.request.data = command;
+  bool success = mapping_module_->processCommand(command);
 
-  bool success = srvclient_mapping.call(srv);
-  bool error = false;
-
-  if (!success)
-  {
-    ROS_ERROR("Failed to call service \"mapping_command\"");
-    return false; //failure
-  }
-  else
-  {
-    if (srv.response.data != nbv_exploration::MappingSrv::Response::ERROR)
-      return true; //success
-  }
+  if (success)
+    return true;
 
   // Error encountered
   std::string cmd_name;
@@ -58,11 +46,15 @@ bool ModelProfilerBase::callMappingService(int command)
       break;
   }
 
-  std::cout << cc.red << "Error after sending " <<  cmd_name << "(ID: " << command << ") to service \"mapping_commands\" \n";
-  std::cout << cc.red << "\t" << srv.response.error << "\n" << cc.reset;
+  std::cout << cc.red << "Error after sending command " <<  cmd_name << "(ID: " << command << ") to mapping module\n";
   return false;
 }
 
+
+void ModelProfilerBase::setMappingModule(MappingModule* m)
+{
+  mapping_module_ = m;
+}
 
 void ModelProfilerBase::setVehicle(VehicleControlBase* v)
 {

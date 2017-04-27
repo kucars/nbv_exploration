@@ -1,7 +1,19 @@
 <?xml version="1.0" ?>
 <launch>
-    <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="true" output="screen">
+    <arg name="scan_topic" default="/nbv_exploration/scan"/>
+    <arg name="debug" default="false"/>
+
+    <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="true" output="screen" if="$(arg debug)" launch-prefix="gdb -ex run --args" >
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/navigation_settings.yaml" command="load" />
+
+      <remap from="scan_in"  to="$(arg scan_topic)"/>
+    </node>
+
+    <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="true" output="screen" unless="$(arg debug)">
+      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+      <rosparam file="$(find nbv_exploration)/config/navigation_settings.yaml" command="load" />
+
+      <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
 </launch>

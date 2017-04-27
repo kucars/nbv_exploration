@@ -111,6 +111,7 @@ add_executable(nbv_main
   src/model_profiler_circular_adaptive.cpp
 
   src/nbv_loop.cpp
+  src/sensing_and_mapping.cpp
   src/termination_check_base.cpp
   src/view_generator.cpp
   src/view_selecter.cpp
@@ -133,9 +134,9 @@ target_link_libraries(nbv_main
     ${PCL_LIBRARIES}
     )
 
-add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)
-add_dependencies(sensing_and_mapping ${catkin_EXPORTED_TARGETS})
-target_link_libraries(sensing_and_mapping ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
+#add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)
+#add_dependencies(sensing_and_mapping ${catkin_EXPORTED_TARGETS})
+#target_link_libraries(sensing_and_mapping ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
 
 add_executable(teleop_uav src/keyboard_teleop.cpp)
 add_dependencies(teleop_uav ${catkin_EXPORTED_TARGETS})

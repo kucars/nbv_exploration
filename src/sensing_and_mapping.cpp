@@ -10,31 +10,6 @@
 #include "utilities/console_utility.h"
 ConsoleUtility cc;
 
-
-void sigIntHandler(int sig)
-{
-  std::cout << cc.yellow << "Handling SIGINT exception\n" << cc.reset;
-  
-  // Forces ros::Rate::sleep() to end if it's stuck (for example, Gazebo isn't running)
-  ros::shutdown();
-}
-
-int main(int argc, char **argv)
-{
-    // >>>>>>>>>>>>>>>>>
-    // Initialize ROS
-    // >>>>>>>>>>>>>>>>>
-    ros::init(argc, argv, "sensing_and_mapping", ros::init_options::NoSigintHandler);
-
-    // >>>>>>>>>>>>>>>>>
-    // Create mappng module
-    // >>>>>>>>>>>>>>>>>
-    MappingModule* m = new MappingModule();
-    
-    return 0;
-}
-
-
 MappingModule::MappingModule()
   : cloud_ptr_rgbd_ (new pcl::PointCloud<pcl::PointXYZRGB>),
     cloud_ptr_profile_ (new pcl::PointCloud<pcl::PointXYZRGB>),
@@ -54,7 +29,10 @@ MappingModule::MappingModule()
   std::cout << "\t" << topic_depth_ << "\n";
   std::cout << "\t" << topic_scan_in_ << "\n";
   std::cout << "\n";
+}
 
+void MappingModule::run()
+{
   // >>>>>>>>>>>>>>>>>
   // Main loop
   // >>>>>>>>>>>>>>>>>
@@ -211,167 +189,6 @@ void MappingModule::addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Pt
     }
 }
 
-bool MappingModule::callbackCommand(nbv_exploration::MappingSrv::Request  &request,
-                     nbv_exploration::MappingSrv::Response &response)
-{
-  bool error = false;
-
-  ros::Rate sleep_rate(10);
-
-  switch(request.data)
-  {
-    case nbv_exploration::MappingSrv::Request::START_SCANNING:
-      is_scanning_ = true;
-      std::cout << cc.green << "Started scanning\n" << cc.reset;
-
-      response.data = response.ACK;
-      break;
-
-
-    case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
-      is_scanning_ = false;
-      std::cout << cc.green << "Processing " << scan_vec_.size() << " scans...\n" << cc.reset;
-
-      if (is_batch_profiling_)
-        processScans();
-
-      response.data = response.DONE;
-      break;
-
-
-    case nbv_exploration::MappingSrv::Request::START_PROFILING:
-      std::cout << cc.green << "Started profiling\n" << cc.reset;
-
-      if (!octree_)
-      {
-        octree_ = new octomap::OcTree (octree_res_);
-        octree_->setBBXMin( bound_min_ );
-        octree_->setBBXMax( bound_max_ );
-      }
-
-
-      response.data = response.ACK;
-      break;
-
-
-    case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
-      is_scanning_ = false;
-      std::cout << cc.green << "Done profiling\n" << cc.reset;
-
-      response.data = response.ACK;
-      break;
-
-
-    case nbv_exploration::MappingSrv::Request::SAVE_MAP:
-      // Point cloud
-      if (!cloud_ptr_profile_)
-      {
-        response.data  = response.ERROR;
-        response.error = "No point cloud data available";
-        error = true;
-        break;
-      }
-      pcl::io::savePCDFileASCII (filename_pcl_, *cloud_ptr_profile_);
-
-      // Octree
-      if (!octree_)
-      {
-        response.data  = response.ERROR;
-        response.error = "No octomap data available";
-        error = true;
-        break;
-      }
-      if (!octree_->write(filename_octree_))
-      {
-        response.data  = response.ERROR;
-        response.error = "Failed to save octomap data to " + filename_octree_;
-        error = true;
-        break;
-      }
-
-      std::cout << cc.green << "Successfully saved map\n" << cc.reset;
-
-    case nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA:
-      is_get_camera_data_ = true;
-      std::cout << cc.magenta << "Waiting for camera data\n" << cc.reset;
-
-      for (int i=0; i<10 && ros::ok() && is_get_camera_data_; i++)
-      {
-        ros::spinOnce();
-        sleep_rate.sleep();
-      }
-
-      if (is_get_camera_data_)
-      {
-        response.data = response.ERROR;
-        response.error = "Could not get camera data";
-      }
-      else
-        response.data = response.DONE;
-
-      break;
-
-
-    case nbv_exploration::MappingSrv::Request::LOAD_MAP:
-      // Point cloud
-      std::cout << "Reading " << filename_pcl_ << "\n";
-      if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (filename_pcl_, *cloud_ptr_profile_) == -1) //* load the file
-      {
-        response.data  = response.ERROR;
-        response.error = "Failed to load point cloud: Could not read file " + filename_pcl_;
-        error = true;
-        break;
-      }
-
-      // Octree
-      std::cout << "Reading " << filename_octree_ << "\n";
-
-      octomap::AbstractOcTree* temp_tree = octomap::AbstractOcTree::read(filename_octree_);
-      if(temp_tree)
-      { // read error returns NULL
-        octree_ = dynamic_cast<octomap::OcTree*>(temp_tree);
-
-        if (octree_)
-        {
-          /*
-          // Scale octree probabilities (bring them closer to 50%)
-          for (octomap::OcTree::iterator it = octree_->begin(), end = octree_->end(); it != end; ++it)
-          {
-            octree_->updateNode(it.getKey(), -0.5f*it->getLogOdds(), true);
-          }
-          octree_->updateInnerOccupancy();
-
-          std::cout << cc.green << "Successfully scaled probabilities\n" << cc.reset;
-          response.data  = response.DONE;
-          break;
-          */
-        }
-        else
-        {
-          response.data  = response.ERROR;
-          response.error = "Failed to load octomap: Type cast failed";
-          error = true;
-          break;
-        }
-      }
-      else
-      {
-        response.data  = response.ERROR;
-        response.error = "Failed to load octomap: Could not read file " + filename_octree_;
-        error = true;
-        break;
-      }
-
-      std::cout << cc.green << "Successfully loaded maps\n" << cc.reset;
-      response.data  = response.DONE;
-      break;
-  }
-
-  if (error)
-    ros::shutdown();
-
-  return true;
-}
 
 void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   if (is_debugging_ && is_debugging_continuous_states_){
@@ -386,7 +203,7 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   Eigen::Matrix4d tf_eigen;
 
   try{
-    tf_listener_->lookupTransform("world", laser_msg.header.frame_id, ros::Time(0), transform);
+    tf_listener_->lookupTransform("world", laser_msg.header.stamp, laser_msg.header.frame_id, laser_msg.header.stamp, laser_msg.header.frame_id, transform);
     tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
   }
   catch (tf::TransformException ex){
@@ -497,13 +314,13 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     // == Transform
     tf::StampedTransform transform;
     try{
-        // Listen for transform
-        tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, ros::Time(0), transform);
+      // Listen for transform
+      tf_listener_->lookupTransform("world", cloud_msg->header.stamp, cloud_msg->header.frame_id, cloud_msg->header.stamp, cloud_msg->header.frame_id, transform);
     }
     catch (tf::TransformException ex){
-        ROS_ERROR("%s",ex.what());
-        ros::Duration(1.0).sleep();
-        return;
+      ROS_ERROR("%s",ex.what());
+      ros::Duration(1.0).sleep();
+      return;
     }
 
     // == Convert tf:Transform to Eigen::Matrix4d
@@ -698,7 +515,7 @@ void MappingModule::initializeTopicHandlers()
   sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
   sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
 
-  ros::ServiceServer service = ros_node_.advertiseService("/nbv_exploration/mapping_command", &MappingModule::callbackCommand, this);
+  //ros::ServiceServer service = ros_node_.advertiseService("/nbv_exploration/mapping_command", &MappingModule::callbackCommand, this);
 
   tf_listener_ = new tf::TransformListener();
 
@@ -711,6 +528,148 @@ void MappingModule::initializeTopicHandlers()
   pub_tree_          = ros_node_.advertise<octomap_msgs::Octomap>(topic_tree_, 10);
 }
 
+
+bool MappingModule::processCommand(int command)
+{
+  bool success = true;
+
+  ros::Rate sleep_rate(10);
+
+  switch(command)
+  {
+    case nbv_exploration::MappingSrv::Request::START_SCANNING:
+      is_scanning_ = true;
+      std::cout << cc.green << "Started scanning\n" << cc.reset;
+      break;
+
+
+    case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
+      is_scanning_ = false;
+      std::cout << cc.green << "Processing " << scan_vec_.size() << " scans...\n" << cc.reset;
+
+      if (is_batch_profiling_)
+        processScans();
+      break;
+
+
+    case nbv_exploration::MappingSrv::Request::START_PROFILING:
+      std::cout << cc.green << "Started profiling\n" << cc.reset;
+
+      if (!octree_)
+      {
+        octree_ = new octomap::OcTree (octree_res_);
+        octree_->setBBXMin( bound_min_ );
+        octree_->setBBXMax( bound_max_ );
+      }
+      break;
+
+
+    case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
+      is_scanning_ = false;
+      std::cout << cc.green << "Done profiling\n" << cc.reset;
+      break;
+
+
+    case nbv_exploration::MappingSrv::Request::SAVE_MAP:
+      // Point cloud
+      if (!cloud_ptr_profile_)
+      {
+        std::cout << cc.red << "ERROR: No point cloud data available. Exiting node.\n" << cc.reset;
+        success = false;
+        break;
+      }
+      pcl::io::savePCDFileASCII (filename_pcl_, *cloud_ptr_profile_);
+
+      // Octree
+      if (!octree_)
+      {
+        std::cout << cc.red << "ERROR: No octomap data available. Exiting node.\n" << cc.reset;
+        success = false;
+        break;
+      }
+      if (!octree_->write(filename_octree_))
+      {
+        std::cout << cc.red << "ERROR: Failed to save octomap data to " << filename_octree_ << ". Exiting node.\n" << cc.reset;
+        success = false;
+        break;
+      }
+
+      std::cout << cc.green << "Successfully saved map\n" << cc.reset;
+      break;
+
+    case nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA:
+      is_get_camera_data_ = true;
+      std::cout << cc.magenta << "Waiting for camera data\n" << cc.reset;
+
+      for (int i=0; i<10 && ros::ok() && is_get_camera_data_; i++)
+      {
+        ros::spinOnce();
+        sleep_rate.sleep();
+      }
+
+      if (is_get_camera_data_)
+      {
+        std::cout << cc.magenta << "Could not get camera data\n" << cc.reset;
+      }
+
+      break;
+
+
+    case nbv_exploration::MappingSrv::Request::LOAD_MAP:
+      // Point cloud
+      std::cout << "Reading " << filename_pcl_ << "\n";
+      if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (filename_pcl_, *cloud_ptr_profile_) == -1) //* load the file
+      {
+        std::cout << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_ << ".Exiting node.\n" << cc.reset;
+        success = false;
+        break;
+      }
+
+      // Octree
+      std::cout << "Reading " << filename_octree_ << "\n";
+
+      octomap::AbstractOcTree* temp_tree = octomap::AbstractOcTree::read(filename_octree_);
+      if(temp_tree)
+      { // read error returns NULL
+        octree_ = dynamic_cast<octomap::OcTree*>(temp_tree);
+
+        if (octree_)
+        {
+          /*
+          // Scale octree probabilities (bring them closer to 50%)
+          for (octomap::OcTree::iterator it = octree_->begin(), end = octree_->end(); it != end; ++it)
+          {
+            octree_->updateNode(it.getKey(), -0.5f*it->getLogOdds(), true);
+          }
+          octree_->updateInnerOccupancy();
+
+          std::cout << cc.green << "Successfully scaled probabilities\n" << cc.reset;
+          response.data  = response.DONE;
+          break;
+          */
+        }
+        else
+        {
+          std::cout << cc.red << "ERROR: Failed to load octomap: Type cast failed .Exiting node.\n" << cc.reset;
+          success = false;
+        }
+      }
+      else
+      {
+        std::cout << cc.red << "ERROR: Failed to load octomap: Could not read file " << filename_octree_ << ". Exiting node.\n" << cc.reset;
+        success = false;
+        break;
+      }
+
+      std::cout << cc.green << "Successfully loaded maps\n" << cc.reset;
+      break;
+  }
+
+  if (!success)
+    ros::shutdown();
+
+  return success;
+}
 
 
 void MappingModule::processScans()

@@ -5,6 +5,8 @@
 // catkin_make -DCATKIN_WHITELIST_PACKAGES="aircraft_inspection" && rosrun aircraft_inspection wall_follower
 
 #include <iostream>
+#include <boost/thread/thread.hpp>
+
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <ros/console.h>
@@ -66,6 +68,7 @@ NBVLoop::NBVLoop()
   // >>>>>>>>>>>>>>>>
   // Initialize modules
   // >>>>>>>>>>>>>>>>
+  initMappingModule();
   initViewGenerator();
   initViewSelecter();
   initVehicle();
@@ -199,11 +202,20 @@ void NBVLoop::evaluateViewpoints()
   state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
 }
 
+void NBVLoop::initMappingModule()
+{
+  mapping_module_ = new MappingModule();
+
+  // Run in a new thread
+  boost::thread mapping_thread_(&MappingModule::run, mapping_module_);
+}
+
 void NBVLoop::initModelProfiler()
 {
   model_profiler_ = new ModelProfilerBoundedBox();
   //model_profiler_ = new ModelProfilerCircularAdaptive();
   model_profiler_->setVehicle(vehicle_);
+  model_profiler_->setMappingModule(mapping_module_);
 }
 
 void NBVLoop::initParameters()

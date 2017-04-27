@@ -97,7 +97,7 @@ bool ModelProfilerBoundedBox::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile
   if (!waypoints_exist_)
     createWaypoints();
 
-  printf("Waypoint count: %d/%d\n", waypoint_counter_, waypoints.size());
+  printf("Waypoint count: %d/%lu\n", waypoint_counter_, waypoints.size());
 
   // Display current position
   geometry_msgs::Point current_position = vehicle_->getPosition();
