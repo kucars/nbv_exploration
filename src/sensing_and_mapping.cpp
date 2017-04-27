@@ -203,12 +203,14 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   Eigen::Matrix4d tf_eigen;
 
   try{
-    tf_listener_->lookupTransform("world", laser_msg.header.stamp, laser_msg.header.frame_id, laser_msg.header.stamp, laser_msg.header.frame_id, transform);
+    ros::Time tf_time = laser_msg.header.stamp;
+
+    tf_listener_->lookupTransform("world", laser_msg.header.frame_id, tf_time, transform);
     tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
   }
   catch (tf::TransformException ex){
     ROS_ERROR("%s",ex.what());
-    //ros::Duration(1.0).sleep();
+    ros::Duration(1.0).sleep();
     return;
   }
 
@@ -315,7 +317,7 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     tf::StampedTransform transform;
     try{
       // Listen for transform
-      tf_listener_->lookupTransform("world", cloud_msg->header.stamp, cloud_msg->header.frame_id, cloud_msg->header.stamp, cloud_msg->header.frame_id, transform);
+      tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, cloud_msg->header.stamp, transform);
     }
     catch (tf::TransformException ex){
       ROS_ERROR("%s",ex.what());
@@ -538,17 +540,22 @@ bool MappingModule::processCommand(int command)
   switch(command)
   {
     case nbv_exploration::MappingSrv::Request::START_SCANNING:
-      is_scanning_ = true;
       std::cout << cc.green << "Started scanning\n" << cc.reset;
+      is_scanning_ = true;
+
       break;
 
 
     case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
+      std::cout << cc.green << "Stop scanning\n" << cc.reset;
       is_scanning_ = false;
-      std::cout << cc.green << "Processing " << scan_vec_.size() << " scans...\n" << cc.reset;
 
       if (is_batch_profiling_)
+      {
+        std::cout << cc.green << "Processing " << scan_vec_.size() << " scans...\n" << cc.reset;
         processScans();
+      }
+
       break;
 
 
@@ -565,8 +572,9 @@ bool MappingModule::processCommand(int command)
 
 
     case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
-      is_scanning_ = false;
       std::cout << cc.green << "Done profiling\n" << cc.reset;
+      is_scanning_ = false;
+
       break;
 
 

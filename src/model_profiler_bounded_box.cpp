@@ -162,8 +162,8 @@ void ModelProfilerBoundedBox::scan()
 
     while (ros::ok() && vehicle_->getPosition().z < bounds.z_max)
     {
-      vehicle_->setSpeed(0.1);
-      vehicle_->setWaypointIncrement(0, 0, 0.3, 0);
+      vehicle_->setSpeed(1.0);
+      vehicle_->setWaypointIncrement(0, 0, bounds.z_max - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25); // Scan slowly
       ros::spinOnce();
     }
@@ -174,8 +174,8 @@ void ModelProfilerBoundedBox::scan()
 
     while (ros::ok() && vehicle_->getPosition().z > bounds.z_min)
     {
-      vehicle_->setSpeed(0.1);
-      vehicle_->setWaypointIncrement(0, 0, -0.3, 0);
+      vehicle_->setSpeed(1.0);
+      vehicle_->setWaypointIncrement(0, 0, bounds.z_min - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25);
       ros::spinOnce();
     }

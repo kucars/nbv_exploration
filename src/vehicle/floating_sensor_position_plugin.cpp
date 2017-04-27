@@ -1,7 +1,6 @@
 #include <vehicle/floating_sensor_position_plugin.h>
 #include <string>
 #include <ctime>
-#include <tf/transform_broadcaster.h>
 
 #if GAZEBO_MAJOR_VERSION >= 6
 #include <ignition/math/Pose3.hh>
@@ -149,29 +148,11 @@ void FloatingSensorPosition::Update()
   current_pos_pitch_ = fmod(current_pos_pitch_, 2*M_PI);
   current_pos_yaw_   = fmod(current_pos_yaw_,   2*M_PI);
 
-  // Update model position in gazebo
-  model_->SetLinkWorldPose(
-    math::Pose(current_pos_x_, current_pos_y_, current_pos_z_,
-               current_pos_roll_, current_pos_pitch_, current_pos_yaw_)
-    , link_);
+  // Publish position
+  UpdatePosition();
 
   // Unlock critical section
   mtx_pose_.unlock();
-
-  // Get current pose
-  GetCurrentPose();
-
-  // Publish current pose
-  pub_pose_.publish(current_pose_);
-
-  // Broadcast tf
-  static tf::TransformBroadcaster br;
-  tf::Transform transform;
-  transform.setOrigin( tf::Vector3(current_pos_x_, current_pos_y_, current_pos_z_) );
-  tf::Quaternion q;
-  q.setRPY(current_pos_roll_, current_pos_pitch_, current_pos_yaw_);
-  transform.setRotation(q);
-  br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "floating_sensor/base_link"));
 }
 
 
@@ -204,6 +185,9 @@ void FloatingSensorPosition::OnRosMsgPose(const geometry_msgs::PoseConstPtr &msg
   current_pos_roll_  = rpy.x;
   current_pos_pitch_ = rpy.y;
   current_pos_yaw_   = rpy.z;
+
+  // Publish position
+  UpdatePosition();
 
   // Unlock critical section
   mtx_pose_.unlock();
@@ -240,6 +224,28 @@ void FloatingSensorPosition::GetCurrentPose()
   current_pose_.orientation.y = p.rot.y;
   current_pose_.orientation.z = p.rot.z;
   current_pose_.orientation.w = p.rot.w;
+}
+
+void FloatingSensorPosition::UpdatePosition()
+{
+  // Update model position in gazebo
+  model_->SetLinkWorldPose(
+    math::Pose(current_pos_x_, current_pos_y_, current_pos_z_,
+               current_pos_roll_, current_pos_pitch_, current_pos_yaw_)
+    , link_);
+
+  // Broadcast tf
+  tf::Quaternion q;
+  q.setRPY(current_pos_roll_, current_pos_pitch_, current_pos_yaw_);
+
+  tf::Transform transform;
+  transform.setOrigin( tf::Vector3(current_pos_x_, current_pos_y_, current_pos_z_) );
+  transform.setRotation(q);
+  tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "floating_sensor/base_link"));
+
+  // Publish current pose
+  GetCurrentPose();
+  pub_pose_.publish(current_pose_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

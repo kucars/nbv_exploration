@@ -67,30 +67,23 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
     return;
   }
 
+  // Compute new velocities
   updateTwist();
 
-  // Set up variables for motion
-  geometry_msgs::Pose p = vehicle_current_pose_;
-  double calibration_constant = 11; //scale speed to match reality
-  double time_elapsed = 0;
+  // Publish speed
+  pub_twist.publish(twist_);
 
-  double dt = 1.0/30;
-  ros::Duration dur(dt);
+  // Sleep until we arrive at destination
+  ros::Duration(time_to_target_).sleep();
 
-  // Continue moving util we've reached the setpoint
-  while(ros::ok() && time_elapsed < time_to_target_)
+  /*
+  ros::Rate r(30);
+  while(ros::ok() && !isNear(vehicle_current_pose_, setpoint_, threshold_sensitivity) )
   {
-    p.position.x += twist_.linear.x * dt * calibration_constant;
-    p.position.y += twist_.linear.y * dt * calibration_constant;
-    p.position.z += twist_.linear.z * dt * calibration_constant;
-    time_elapsed += dt;
-
-    // Publish pose
-    pub_pose.publish(p);
-
     ros::spinOnce();
-    dur.sleep();
+    r.sleep();
   }
+  */
 
   // Done, publish setpoint to make sure we're in target location
   pub_pose.publish(setpoint_);

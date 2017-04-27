@@ -6,7 +6,6 @@
 ModelProfilerBase::ModelProfilerBase()
 {
   ros::NodeHandle ros_node;
-  srvclient_mapping = ros_node.serviceClient<nbv_exploration::MappingSrv>("nbv_exploration/mapping_command");
 }
 
 bool ModelProfilerBase::callMappingService(int command)

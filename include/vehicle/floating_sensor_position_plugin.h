@@ -18,6 +18,8 @@
 #include <ros/subscribe_options.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include <tf/transform_broadcaster.h>
+
 #include <thread>
 #include <mutex>          // std::mutex
 
@@ -38,9 +40,11 @@ protected:
   virtual void OnRosMsgTwist(const geometry_msgs::TwistConstPtr &msg);
   virtual void QueueThread();
   virtual void GetCurrentPose();
+  virtual void UpdatePosition();
 
 private:
   std::mutex mtx_pose_;           // mutex for critical section
+  tf::TransformBroadcaster tf_broadcaster_;
 
   physics::WorldPtr world_;
   physics::LinkPtr link_;
