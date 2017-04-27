@@ -39,17 +39,16 @@ class MappingModule
 public:
   MappingModule();
 
+  void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+  void callbackScan(const sensor_msgs::LaserScan& laser_msg);
+  bool callbackCommand(nbv_exploration::MappingSrv::Request  &req, nbv_exploration::MappingSrv::Response &res);
+
 private:
   // =========
   // Methods
   // =========
   void addPointCloudToTree(pcl::PointCloud<pcl::PointXYZRGB> cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
   void addToGlobalCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_in, pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud_out, bool should_filter = true);
-
-  void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-  void callbackScan(const sensor_msgs::LaserScan& laser_msg);
-  bool callbackCommand(nbv_exploration::MappingSrv::Request  &req, nbv_exploration::MappingSrv::Response &res);
-
   void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::point3d& origin, octomap::point3d& sensor_dir,
                         octomap::KeySet& free_cells, octomap::KeySet& occupied_cells,
                         double maxrange);

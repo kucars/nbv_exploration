@@ -29,7 +29,7 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     // Create mappng module
     // >>>>>>>>>>>>>>>>>
-    MappingModule m;
+    MappingModule* m = new MappingModule();
     
     return 0;
 }
@@ -49,8 +49,7 @@ MappingModule::MappingModule()
   // >>>>>>>>>>>>>>>>>
   // Main function
   // >>>>>>>>>>>>>>>>>
-  std::cout << cc.red << "Begin Sensing\n" << cc.reset;
-  std::cout << cc.magenta << "\nStarted\n" << cc.reset;
+  std::cout << cc.magenta << "Begin Sensing\n" << cc.reset;
   std::cout << "Listening for the following topics: \n";
   std::cout << "\t" << topic_depth_ << "\n";
   std::cout << "\t" << topic_scan_in_ << "\n";
@@ -64,17 +63,11 @@ MappingModule::MappingModule()
   while(ros::ok())
   {
     //Publish once a second, but update 30 times a second
-
-    if (i>1)
-    {
-      i--;
-    }
-    else
+    if (i-- <= 0)
     {
       i=30;
-      // == Publish
-      // Profile Cloud
 
+      // Publish profile Cloud
       if (cloud_ptr_profile_)
       {
         sensor_msgs::PointCloud2 cloud_msg;
@@ -84,7 +77,7 @@ MappingModule::MappingModule()
         pub_scan_cloud_.publish(cloud_msg);
       }
 
-      // RGB-D Cloud
+      // Publish RGB-D Cloud
       if (cloud_ptr_rgbd_)
       {
         sensor_msgs::PointCloud2 cloud_msg;
@@ -94,7 +87,7 @@ MappingModule::MappingModule()
         pub_rgbd_cloud_.publish(cloud_msg);
       }
 
-      // Octomap
+      // Publish octomap
       if (octree_)
       {
         octomap_msgs::Octomap msg;
