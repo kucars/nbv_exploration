@@ -106,12 +106,11 @@ install(TARGETS
 add_executable(nbv_main
   src/nbv_main.cpp
 
+  src/mapping_module.cpp
   src/model_profiler_base.cpp
   src/model_profiler_bounded_box.cpp
   src/model_profiler_circular_adaptive.cpp
-
   src/nbv_loop.cpp
-  src/sensing_and_mapping.cpp
   src/termination_check_base.cpp
   src/view_generator.cpp
   src/view_selecter.cpp
@@ -134,42 +133,34 @@ target_link_libraries(nbv_main
     ${PCL_LIBRARIES}
     )
 
-#add_executable(sensing_and_mapping src/sensing_and_mapping.cpp)
-#add_dependencies(sensing_and_mapping ${catkin_EXPORTED_TARGETS})
-#target_link_libraries(sensing_and_mapping ${catkin_LIBRARIES} -lgmp -lmpfr ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} ${Eigen_LIBRARIES})
-
-add_executable(teleop_uav src/keyboard_teleop.cpp)
-add_dependencies(teleop_uav ${catkin_EXPORTED_TARGETS})
-target_link_libraries(teleop_uav ${catkin_LIBRARIES} )
-
 add_executable(correct_laser_scan_and_depth src/correct_laser_scan_and_depth.cpp)
 add_dependencies(correct_laser_scan_and_depth ${catkin_EXPORTED_TARGETS})
 target_link_libraries(correct_laser_scan_and_depth ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(test_object_segmentation src/test_object_segmentation.cpp)
+add_executable(test_object_segmentation src/component_test/test_object_segmentation.cpp)
 add_dependencies(test_object_segmentation ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_object_segmentation ${catkin_LIBRARIES}  ${PCL_LIBRARIES})
 
-add_executable(test_octomap src/test_octomap.cpp)
+add_executable(test_octomap src/component_test/test_octomap.cpp)
 add_dependencies(test_octomap ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
 
 add_executable(test_symmetry_detection
-  src/test_symmetry_detection.cpp
+  src/component_test/test_symmetry_detection.cpp
   src/lib/MeanShift/MeanShift.cpp)
 add_dependencies(test_symmetry_detection ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_symmetry_detection ${catkin_LIBRARIES}  ${PCL_LIBRARIES})
 
 
 
-add_executable(pcd2ply src/utility/pcd2ply.cpp)
+add_executable(pcd2ply src/utilities/pcd2ply.cpp)
 add_dependencies(pcd2ply ${catkin_EXPORTED_TARGETS})
 target_link_libraries(pcd2ply ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(ply2pcd src/utility/ply2pcd.cpp)
+add_executable(ply2pcd src/utilities/ply2pcd.cpp)
 add_dependencies(ply2pcd ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ply2pcd ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(pcd_cut_cuboid src/utility/pcd_cut_cuboid.cpp)
+add_executable(pcd_cut_cuboid src/utilities/pcd_cut_cuboid.cpp)
 add_dependencies(pcd_cut_cuboid ${catkin_EXPORTED_TARGETS})
 target_link_libraries(pcd_cut_cuboid ${catkin_LIBRARIES} ${PCL_LIBRARIES})
