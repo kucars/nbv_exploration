@@ -42,22 +42,48 @@ bool VehicleControlFloatingSensor::isReady()
   return is_ready_;
 }
 
+bool VehicleControlFloatingSensor::isSationary(double threshold_sensitivity)
+{
+  // Doesn't check if we're stationary since the sensor teleports
+  // Instead it checks if the sensor is in the desired location
+
+  return isNear(vehicle_current_pose_, setpoint_, threshold_sensitivity );
+}
 
 void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
 {
+  if (speed_ < 0)
+  {
+    // Teleport sensor instantly
+    pub_pose.publish(setpoint_);
+
+    // Wait for sensor to reach destination
+    distance_threshold_ = 0.1;
+    while (ros::ok() && !isNear(setpoint_, vehicle_current_pose_, 1) )
+    {
+      ros::spinOnce();
+    }
+
+    return;
+  }
+
   updateTwist();
 
   // Set up variables for motion
   geometry_msgs::Pose p = vehicle_current_pose_;
   double dt = 1.0/30;
   ros::Rate rate(1/dt);
+  double calibration_constant = 11; //scale speed to match reality
+
+  double time_elapsed = 0;
 
   // Continue moving util we've reached the setpoint
-  while(ros::ok() && !isNear(setpoint_, vehicle_current_pose_, threshold_sensitivity) )
+  while(ros::ok() && time_elapsed < time_to_target_)
   {
-    p.position.x += twist_.linear.x * dt;
-    p.position.y += twist_.linear.y * dt;
-    p.position.z += twist_.linear.z * dt;
+    p.position.x += twist_.linear.x * dt * calibration_constant;
+    p.position.y += twist_.linear.y * dt * calibration_constant;
+    p.position.z += twist_.linear.z * dt * calibration_constant;
+    time_elapsed += dt;
 
     // Publish pose
     pub_pose.publish(p);
@@ -65,13 +91,15 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
     ros::spinOnce();
     rate.sleep();
   }
+
+  // Done, publish setpoint to make sure we're in target location
+  pub_pose.publish(setpoint_);
 }
 
 
 void VehicleControlFloatingSensor::setSpeed(double speed)
 {
   speed_ = speed;
-  //std::cout << cc.yellow << "Warning: setSpeed(double) not implimented in the VehicleControlFloatingSensor class\n" << cc.reset;
 }
 
 
@@ -130,10 +158,11 @@ void VehicleControlFloatingSensor::updateTwist()
 
   // Normalize and set speed accordingly
   double norm = sqrt(twist_.linear.x*twist_.linear.x + twist_.linear.y*twist_.linear.y + twist_.linear.z*twist_.linear.z);
+  time_to_target_ = norm / speed_;
 
-  twist_.linear.x = twist_.linear.x / norm * speed_;
-  twist_.linear.y = twist_.linear.y / norm * speed_;
-  twist_.linear.z = twist_.linear.z / norm * speed_;
+  twist_.linear.x = twist_.linear.x / time_to_target_;
+  twist_.linear.y = twist_.linear.y / time_to_target_;
+  twist_.linear.z = twist_.linear.z / time_to_target_;
 
   printf("Update Twist z: %lf, norm: %lf\n", twist_.linear.z, norm);
 }

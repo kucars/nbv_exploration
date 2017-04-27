@@ -16,6 +16,7 @@ private:
   ros::Publisher  pub_twist;
 
   double speed_;
+  double time_to_target_;
   geometry_msgs::Twist twist_;
 
 public:
@@ -24,6 +25,7 @@ public:
   void callbackPose(const geometry_msgs::Pose& pose_msg);
 
   bool isReady();
+  bool isSationary(double threshold_sensitivity = 1);
 
   void moveVehicle(double threshold_sensitivity = 1);
   void setSpeed(double speed);

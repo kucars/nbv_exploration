@@ -39,7 +39,6 @@ void ModelProfilerBoundedBox::createWaypoints()
   w = createSingleWaypoint(bounds.x_min, bounds.y_min, bounds.z_max, x_center, y_center);
   waypoints_temp.push_back(w);
 
-
   w = createSingleWaypoint(x_center, bounds.y_min, bounds.z_max, x_center, y_center);
   waypoints_temp.push_back(w);
 
@@ -98,18 +97,23 @@ bool ModelProfilerBoundedBox::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile
   if (!waypoints_exist_)
     createWaypoints();
 
+  printf("Waypoint count: %d/%d\n", waypoint_counter_, waypoints.size());
+
   // Display current position
   geometry_msgs::Point current_position = vehicle_->getPosition();
-  printf("Current position : [%lf, %lf, %lf]\n", current_position.x, current_position.y, current_position.z);
+  printf("Current position: [%lf, %lf, %lf]\n", current_position.x, current_position.y, current_position.z);
 
   // Move to waypoint
   UAVWaypoint w = waypoints[waypoint_counter_];
-  printf("Target position : [%lf, %lf, %lf]\n", w.x, w.y, w.z);
+  printf("Target position: [%lf, %lf, %lf]\n", w.x, w.y, w.z);
 
   vehicle_->setWaypoint(w.x, w.y, w.z, w.yaw);
-  vehicle_->setSpeed(0.1);
-  vehicle_->moveVehicle(1.5);
+  vehicle_->setSpeed(-1);
+  vehicle_->moveVehicle(0);
 
+  current_position = vehicle_->getPosition();
+  printf("Done moving: [%lf, %lf, %lf]\n", current_position.x, current_position.y, current_position.z);
+  printf("Stating scan\n");
 
   // Perform scan
   scan();
@@ -141,9 +145,15 @@ bool ModelProfilerBoundedBox::run(pcl::PointCloud<pcl::PointXYZRGB>::Ptr profile
 
 void ModelProfilerBoundedBox::scan()
 {
+  // Make sure sensor is stationary/at target location
+  // Helps with floating sensor when it's teleporting
+  while (ros::ok() && !vehicle_->isStationary(1) )
+  {
+    ros::spinOnce();
+  }
+
   // Request START_SCANNING
   callMappingService(nbv_exploration::MappingSrv::Request::START_SCANNING);
-
 
   // Scan
   if (is_sensor_rising_)

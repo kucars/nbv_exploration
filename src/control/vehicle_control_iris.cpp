@@ -104,6 +104,9 @@ void VehicleControlIris::moveVehicle(double threshold_sensitivity)
 void VehicleControlIris::setSpeed(double speed)
 {
   std::cout << cc.yellow << "Warning: setSpeed(double) not implimented in the VehicleControlIris class\n" << cc.reset;
+
+  if (speed < 0)
+    return; //Ignore invalid speeds
 }
 
 

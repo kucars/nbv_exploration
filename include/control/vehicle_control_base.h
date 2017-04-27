@@ -26,6 +26,7 @@ public:
   virtual void initialize(){};
   virtual void start(){};
   virtual bool isReady(){};
+  virtual bool isStationary(double threshold_sensitivity){};
   virtual void setSpeed(double speed){};
   virtual void setWaypoint(double x, double y, double z, double yaw){};
   virtual void setWaypoint(geometry_msgs::Pose p){};
