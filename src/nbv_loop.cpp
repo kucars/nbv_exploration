@@ -94,7 +94,7 @@ NBVLoop::NBVLoop()
   // >>>>>>>>>>>>>>>>>
   // Clean up
   // >>>>>>>>>>>>>>>>>
-  std::cout << cc.yellow << "Shutting down\n" << cc.reset;
+  std::cout << "[NBVLoop] " << cc.yellow << "Shutting down\n" << cc.reset;
   ros::shutdown();
 }
 
@@ -102,7 +102,7 @@ void NBVLoop::generateViewpoints()
 {
   if (state != NBVState::VIEWPOINT_GENERATION)
   {
-    std::cout << cc.red << "ERROR: Attempt to generate viewpoints out of order\n" << cc.reset;
+    std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to generate viewpoints out of order\n" << cc.reset;
     return;
   }
   if (is_debug_states)
@@ -122,7 +122,7 @@ void NBVLoop::evaluateViewpoints()
 {
   if (state != NBVState::VIEWPOINT_EVALUATION)
   {
-    std::cout << cc.red << "ERROR: Attempt to evaluate viewpoints out of order\n" << cc.reset;
+    std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to evaluate viewpoints out of order\n" << cc.reset;
     return;
   }
   if (is_debug_states)
@@ -133,6 +133,8 @@ void NBVLoop::evaluateViewpoints()
   view_selecter_->evaluate();
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
   vehicle_->setWaypoint(p);
+
+  std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
 
   state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
 }
@@ -216,10 +218,34 @@ void NBVLoop::initVehicle()
   vehicle_ = new VehicleControlFloatingSensor();
 }
 
+void NBVLoop::positionVehicleAfterProfiling()
+{
+  // Move vehicle up to the model after profiling
+  if (is_debug_states)
+  {
+    std::cout << "[NBVLoop] " << cc.green << "Moving vehicle after profiling\n" << cc.reset;
+  }
+  // @todo
+  std::cout << "[NBVLoop] " << cc.yellow << "Note: Moving vehicle after profiling uses a fixed waypoint defined in config settings. Create adaptive method.\n" << cc.reset;
+
+  double x, y, z, yaw;
+  ros::param::param<double>("~profiling_complete_pose_x", x, 0);
+  ros::param::param<double>("~profiling_complete_pose_y", y, 0);
+  ros::param::param<double>("~profiling_complete_pose_z", z, 10);
+  ros::param::param<double>("~profiling_complete_pose_yaw", yaw, 0);
+
+  vehicle_->setWaypoint(x, y, z, yaw);
+  vehicle_->setSpeed(1.0);
+  vehicle_->setSpeed(-1); //Allow instant teleportation if using the floating sensor. Ignored by other vehicles
+  vehicle_->moveVehicle();
+
+  state = NBVState::MOVING_COMPLETE;
+}
+
 void NBVLoop::profilingProcessing(){
   if (state != NBVState::PROFILING_PROCESSING)
   {
-    std::cout << cc.red << "ERROR: Attempt to start profiling out of order\n" << cc.reset;
+    std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to start profiling out of order\n" << cc.reset;
     return;
   }
   if (is_debug_states)
@@ -269,7 +295,7 @@ void NBVLoop::runStateMachine()
         }
         else
         {
-          state = NBVState::MOVING_COMPLETE;
+          state = NBVState::PROFILING_COMPLETE;
         }
         break;
 
@@ -278,7 +304,7 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::MOVING_COMPLETE:
-        std::cout << "[" << ros::Time::now().toSec() << "]" << cc.magenta << "Requesting camera data\n" << cc.reset;
+        std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
         model_profiler_->callMappingService(nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA);
 
         state = NBVState::TERMINATION_CHECK;
@@ -288,10 +314,13 @@ void NBVLoop::runStateMachine()
 
       case NBVState::TERMINATION_MET:
         is_terminating = true;
-        std::cout << cc.yellow << "Termination condition met\n" << cc.reset;
+        std::cout << "[NBVLoop] " << cc.yellow << "Termination condition met\n" << cc.reset;
         break;
 
       case NBVState::PROFILING_COMPLETE:
+        positionVehicleAfterProfiling();
+        break;
+
       case NBVState::TERMINATION_NOT_MET:
         state = NBVState::VIEWPOINT_GENERATION;
         generateViewpoints();
@@ -305,6 +334,7 @@ void NBVLoop::runStateMachine()
       case NBVState::VIEWPOINT_EVALUATION_COMPLETE:
         state = NBVState::MOVING;
         vehicle_->moveVehicle(0.25); //Make sure we go to the exact position
+        state = NBVState::MOVING_COMPLETE;
         break;
     }
 
@@ -319,7 +349,7 @@ void NBVLoop::terminationCheck()
 {
   if (state != NBVState::TERMINATION_CHECK)
   {
-    std::cout << cc.red << "ERROR: Attempt to check termination out of order\n" << cc.reset;
+    std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to check termination out of order\n" << cc.reset;
     return;
   }
   if (is_debug_states)

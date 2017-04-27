@@ -29,7 +29,7 @@ ViewSelecterBase::ViewSelecterBase()
   // >>>>>>>>>>>>>>>>>
   // Read parameters
   // >>>>>>>>>>>>>>>>>
-  ros::param::param("~debug_view_selecter", is_debug_, false);
+  ros::param::param("~debug_view_selecter", is_debug_, true);
 
   double fov_h, fov_v, r_max, r_min;
   ros::param::param("~fov_horizontal", fov_h, 60.0);

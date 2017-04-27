@@ -94,6 +94,7 @@ public:
   void terminationCheck();
   void generateViewpoints();
   void evaluateViewpoints();
+  void positionVehicleAfterProfiling();
   void profilingProcessing();
 
   double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);

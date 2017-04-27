@@ -1,8 +1,8 @@
 ## Debug settings
 debug_nbv_main_states: true
 debug_mapping: false
-debug_view_selecter: true
 debug_view_generator: true
+debug_view_selecter: true
 
 ## Scenario settings
 nav_bounds_x_max: 20
@@ -15,6 +15,12 @@ nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may
 ## UAV dimensions (used in collision detection)
 uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
+
+## UAV position after profiling
+profiling_complete_pose_x: 0
+profiling_complete_pose_y: -20
+profiling_complete_pose_z: 5
+profiling_complete_pose_yaw: 1.571
 
 ## View generation settings
 uav_position_resolution_x: 1.0

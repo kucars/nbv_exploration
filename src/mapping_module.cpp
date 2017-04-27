@@ -20,7 +20,7 @@ MappingModule::MappingModule()
   // >>>>>>>>>>>>>>>>>
   // Main function
   // >>>>>>>>>>>>>>>>>
-  std::cout << cc.magenta << "Begin Sensing\n" << cc.reset;
+  std::cout << "[Mapping] " << cc.magenta << "Begin Sensing\n" << cc.reset;
   std::cout << "Listening for the following topics: \n";
   std::cout << "\t" << topic_depth_ << "\n";
   std::cout << "\t" << topic_scan_in_ << "\n";
@@ -138,7 +138,7 @@ void MappingModule::addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d
 
 void MappingModule::addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter) {
     if (is_debugging_){
-        std::cout << cc.green << "MAPPING\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.green << "MAPPING\n" << cc.reset;
     }
 
     // Initialize global cloud if not already done so
@@ -180,15 +180,17 @@ void MappingModule::addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCl
       */
     }
 
-    if (is_debugging_){
-        std::cout << cc.blue << "Number of points in global map: " << cloud_out->points.size() << "\n" << cc.reset;
+    if (is_debugging_)
+    {
+      std::cout << "[Mapping] " << cc.blue << "Number of points in global map: " << cloud_out->points.size() << "\n" << cc.reset;
     }
 }
 
 
 void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
-  if (is_debugging_){
-    std::cout << cc.magenta << "Scan readings\n" << cc.reset;
+  if (is_debugging_)
+  {
+    std::cout << "[Mapping] " << cc.magenta << "Scan readings\n" << cc.reset;
   }
 
   if (!is_scanning_)
@@ -285,8 +287,9 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
 
 void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
-    if (is_debugging_){
-        std::cout << cc.green << "Depth sensing\n" << cc.reset;
+    if (is_debugging_)
+    {
+        std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
     }
 
     if (!is_get_camera_data_)
@@ -363,7 +366,7 @@ void MappingModule::computeTreeUpdatePlanar(const octomap::Pointcloud& scan, con
       (ray_skipping_vertical_ != 1 || ray_skipping_horizontal_ != 1))
   {
     use_ray_skipping = true;
-    std::cout << "Ray skipping\n";
+    std::cout << "[Mapping] " << "Ray skipping\n";
   }
 
   // create as many KeyRays as there are OMP_THREADS defined,
@@ -545,19 +548,19 @@ bool MappingModule::processCommand(int command)
   switch(command)
   {
     case nbv_exploration::MappingSrv::Request::START_SCANNING:
-      std::cout << cc.green << "Started scanning\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.green << "Started scanning\n" << cc.reset;
       is_scanning_ = true;
 
       break;
 
 
     case nbv_exploration::MappingSrv::Request::STOP_SCANNING:
-      std::cout << cc.green << "Stop scanning\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.green << "Stop scanning\n" << cc.reset;
       is_scanning_ = false;
 
       if (is_batch_profiling_)
       {
-        std::cout << cc.green << "Processing " << scan_vec_.size() << " scans...\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.green << "Processing " << scan_vec_.size() << " scans...\n" << cc.reset;
         processScans();
       }
 
@@ -565,7 +568,7 @@ bool MappingModule::processCommand(int command)
 
 
     case nbv_exploration::MappingSrv::Request::START_PROFILING:
-      std::cout << cc.green << "Started profiling\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.green << "Started profiling\n" << cc.reset;
 
       if (!octree_)
       {
@@ -577,7 +580,7 @@ bool MappingModule::processCommand(int command)
 
 
     case nbv_exploration::MappingSrv::Request::STOP_PROFILING:
-      std::cout << cc.green << "Done profiling\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.green << "Done profiling\n" << cc.reset;
       is_scanning_ = false;
 
       break;
@@ -587,7 +590,7 @@ bool MappingModule::processCommand(int command)
       // Point cloud
       if (!cloud_ptr_profile_)
       {
-        std::cout << cc.red << "ERROR: No point cloud data available. Exiting node.\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.red << "ERROR: No point cloud data available. Exiting node.\n" << cc.reset;
         success = false;
         break;
       }
@@ -596,23 +599,23 @@ bool MappingModule::processCommand(int command)
       // Octree
       if (!octree_)
       {
-        std::cout << cc.red << "ERROR: No octomap data available. Exiting node.\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.red << "ERROR: No octomap data available. Exiting node.\n" << cc.reset;
         success = false;
         break;
       }
       if (!octree_->write(filename_octree_))
       {
-        std::cout << cc.red << "ERROR: Failed to save octomap data to " << filename_octree_ << ". Exiting node.\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.red << "ERROR: Failed to save octomap data to " << filename_octree_ << ". Exiting node.\n" << cc.reset;
         success = false;
         break;
       }
 
-      std::cout << cc.green << "Successfully saved map\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.green << "Successfully saved map\n" << cc.reset;
       break;
 
     case nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA:
       is_get_camera_data_ = true;
-      std::cout << cc.magenta << "Waiting for camera data\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
 
       for (int i=0; i<10 && ros::ok() && is_get_camera_data_; i++)
       {
@@ -622,7 +625,7 @@ bool MappingModule::processCommand(int command)
 
       if (is_get_camera_data_)
       {
-        std::cout << cc.magenta << "Could not get camera data\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.magenta << "Could not get camera data\n" << cc.reset;
       }
 
       break;
@@ -630,16 +633,16 @@ bool MappingModule::processCommand(int command)
 
     case nbv_exploration::MappingSrv::Request::LOAD_MAP:
       // Point cloud
-      std::cout << "Reading " << filename_pcl_ << "\n";
+      std::cout << "[Mapping] " << "Reading " << filename_pcl_ << "\n";
       if (pcl::io::loadPCDFile<PointXYZ> (filename_pcl_, *cloud_ptr_profile_) == -1) //* load the file
       {
-        std::cout << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_ << ".Exiting node.\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_ << ".Exiting node.\n" << cc.reset;
         success = false;
         break;
       }
 
       // Octree
-      std::cout << "Reading " << filename_octree_ << "\n";
+      std::cout << "[Mapping] " << "Reading " << filename_octree_ << "\n";
 
       octomap::AbstractOcTree* temp_tree = octomap::AbstractOcTree::read(filename_octree_);
       if(temp_tree)
@@ -656,25 +659,25 @@ bool MappingModule::processCommand(int command)
           }
           octree_->updateInnerOccupancy();
 
-          std::cout << cc.green << "Successfully scaled probabilities\n" << cc.reset;
+          std::cout << "[Mapping] " << cc.green << "Successfully scaled probabilities\n" << cc.reset;
           response.data  = response.DONE;
           break;
           */
         }
         else
         {
-          std::cout << cc.red << "ERROR: Failed to load octomap: Type cast failed .Exiting node.\n" << cc.reset;
+          std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Type cast failed .Exiting node.\n" << cc.reset;
           success = false;
         }
       }
       else
       {
-        std::cout << cc.red << "ERROR: Failed to load octomap: Could not read file " << filename_octree_ << ". Exiting node.\n" << cc.reset;
+        std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Could not read file " << filename_octree_ << ". Exiting node.\n" << cc.reset;
         success = false;
         break;
       }
 
-      std::cout << cc.green << "Successfully loaded maps\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.green << "Successfully loaded maps\n" << cc.reset;
       break;
   }
 
@@ -708,6 +711,6 @@ void MappingModule::processScans()
 
   // == Timing
   t_end = ros::Time::now().toSec();
-  std::cout << cc.green << "Done processing.\n" << cc.reset;
+  std::cout << "[Mapping] " << cc.green << "Done processing.\n" << cc.reset;
   std::cout << "   Total time: " << t_end-t_start << " sec\tTotal scan: " << count << "\t(" << (t_end-t_start)/count << " sec/scan)\n";
 }
