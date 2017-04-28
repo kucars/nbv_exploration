@@ -112,8 +112,10 @@ add_executable(nbv_main
   src/model_profiler_circular_adaptive.cpp
   src/nbv_loop.cpp
   src/termination_check_base.cpp
-  src/view_generator.cpp
-  src/view_selecter.cpp
+  src/view_generator_base.cpp
+  src/view_generator_frontier.cpp
+  src/view_generator_nn.cpp
+  src/view_selecter_base.cpp
 
   src/control/vehicle_control_base.cpp
   src/control/vehicle_control_floating_sensor.cpp

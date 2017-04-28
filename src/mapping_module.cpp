@@ -137,12 +137,14 @@ void MappingModule::addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d
 }
 
 void MappingModule::addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter) {
-    if (is_debugging_){
+    if (is_debugging_)
+    {
         std::cout << "[Mapping] " << cc.green << "MAPPING\n" << cc.reset;
     }
 
     // Initialize global cloud if not already done so
-    if (!cloud_out){
+    if (!cloud_out)
+    {
         cloud_out = cloud_in;
         return;
     }
@@ -271,16 +273,18 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
 
   octomap::point3d sensor_dir =  pose_conversion::getOctomapDirectionVectorFromTransform(transform);
 
-  if (is_batch_profiling_)
+  if (is_filling_octomap_)
   {
-    pose_vec_.push_back(sensor_origin);
-    dir_vec_.push_back(sensor_dir);
-    scan_vec_.push_back(*scan_ptr + *scan_far_ptr);
-  }
-  else
-  {
-    if(is_filling_octomap_)
+    if (is_filling_octomap_continuously_)
+    {
       addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, sensor_dir, laser_range_);
+    }
+    else
+    {
+      pose_vec_.push_back(sensor_origin);
+      dir_vec_.push_back(sensor_dir);
+      scan_vec_.push_back(*scan_ptr + *scan_far_ptr);
+    }
   }
 }
 
@@ -476,8 +480,6 @@ PointCloudXYZ::Ptr MappingModule::getPointCloud()
 void MappingModule::initializeParameters()
 {
   is_get_camera_data_ = false;
-  is_batch_profiling_ = false;
-  is_filling_octomap_ = false;
   is_scanning_ = false;
 
   filename_pcl_    = "profile_cloud.pcd";
@@ -491,6 +493,9 @@ void MappingModule::initializeParameters()
   topic_tree_         = "/nbv_exploration/output_tree";
 
   ros::param::param("~debug_mapping", is_debugging_, false);
+
+  ros::param::param("~profiling_fill_octomap", is_filling_octomap_, true);
+  ros::param::param("~profiling_fill_octomap_continuously", is_filling_octomap_continuously_, true);
 
   ros::param::param("~depth_range_max", max_rgbd_range_, 5.0);
   ros::param::param("~octree_resolution", octree_res_, 0.2);
@@ -558,7 +563,7 @@ bool MappingModule::processCommand(int command)
       std::cout << "[Mapping] " << cc.green << "Stop scanning\n" << cc.reset;
       is_scanning_ = false;
 
-      if (is_batch_profiling_)
+      if (is_filling_octomap_ && !is_filling_octomap_continuously_)
       {
         std::cout << "[Mapping] " << cc.green << "Processing " << scan_vec_.size() << " scans...\n" << cc.reset;
         processScans();

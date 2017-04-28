@@ -1,17 +1,16 @@
 ## Common Settings
+
+# Booleans
 profiling_skip: true #skip profiling?
 profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
-profiling_scan_speed: 1.0
+profiling_fill_octomap: true  #Create an octomap in the initial scans?
+profiling_fill_octomap_continuously: false
 profiling_use_symmetry: true
+
+# Other
+profiling_scan_speed: 1.0
 profiling_method: 1 # 0 for adaptive circular, 1 for bounded box
+
 
 ## Adaptive Circular
 profiling_circular_waypoints: 5
-
-## Bounded Box
-object_bounds_x_max: 5
-object_bounds_x_min: -5
-object_bounds_y_max: 5
-object_bounds_y_min: -5
-object_bounds_z_max: 5
-object_bounds_z_min: 0

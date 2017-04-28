@@ -200,16 +200,26 @@ void NBVLoop::initParameters()
 
 void NBVLoop::initViewGenerator()
 {
-  //view_generator_ = new ViewGenerator_Frontier();
-  view_generator_ = new ViewGeneratorNN();
-  view_generator_->setDebug(true);
+  int view_generator_method;
+  ros::param::param("~view_generator_type", view_generator_method, 0);
+
+  switch(view_generator_method)
+  {
+  default:
+  case 0:
+    view_generator_ = new ViewGeneratorNN();
+    break;
+  case 1:
+    view_generator_ = new ViewGeneratorFrontier();
+    break;
+  }
+
 }
 
 void NBVLoop::initViewSelecter()
 {
   view_selecter_ = new ViewSelecterBase();
   view_selecter_->setViewGenerator(view_generator_);
-  view_selecter_->setDebug(false);
 }
 
 void NBVLoop::initVehicle()

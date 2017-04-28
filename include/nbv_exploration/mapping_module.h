@@ -84,9 +84,9 @@ private:
   int ray_skipping_vertical_;
 
   // == Booleans
-  bool is_batch_profiling_;
   bool is_debugging_; //Set to true to see debug text
   bool is_filling_octomap_;
+  bool is_filling_octomap_continuously_;
   bool is_get_camera_data_;
   bool is_scanning_;
 

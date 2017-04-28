@@ -9,8 +9,8 @@
 #include <tf_conversions/tf_eigen.h>
 //#include <culling/occlusion_culling.h>
 
-#include "nbv_exploration/view_generator.h"
-#include "nbv_exploration/view_selecter.h"
+#include "nbv_exploration/view_generator_base.h"
+#include "nbv_exploration/view_selecter_base.h"
 #include "nbv_exploration/common.h"
 
 // =======

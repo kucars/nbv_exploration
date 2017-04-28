@@ -1,5 +1,5 @@
-#ifndef NBV_EXPLORATION_VIEW_SELECTER_H
-#define NBV_EXPLORATION_VIEW_SELECTER_H
+#ifndef NBV_EXPLORATION_VIEW_SELECTER_BASE_H
+#define NBV_EXPLORATION_VIEW_SELECTER_BASE_H
 
 #include <iostream>
 #include <ros/ros.h>
@@ -16,7 +16,7 @@
 #include <octomap/OcTree.h>
 #include <octomap/OcTreeNode.h>
 
-#include "nbv_exploration/view_generator.h"
+#include "nbv_exploration/view_generator_base.h"
 
 typedef geometry_msgs::Pose Pose;
 
