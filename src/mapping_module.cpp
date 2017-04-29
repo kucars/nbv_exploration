@@ -72,6 +72,16 @@ void MappingModule::run()
         msg.header.stamp = ros::Time::now();
         pub_tree_.publish(msg);
       }
+
+      if (octree_prediction_)
+      {
+        octomap_msgs::Octomap msg;
+        octomap_msgs::fullMapToMsg (*octree_prediction_, msg);
+
+        msg.header.frame_id = "world";
+        msg.header.stamp = ros::Time::now();
+        pub_tree_prediction_.publish(msg);
+      }
     }
 
     // Sleep
@@ -80,7 +90,27 @@ void MappingModule::run()
   }
 }
 
-void MappingModule::addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar)
+void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in)
+{
+  for (int j=0; j<cloud_in.points.size(); j++)
+  {
+    // Convert from PCL point to Octomap point
+    octomap::point3d p (
+          cloud_in.points[j].x,
+          cloud_in.points[j].y,
+          cloud_in.points[j].z);
+
+    // Find key corresponding to this position
+    octomap::OcTreeKey key;
+    if ( octree_in->coordToKeyChecked(p, key) )
+    {
+      // Mark this position as occupied
+      octree_in->updateNode(key, true);
+    }
+  }
+}
+
+void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar)
 {
   // Note that "range" is the perpendicular distance to the end of the camera plane
 
@@ -96,14 +126,14 @@ void MappingModule::addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d
   octomap::KeySet free_cells, occupied_cells;
 
   if (isPlanar)
-    computeTreeUpdatePlanar(ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
+    computeTreeUpdatePlanar(octree_in, ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
   else
-    octree_->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
+    octree_in->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
 
   // insert data into tree using continuous probabilities -----------------------
   for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
   {
-    octree_->updateNode(*it, false);
+    octree_in->updateNode(*it, false);
   }
 
   for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
@@ -115,26 +145,9 @@ void MappingModule::addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d
     }
     else
     {
-      octree_->updateNode(*it, true);
+      octree_in->updateNode(*it, true);
     }
   }
-
-  /*
-  // insert data into tree using binary probabilities -----------------------
-  for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
-  {
-    octree_->updateNode(*it, false);
-  }
-
-  for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
-  {
-    octomap::point3d p = octree_->keyToCoord(*it);
-    if (p.z() <= sensor_data_min_height_)
-      octree_->updateNode(*it, false);
-    else
-      octree_->updateNode(*it, true);
-  }
-  */
 }
 
 void MappingModule::addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter) {
@@ -278,7 +291,7 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   {
     if (is_filling_octomap_continuously_)
     {
-      addPointCloudToTree(*scan_ptr + *scan_far_ptr, sensor_origin, sensor_dir, laser_range_);
+      addPointCloudToTree(octree_, *scan_ptr + *scan_far_ptr, sensor_origin, sensor_dir, laser_range_);
     }
     else
     {
@@ -345,13 +358,13 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
                              transform.getOrigin().z());
     octomap::point3d sensor_dir = pose_conversion::getOctomapDirectionVectorFromTransform(transform);
 
-    addPointCloudToTree(*cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+    addPointCloudToTree(octree_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
 
     // == Done updating
     is_get_camera_data_ = false;
 }
 
-void MappingModule::computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::point3d& origin, octomap::point3d& sensor_dir,
+void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const octomap::Pointcloud& scan, const octomap::point3d& origin, octomap::point3d& sensor_dir,
                       octomap::KeySet& free_cells, octomap::KeySet& occupied_cells,
                       double maxrange)
 {
@@ -420,7 +433,7 @@ void MappingModule::computeTreeUpdatePlanar(const octomap::Pointcloud& scan, con
     if (maxrange < 0.0 || perp_dist <= maxrange)
     { // is not maxrange meas.
       // free cells
-      if (octree_->computeRayKeys(origin, p, *keyray))
+      if (octree_in->computeRayKeys(origin, p, *keyray))
       {
         #ifdef _OPENMP
         #pragma omp critical (free_insert)
@@ -431,7 +444,7 @@ void MappingModule::computeTreeUpdatePlanar(const octomap::Pointcloud& scan, con
       }
       // occupied endpoint
       octomap::OcTreeKey key;
-      if (octree_->coordToKeyChecked(p, key)){
+      if (octree_in->coordToKeyChecked(p, key)){
         #ifdef _OPENMP
         #pragma omp critical (occupied_insert)
         #endif
@@ -446,7 +459,7 @@ void MappingModule::computeTreeUpdatePlanar(const octomap::Pointcloud& scan, con
       double max_rgbd_range__to_point = maxrange/sensor_dir.dot(direction);
 
       octomap::point3d new_end = origin + direction * (float) max_rgbd_range__to_point;
-      if (octree_->computeRayKeys(origin, new_end, *keyray)){
+      if (octree_in->computeRayKeys(origin, new_end, *keyray)){
         #ifdef _OPENMP
         #pragma omp critical (free_insert)
         #endif
@@ -473,6 +486,11 @@ octomap::OcTree* MappingModule::getOctomap()
   return octree_;
 }
 
+octomap::OcTree* MappingModule::getOctomapPredicted()
+{
+  return octree_prediction_;
+}
+
 PointCloudXYZ::Ptr MappingModule::getPointCloud()
 {
   return cloud_ptr_profile_;
@@ -493,6 +511,7 @@ void MappingModule::initializeParameters()
   topic_scan_out_     = "/nbv_exploration/scan_cloud";
   topic_rgbd_out_     = "/nbv_exploration/rgbd_cloud";
   topic_tree_         = "/nbv_exploration/output_tree";
+  topic_tree_predicted_="/nbv_exploration/output_tree_predicted";
 
   ros::param::param("~debug_mapping", is_debugging_, false);
   ros::param::param("~profiling_check_symmetry", is_checking_symmetry_, true);
@@ -543,6 +562,7 @@ void MappingModule::initializeTopicHandlers()
   pub_scan_cloud_    = ros_node_.advertise<sensor_msgs::PointCloud2>(topic_scan_out_, 10);
   pub_rgbd_cloud_    = ros_node_.advertise<sensor_msgs::PointCloud2>(topic_rgbd_out_, 10);
   pub_tree_          = ros_node_.advertise<octomap_msgs::Octomap>(topic_tree_, 10);
+  pub_tree_prediction_ = ros_node_.advertise<octomap_msgs::Octomap>(topic_tree_predicted_, 10);
 }
 
 
@@ -583,6 +603,13 @@ bool MappingModule::processCommand(int command)
         octree_->setBBXMin( bound_min_ );
         octree_->setBBXMax( bound_max_ );
       }
+
+      if (!octree_prediction_)
+      {
+        octree_prediction_ = new octomap::OcTree (octree_res_);
+        octree_prediction_->setBBXMin( bound_min_ );
+        octree_prediction_->setBBXMax( bound_max_ );
+      }
       break;
 
 
@@ -596,6 +623,9 @@ bool MappingModule::processCommand(int command)
         sym_det->setInputCloud(cloud_ptr_profile_);
         sym_det->run();
         sym_det->getOutputCloud(cloud_ptr_profile_symmetry_);
+
+        // Populate octree with symmetry data
+        addPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
       }
 
       break;
@@ -622,6 +652,7 @@ bool MappingModule::processCommand(int command)
           success = false;
           break;
         }
+
         pcl::io::savePCDFileASCII (filename_pcl_symmetry_, *cloud_ptr_profile_symmetry_);
       }
 
@@ -685,6 +716,12 @@ bool MappingModule::processCommand(int command)
           success = false;
           break;
         }
+
+        // Populate octree with symmetry data
+        octree_prediction_ = new octomap::OcTree (octree_res_);
+        octree_prediction_->setBBXMin( bound_min_ );
+        octree_prediction_->setBBXMax( bound_max_ );
+        addPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
       }
 
       // Octree
@@ -749,7 +786,7 @@ void MappingModule::processScans()
     octomap::point3d sensor_dir = dir_vec_[i];
     PointCloudXYZ scan = scan_vec_[i];
 
-    addPointCloudToTree(scan_vec_[i], sensor_origin, sensor_dir, laser_range_);
+    addPointCloudToTree(octree_, scan_vec_[i], sensor_origin, sensor_dir, laser_range_);
 
     // == Pop
     pose_vec_.pop_back();

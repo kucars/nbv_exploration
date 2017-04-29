@@ -44,7 +44,8 @@ public:
   // Methods
   // =========
   MappingModule();
-  octomap::OcTree* getOctomap();
+  octomap::OcTree*   getOctomap();
+  octomap::OcTree*   getOctomapPredicted();
   PointCloudXYZ::Ptr getPointCloud();
   bool processCommand(int command);
   void run();
@@ -53,13 +54,15 @@ private:
   // =========
   // Methods
   // =========
-  void addPointCloudToTree(PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
+  void addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in);
+  void addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
   void addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter = true);
 
   void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
   void callbackScan(const sensor_msgs::LaserScan& laser_msg);
 
-  void computeTreeUpdatePlanar(const octomap::Pointcloud& scan, const octomap::point3d& origin, octomap::point3d& sensor_dir,
+  void computeTreeUpdatePlanar(octomap::OcTree* octree_in, const octomap::Pointcloud& scan,
+                        const octomap::point3d& origin, octomap::point3d& sensor_dir,
                         octomap::KeySet& free_cells, octomap::KeySet& occupied_cells,
                         double maxrange);
 
@@ -105,6 +108,7 @@ private:
   PointCloudXYZ::Ptr cloud_ptr_profile_;
   PointCloudXYZ::Ptr cloud_ptr_profile_symmetry_;
   octomap::OcTree* octree_;
+  octomap::OcTree* octree_prediction_;
 
   // == Strings
   std::string filename_octree_;
@@ -117,6 +121,7 @@ private:
   std::string topic_scan_out_;
   std::string topic_rgbd_out_;
   std::string topic_tree_;
+  std::string topic_tree_predicted_;
 
   // == Publishers
   ros::NodeHandle ros_node_;
@@ -125,8 +130,9 @@ private:
   ros::Publisher pub_scan_cloud_;
   ros::Publisher pub_rgbd_cloud_;
   ros::Publisher pub_tree_;
+  ros::Publisher pub_tree_prediction_;
 
-  // == Subsctiptions
+  // == Subscriptions
   ros::Subscriber sub_rgbd_;
   ros::Subscriber sub_scan_;
   ros::Subscriber sub_scan_command_;
