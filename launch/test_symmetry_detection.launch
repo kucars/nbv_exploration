@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <launch>
     <node pkg="nbv_exploration" name="test_symmetry_detection" type="test_symmetry_detection" required="true" output="screen">
-      <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
+      <rosparam file="$(find nbv_exploration)/config/test_symmetry_detection_settings.yaml" command="load" />
     </node>
 </launch>

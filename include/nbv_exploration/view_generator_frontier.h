@@ -14,5 +14,4 @@ public:
   void generateViews();
 };
 
-
 #endif

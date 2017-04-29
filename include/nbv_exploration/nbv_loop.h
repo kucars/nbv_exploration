@@ -7,6 +7,8 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 
+#include "nbv_exploration/common.h"
+
 #include "nbv_exploration/mapping_module.h"
 #include "nbv_exploration/model_profiler_base.h"
 #include "nbv_exploration/model_profiler_bounded_box.h"

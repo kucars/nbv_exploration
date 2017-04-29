@@ -105,12 +105,13 @@ install(TARGETS
 
 add_executable(nbv_main
   src/nbv_main.cpp
+  src/nbv_loop.cpp
 
   src/mapping_module.cpp
   src/model_profiler_base.cpp
   src/model_profiler_bounded_box.cpp
   src/model_profiler_circular_adaptive.cpp
-  src/nbv_loop.cpp
+  src/symmetry_detector.cpp
   src/termination_check_base.cpp
   src/view_generator_base.cpp
   src/view_generator_frontier.cpp
@@ -124,6 +125,8 @@ add_executable(nbv_main
   src/culling/frustum_culling.cpp
   src/culling/occlusion_culling.cpp
   src/culling/voxel_grid_occlusion_estimation.cpp
+
+  src/lib/MeanShift/MeanShift.cpp
   )
 add_dependencies(nbv_main ${catkin_EXPORTED_TARGETS})
 target_link_libraries(nbv_main
@@ -139,7 +142,9 @@ add_executable(correct_laser_scan_and_depth src/correct_laser_scan_and_depth.cpp
 add_dependencies(correct_laser_scan_and_depth ${catkin_EXPORTED_TARGETS})
 target_link_libraries(correct_laser_scan_and_depth ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(test_object_segmentation src/component_test/test_object_segmentation.cpp)
+add_executable(test_object_segmentation
+  src/component_test/test_object_segmentation.cpp
+  )
 add_dependencies(test_object_segmentation ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_object_segmentation ${catkin_LIBRARIES}  ${PCL_LIBRARIES})
 
@@ -149,6 +154,7 @@ target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
 
 add_executable(test_symmetry_detection
   src/component_test/test_symmetry_detection.cpp
+  src/symmetry_detector.cpp
   src/lib/MeanShift/MeanShift.cpp)
 add_dependencies(test_symmetry_detection ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_symmetry_detection ${catkin_LIBRARIES}  ${PCL_LIBRARIES})

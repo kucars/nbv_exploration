@@ -1,8 +1,9 @@
 ## Common Settings
 
 # Booleans
-profiling_skip: true #skip profiling?
+profiling_skip: false #skip profiling?
 profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
+profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
 profiling_use_symmetry: true

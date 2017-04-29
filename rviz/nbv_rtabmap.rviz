@@ -3,7 +3,9 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /TF1/Frames1
+        - /OccupancyGrid1
       Splitter Ratio: 0.5
     Tree Height: 328
   - Class: rviz/Selection
@@ -24,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Sensor cloud
+    SyncSource: LaserScan
 Visualization Manager:
   Class: ""
   Displays:
@@ -47,19 +49,32 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
+        floating_sensor/base_link:
+          Value: true
+        floating_sensor/camera_depth_optical_frame:
+          Value: true
+        floating_sensor/laser_frame:
+          Value: true
+        world:
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        world:
+          floating_sensor/base_link:
+            floating_sensor/camera_depth_optical_frame:
+              {}
+            floating_sensor/laser_frame:
+              {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Class: rviz/Image
       Enabled: true
       Image Topic: /iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw
@@ -95,7 +110,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.1
+      Size (m): 0.02
       Style: Flat Squares
       Topic: /nbv_exploration/scan
       Unreliable: false
@@ -314,7 +329,7 @@ Visualization Manager:
       Min. Height Display: -3.40282e+38
       Name: OccupancyGrid
       Octomap Topic: /nbv_exploration/output_tree
-      Queue Size: 5
+      Queue Size: 1
       Unknown voxel distance: 1
       Value: true
       Voxel Alpha: 1
@@ -359,6 +374,66 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/LaserScan
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 6.72623e-44
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: LaserScan
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Flat Squares
+      Topic: /floating_sensor/scan
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Flat Squares
+      Topic: /floating_sensor/camera/depth/points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -383,22 +458,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 11.4175
+      Distance: 45.4566
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.908926
-        Y: -3.14604
-        Z: 3.67688
+        X: -1.63095
+        Y: -0.468762
+        Z: -0.583303
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.894796
+      Pitch: 0.589797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.78358
+      Yaw: 5.15358
     Saved: ~
 Window Geometry:
   Displays:
@@ -418,5 +493,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1123
-  X: 767
-  Y: 184
+  X: 607
+  Y: 24

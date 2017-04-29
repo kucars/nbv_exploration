@@ -37,7 +37,8 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
-#include <nbv_exploration/nbv_loop.h>
+#include "nbv_exploration/view_generator_nn.h"
+#include "nbv_exploration/nbv_loop.h"
 
 
 NBVLoop::NBVLoop()

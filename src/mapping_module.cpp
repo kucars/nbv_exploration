@@ -9,6 +9,7 @@
 MappingModule::MappingModule()
   : cloud_ptr_rgbd_ (new PointCloudXYZ),
     cloud_ptr_profile_ (new PointCloudXYZ),
+    cloud_ptr_profile_symmetry_ (new PointCloudXYZ),
     octree_(NULL)
 {
   // >>>>>>>>>>>>>>>>>
@@ -45,7 +46,7 @@ void MappingModule::run()
       if (cloud_ptr_profile_)
       {
         sensor_msgs::PointCloud2 cloud_msg;
-        pcl::toROSMsg(*cloud_ptr_profile_, cloud_msg); 	//cloud of original (white) using original cloud
+        pcl::toROSMsg(*cloud_ptr_profile_, cloud_msg);
         cloud_msg.header.frame_id = "world";
         cloud_msg.header.stamp = ros::Time::now();
         pub_scan_cloud_.publish(cloud_msg);
@@ -55,7 +56,7 @@ void MappingModule::run()
       if (cloud_ptr_rgbd_)
       {
         sensor_msgs::PointCloud2 cloud_msg;
-        pcl::toROSMsg(*cloud_ptr_rgbd_, cloud_msg); 	//cloud of original (white) using original cloud
+        pcl::toROSMsg(*cloud_ptr_rgbd_, cloud_msg);
         cloud_msg.header.frame_id = "world";
         cloud_msg.header.stamp = ros::Time::now();
         pub_rgbd_cloud_.publish(cloud_msg);
@@ -482,8 +483,9 @@ void MappingModule::initializeParameters()
   is_get_camera_data_ = false;
   is_scanning_ = false;
 
-  filename_pcl_    = "profile_cloud.pcd";
-  filename_octree_ = "profile_octree.ot";
+  filename_pcl_          = "profile_cloud.pcd";
+  filename_pcl_symmetry_ = "profile_cloud_symmetry.pcd";
+  filename_octree_       = "profile_octree.ot";
 
   topic_depth_        = "/nbv_exploration/depth";
   topic_map_          = "/nbv_exploration/global_map_cloud";
@@ -493,7 +495,7 @@ void MappingModule::initializeParameters()
   topic_tree_         = "/nbv_exploration/output_tree";
 
   ros::param::param("~debug_mapping", is_debugging_, false);
-
+  ros::param::param("~profiling_check_symmetry", is_checking_symmetry_, true);
   ros::param::param("~profiling_fill_octomap", is_filling_octomap_, true);
   ros::param::param("~profiling_fill_octomap_continuously", is_filling_octomap_continuously_, true);
 
@@ -588,10 +590,20 @@ bool MappingModule::processCommand(int command)
       std::cout << "[Mapping] " << cc.green << "Done profiling\n" << cc.reset;
       is_scanning_ = false;
 
+      if (is_checking_symmetry_)
+      {
+        SymmetryDetector* sym_det = new SymmetryDetector();
+        sym_det->setInputCloud(cloud_ptr_profile_);
+        sym_det->run();
+        sym_det->getOutputCloud(cloud_ptr_profile_symmetry_);
+      }
+
       break;
 
 
     case nbv_exploration::MappingSrv::Request::SAVE_MAP:
+      std::cout << "[Mapping] " << cc.green << "Saving maps\n" << cc.reset;
+
       // Point cloud
       if (!cloud_ptr_profile_)
       {
@@ -601,18 +613,34 @@ bool MappingModule::processCommand(int command)
       }
       pcl::io::savePCDFileASCII (filename_pcl_, *cloud_ptr_profile_);
 
-      // Octree
-      if (!octree_)
+
+      if (is_checking_symmetry_)
       {
-        std::cout << "[Mapping] " << cc.red << "ERROR: No octomap data available. Exiting node.\n" << cc.reset;
-        success = false;
-        break;
+        if (!cloud_ptr_profile_symmetry_)
+        {
+          std::cout << "[Mapping] " << cc.red << "ERROR: No symmetry data available. Exiting node.\n" << cc.reset;
+          success = false;
+          break;
+        }
+        pcl::io::savePCDFileASCII (filename_pcl_symmetry_, *cloud_ptr_profile_symmetry_);
       }
-      if (!octree_->write(filename_octree_))
+
+
+      // Octree
+      if (is_filling_octomap_)
       {
-        std::cout << "[Mapping] " << cc.red << "ERROR: Failed to save octomap data to " << filename_octree_ << ". Exiting node.\n" << cc.reset;
-        success = false;
-        break;
+        if (!octree_)
+        {
+          std::cout << "[Mapping] " << cc.red << "ERROR: No octomap data available. Exiting node.\n" << cc.reset;
+          success = false;
+          break;
+        }
+        if (!octree_->write(filename_octree_))
+        {
+          std::cout << "[Mapping] " << cc.red << "ERROR: Failed to save octomap data to " << filename_octree_ << ". Exiting node.\n" << cc.reset;
+          success = false;
+          break;
+        }
       }
 
       std::cout << "[Mapping] " << cc.green << "Successfully saved map\n" << cc.reset;
@@ -646,40 +674,56 @@ bool MappingModule::processCommand(int command)
         break;
       }
 
-      // Octree
-      std::cout << "[Mapping] " << "Reading " << filename_octree_ << "\n";
+      // Symmetry
+      if (is_checking_symmetry_)
+      {
+        std::cout << "[Mapping] " << "Reading " << filename_pcl_symmetry_ << "\n";
 
-      octomap::AbstractOcTree* temp_tree = octomap::AbstractOcTree::read(filename_octree_);
-      if(temp_tree)
-      { // read error returns NULL
-        octree_ = dynamic_cast<octomap::OcTree*>(temp_tree);
-
-        if (octree_)
+        if (pcl::io::loadPCDFile<PointXYZ> (filename_pcl_symmetry_, *cloud_ptr_profile_symmetry_) == -1) //* load the file
         {
-          /*
-          // Scale octree probabilities (bring them closer to 50%)
-          for (octomap::OcTree::iterator it = octree_->begin(), end = octree_->end(); it != end; ++it)
-          {
-            octree_->updateNode(it.getKey(), -0.5f*it->getLogOdds(), true);
-          }
-          octree_->updateInnerOccupancy();
-
-          std::cout << "[Mapping] " << cc.green << "Successfully scaled probabilities\n" << cc.reset;
-          response.data  = response.DONE;
+          std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_symmetry_ << ".Exiting node.\n" << cc.reset;
+          success = false;
           break;
-          */
+        }
+      }
+
+      // Octree
+      if (is_filling_octomap_)
+      {
+        std::cout << "[Mapping] " << "Reading " << filename_octree_ << "\n";
+
+        octomap::AbstractOcTree* temp_tree = octomap::AbstractOcTree::read(filename_octree_);
+        if(temp_tree)
+        { // read error returns NULL
+          octree_ = dynamic_cast<octomap::OcTree*>(temp_tree);
+
+          if (octree_)
+          {
+            /*
+            // Scale octree probabilities (bring them closer to 50%)
+            for (octomap::OcTree::iterator it = octree_->begin(), end = octree_->end(); it != end; ++it)
+            {
+              octree_->updateNode(it.getKey(), -0.5f*it->getLogOdds(), true);
+            }
+            octree_->updateInnerOccupancy();
+
+            std::cout << "[Mapping] " << cc.green << "Successfully scaled probabilities\n" << cc.reset;
+            response.data  = response.DONE;
+            break;
+            */
+          }
+          else
+          {
+            std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Type cast failed .Exiting node.\n" << cc.reset;
+            success = false;
+          }
         }
         else
         {
-          std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Type cast failed .Exiting node.\n" << cc.reset;
+          std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Could not read file " << filename_octree_ << ". Exiting node.\n" << cc.reset;
           success = false;
+          break;
         }
-      }
-      else
-      {
-        std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Could not read file " << filename_octree_ << ". Exiting node.\n" << cc.reset;
-        success = false;
-        break;
       }
 
       std::cout << "[Mapping] " << cc.green << "Successfully loaded maps\n" << cc.reset;

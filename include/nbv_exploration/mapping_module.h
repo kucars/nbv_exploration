@@ -5,9 +5,6 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 
-#include <nbv_exploration/MappingSrv.h>
-#include <nbv_exploration/common.h>
-
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -36,15 +33,21 @@
 #include <pcl/registration/icp.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
+#include "nbv_exploration/MappingSrv.h"
+#include "nbv_exploration/common.h"
+#include "nbv_exploration/symmetry_detector.h"
+
 class MappingModule
 {
 public:
+  // =========
+  // Methods
+  // =========
   MappingModule();
-  void run();
-  bool processCommand(int command);
-
   octomap::OcTree* getOctomap();
   PointCloudXYZ::Ptr getPointCloud();
+  bool processCommand(int command);
+  void run();
 
 private:
   // =========
@@ -89,6 +92,7 @@ private:
   bool is_filling_octomap_continuously_;
   bool is_get_camera_data_;
   bool is_scanning_;
+  bool is_checking_symmetry_;
 
   // == Profiling
   std::vector<octomap::point3d> pose_vec_, dir_vec_;
@@ -99,11 +103,13 @@ private:
   // == Point clouds and octrees
   PointCloudXYZ::Ptr cloud_ptr_rgbd_;
   PointCloudXYZ::Ptr cloud_ptr_profile_;
+  PointCloudXYZ::Ptr cloud_ptr_profile_symmetry_;
   octomap::OcTree* octree_;
 
   // == Strings
   std::string filename_octree_;
   std::string filename_pcl_;
+  std::string filename_pcl_symmetry_;
 
   std::string topic_depth_;
   std::string topic_map_;

@@ -7,6 +7,7 @@
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/nbv_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/profiling_settings.yaml" command="load" />
+      <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
 
       <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
@@ -15,6 +16,7 @@
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/nbv_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/profiling_settings.yaml" command="load" />
+      <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
 
       <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
