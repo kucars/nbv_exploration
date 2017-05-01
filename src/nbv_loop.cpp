@@ -37,7 +37,6 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/registration/icp.h>
 
-#include "nbv_exploration/view_generator_nn.h"
 #include "nbv_exploration/nbv_loop.h"
 
 
@@ -131,7 +130,10 @@ void NBVLoop::evaluateViewpoints()
     std::cout << "[NBVLoop] " << cc.green << "Evaluating viewpoints\n" << cc.reset;
   }
 
+  // Evaluate viewpoints
   view_selecter_->evaluate();
+
+  // Move to next best view
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
   vehicle_->setWaypoint(p);
 
@@ -219,7 +221,23 @@ void NBVLoop::initViewGenerator()
 
 void NBVLoop::initViewSelecter()
 {
-  view_selecter_ = new ViewSelecterBase();
+  int view_selecter_method;
+  ros::param::param("~view_generator_type", view_selecter_method, 0);
+
+  switch(view_selecter_method)
+  {
+  default:
+  case 0:
+    view_selecter_ = new ViewSelecterIg();
+    break;
+  case 1:
+    view_selecter_ = new ViewSelecterIgExpDistance();
+    break;
+  case 2:
+    view_selecter_ = new ViewSelecterSymmetryPrediction();
+    break;
+  }
+
   view_selecter_->setViewGenerator(view_generator_);
 }
 

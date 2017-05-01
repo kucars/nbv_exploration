@@ -296,7 +296,7 @@ void SymmetryDetector::run()
   long total_features = feature_vec.size();
   while (feature_vec.size()>0)
   {
-    printf("\r Points remaining for pairing: %ld/%ld [%3.1lf\%]       ", feature_vec.size(), total_features, (1-1.0*feature_vec.size()/total_features)*100.0 );
+    printf("\r Points remaining for pairing: %ld/%ld [%3.1lf\%%]       ", feature_vec.size(), total_features, (1-1.0*feature_vec.size()/total_features)*100.0 );
     //Get last point in result cloud
     KeypointFeature p1 = feature_vec.back();
 

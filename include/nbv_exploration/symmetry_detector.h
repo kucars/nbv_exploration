@@ -1,5 +1,5 @@
-#ifndef NBV_EXPLORATION_VIEW_GENERATOR_NN_H
-#define NBV_EXPLORATION_VIEW_GENERATOR_NN_H
+#ifndef NBV_EXPLORATION_SYMMETRY_DETECTOR_H
+#define NBV_EXPLORATION_SYMMETRY_DETECTOR_H
 
 #include <pcl/common/time.h>
 #include <pcl/point_types.h>

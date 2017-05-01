@@ -13,11 +13,15 @@
 #include "nbv_exploration/model_profiler_base.h"
 #include "nbv_exploration/model_profiler_bounded_box.h"
 #include "nbv_exploration/model_profiler_circular_adaptive.h"
+#include "nbv_exploration/termination_check_base.h"
 #include "nbv_exploration/view_generator_base.h"
 #include "nbv_exploration/view_generator_frontier.h"
 #include "nbv_exploration/view_generator_nn.h"
 #include "nbv_exploration/view_selecter_base.h"
-#include "nbv_exploration/termination_check_base.h"
+#include "nbv_exploration/view_selecter_ig.h"
+#include "nbv_exploration/view_selecter_ig_exp_distance.h"
+#include "nbv_exploration/view_selecter_symmetry_prediction.h"
+
 
 #include "control/vehicle_control_base.h"
 #include "control/vehicle_control_floating_sensor.h"

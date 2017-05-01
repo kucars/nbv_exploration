@@ -20,8 +20,29 @@
 
 typedef geometry_msgs::Pose Pose;
 
+struct OctomapKeyCompare {
+  bool operator() (const octomap::OcTreeKey& lhs, const octomap::OcTreeKey& rhs) const
+  {
+    size_t h1 = size_t(lhs.k[0]) + 1447*size_t(lhs.k[1]) + 345637*size_t(lhs.k[2]);
+    size_t h2 = size_t(rhs.k[0]) + 1447*size_t(rhs.k[1]) + 345637*size_t(rhs.k[2]);
+    return h1< h2;
+  }
+};
+
 class ViewSelecterBase
 {
+public:
+  ViewSelecterBase();
+  ~ViewSelecterBase(){};
+
+  void evaluate();
+
+  virtual std::string getMethodName();
+  Pose  getTargetPose();
+  void setCameraSettings(double fov_h, double fov_v, double r_max, double r_min);
+  void setViewGenerator(ViewGeneratorBase* v);
+  void update();
+
 protected:
   ViewGeneratorBase* view_gen_;
   
@@ -37,7 +58,12 @@ protected:
   double range_max_;
   double range_min_;
   double tree_resolution_;
-  double last_max_utility_;
+
+  int info_iteration_;
+  float info_entropy_total_;
+  std::vector<float> info_utilities_;
+  float info_utility_max_;
+  float info_utility_med_;
   
   bool is_debug_;
   
@@ -50,77 +76,28 @@ protected:
   ros::Publisher marker_pub;
   ros::Publisher pose_pub;
   ros::Publisher ig_pub;
-  
-  
-public:
-  ViewSelecterBase();
-  ~ViewSelecterBase(){}
-  
-  void setViewGenerator(ViewGeneratorBase* v)
-  {
-    view_gen_ = v;
-  }
-  
-  void update()
-  {
-    cloud_occupied_ptr_ = view_gen_->cloud_occupied_ptr_;
-    tree_               = view_gen_->tree_;
-    current_pose_       = view_gen_->current_pose_;
-    
-    tree_resolution_ = tree_->getResolution();
-    
-    octomap::point3d min (view_gen_->obj_bounds_x_min_,
-			  view_gen_->obj_bounds_y_min_,
-			  view_gen_->obj_bounds_z_min_);
-    octomap::point3d max (view_gen_->obj_bounds_x_max_,
-			  view_gen_->obj_bounds_y_max_,
-			  view_gen_->obj_bounds_z_max_);
-			  
-    std::cout << "Bounds min: " << view_gen_->obj_bounds_x_min_ << ", " << view_gen_->obj_bounds_y_min_ << ", " << view_gen_->obj_bounds_z_min_ << "\n";
-    std::cout << "Bounds max: " << view_gen_->obj_bounds_x_max_ << ", " << view_gen_->obj_bounds_y_max_ << ", " << view_gen_->obj_bounds_z_max_ << "\n";
-		    
-    tree_->setBBXMin( min );	       
-    tree_->setBBXMax( max );
-    
-    computeRelativeRays();
-  }
-  
 
-  Pose getTargetPose()
-  {
-    return selected_pose_;
-  }
-
-  void setCameraSettings(double fov_h, double fov_v, double r_max, double r_min)
-  {
-    fov_horizontal_ = fov_h;
-    fov_vertical_ = fov_v;
-    range_max_ = r_max;
-    range_min_ = r_min;
-  }
-
-  void setDebug(bool b)
-  {
-    is_debug_ = b;
-  }
-
-  void evaluate();
+protected:
   bool isEntropyLow();
   
+
   double getNodeOccupancy(octomap::OcTreeNode* node);
   double getNodeEntropy(octomap::OcTreeNode* node);
   
+
   double computeRelativeRays();
   void computeOrientationMatrix(Pose p);
   octomap::point3d transformToGlobalRay(Eigen::Vector3d ray_dir);
   bool isNodeInBounds(octomap::OcTreeKey &key);
   bool isPointInBounds(octomap::point3d &p);
   
+
   double calculateIG(Pose p);
   double calculateDistance(Pose p);
   double calculateAngularDistance(Pose p);
   virtual double calculateUtility(Pose p);
   
+
   void addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint);
   void clearRayMarkers();
   void publishRayMarkers();

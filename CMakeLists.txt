@@ -48,6 +48,11 @@ IF(OCTOMAP_OMP)
   SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 ENDIF(OCTOMAP_OMP)
 
+add_message_files(
+  FILES
+  IterationInfo.msg
+)
+
 add_service_files(
   FILES
   MappingSrv.srv
@@ -117,6 +122,9 @@ add_executable(nbv_main
   src/view_generator_frontier.cpp
   src/view_generator_nn.cpp
   src/view_selecter_base.cpp
+  src/view_selecter_ig.cpp
+  src/view_selecter_ig_exp_distance.cpp
+  src/view_selecter_symmetry_prediction.cpp
 
   src/control/vehicle_control_base.cpp
   src/control/vehicle_control_floating_sensor.cpp
