@@ -132,6 +132,7 @@ void NBVLoop::evaluateViewpoints()
 
   // Evaluate viewpoints
   view_selecter_->evaluate();
+  view_selecter_comparison_->evaluate();
 
   // Move to next best view
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
@@ -239,6 +240,16 @@ void NBVLoop::initViewSelecter()
   }
 
   view_selecter_->setViewGenerator(view_generator_);
+
+
+  // Another selecter to compare with
+  if (view_selecter_method != 0)
+    view_selecter_comparison_ = new ViewSelecterIg();
+  else
+    view_selecter_comparison_ = new ViewSelecterIgExpDistance();
+
+  view_selecter_comparison_->setViewGenerator(view_generator_);
+
 }
 
 void NBVLoop::initVehicle()

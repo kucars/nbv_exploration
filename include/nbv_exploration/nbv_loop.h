@@ -55,6 +55,7 @@ public:
   VehicleControlBase*   vehicle_;
   ViewGeneratorBase*    view_generator_;
   ViewSelecterBase*     view_selecter_;
+  ViewSelecterBase*     view_selecter_comparison_;
 
   // DEBUG
   bool is_debug_states;

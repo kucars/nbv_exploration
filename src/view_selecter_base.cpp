@@ -360,13 +360,19 @@ void ViewSelecterBase::evaluate()
     }
   } //end for
 
+  // Compute median value
+  std::vector<float> sorted_utilities(info_utilities_);
+  std::sort(sorted_utilities.begin(), sorted_utilities.end());
+  info_utility_med_ = sorted_utilities[sorted_utilities.size()/2];
+
   // Publish information about our viewpoint selection scheme
   nbv_exploration::IterationInfo iteration_msg;
   iteration_msg.iteration = info_iteration_;
   iteration_msg.total_entropy = info_entropy_total_;
-  iteration_msg.utility_method = getMethodName();
+  iteration_msg.method = getMethodName();
   iteration_msg.utilities = info_utilities_;
   iteration_msg.max_utility = info_utility_max_;
+  iteration_msg.med_utility = info_utility_med_;
   ig_pub.publish(iteration_msg);
 }
 
