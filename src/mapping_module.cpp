@@ -63,7 +63,7 @@ void MappingModule::run()
       }
 
       // Publish octomap
-      if (octree_ /*&& pub_tree_.getNumSubscribers() > 0*/)
+      if (octree_ && pub_tree_.getNumSubscribers() > 0)
       {
         octomap_msgs::Octomap msg;
         octomap_msgs::fullMapToMsg (*octree_, msg);
@@ -73,7 +73,7 @@ void MappingModule::run()
         pub_tree_.publish(msg);
       }
 
-      if (octree_prediction_ /*&& pub_tree_prediction_.getNumSubscribers() > 0*/)
+      if (octree_prediction_ && pub_tree_prediction_.getNumSubscribers() > 0)
       {
         octomap_msgs::Octomap msg;
         octomap_msgs::fullMapToMsg (*octree_prediction_, msg);
