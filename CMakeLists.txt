@@ -113,14 +113,21 @@ add_executable(nbv_main
   src/nbv_loop.cpp
 
   src/mapping_module.cpp
+
   src/model_profiler_base.cpp
   src/model_profiler_bounded_box.cpp
   src/model_profiler_circular_adaptive.cpp
+
   src/symmetry_detector.cpp
+
   src/termination_check_base.cpp
+  src/termination_check_entropy_stagnation.cpp
+  src/termination_check_max_iterations.cpp
+
   src/view_generator_base.cpp
   src/view_generator_frontier.cpp
   src/view_generator_nn.cpp
+
   src/view_selecter_base.cpp
   src/view_selecter_ig.cpp
   src/view_selecter_ig_exp_distance.cpp

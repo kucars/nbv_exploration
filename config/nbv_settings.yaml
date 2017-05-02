@@ -6,6 +6,7 @@ debug_mapping: false
 debug_view_generator: false
 debug_view_selecter: false
 
+
 ############
 ## Scenario settings
 ############
@@ -23,9 +24,18 @@ object_bounds_y_min: -20
 object_bounds_z_max: 7
 object_bounds_z_min: 0
 
+
+############
+## Vehicle settings
+############
+# 0: floating sensor
+# 1: iris
+vehicle_type: 0
+
 ## UAV dimensions (used in collision detection)
 uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
+
 
 ############
 ## Profiling settings
@@ -50,19 +60,29 @@ profiling_complete_pose_y: -20
 profiling_complete_pose_z: 5
 profiling_complete_pose_yaw: 1.571
 
+
 ############
 ## Termination settings
 ############
-termination_max_iterations: 300
+# 0: Max iterations
+# 1: Entropy Stagnation
+termination_type: 1
+termination_iterations_max: 300
+termination_entropy_min_change_threshold: 0.0001
+termination_entropy_window_size: 5
+
 
 ############
 ## View Generation settings
 ############
-view_generator_type: 0 # 0 for nearest Neighbor (NN), 1 for frontier
+# 0: Nearest Neighbor (NN)
+# 1: Frontier
+view_generator_type: 0
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
 view_generator_nn_pos_res_yaw: rad(pi/4)
+
 
 ############
 ## View Selecter settings

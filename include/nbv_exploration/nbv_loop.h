@@ -14,6 +14,8 @@
 #include "nbv_exploration/model_profiler_bounded_box.h"
 #include "nbv_exploration/model_profiler_circular_adaptive.h"
 #include "nbv_exploration/termination_check_base.h"
+#include "nbv_exploration/termination_check_entropy_stagnation.h"
+#include "nbv_exploration/termination_check_max_iterations.h"
 #include "nbv_exploration/view_generator_base.h"
 #include "nbv_exploration/view_generator_frontier.h"
 #include "nbv_exploration/view_generator_nn.h"
@@ -93,9 +95,10 @@ public:
 
   void initMappingModule();
   void initModelProfiler();
+  void initTerminationChecker();
+  void initVehicle();
   void initViewGenerator();
   void initViewSelecter();
-  void initVehicle();
   void runStateMachine();
   void sigIntHandler(int sig);
 

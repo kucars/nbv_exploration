@@ -1,15 +1,20 @@
-#ifndef TERMINATIONCHECKBASE_H
-#define TERMINATIONCHECKBASE_H
+#ifndef TERMINATION_CHECK_BASE_H
+#define TERMINATION_CHECK_BASE_H
+
+#include <ros/ros.h>
+#include "nbv_exploration/common.h"
+#include "nbv_exploration/view_selecter_base.h"
 
 class TerminationCheckBase
 {
 public:
-  int max_iterations_;
-  int current_iteration_;
-
   TerminationCheckBase();
-  void update();
-  bool isTerminated();
+  virtual bool isTerminated();
+  void setViewSelecter(ViewSelecterBase* v);
+  virtual void update();
+
+protected:
+  ViewSelecterBase* view_selecter_;
 };
 
 #endif // TERMINATIONCHECKBASE_H

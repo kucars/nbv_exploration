@@ -63,8 +63,7 @@ NBVLoop::NBVLoop()
   initViewSelecter();
   initVehicle();
   initModelProfiler();
-  termination_check_module_ = new TerminationCheckBase();
-
+  initTerminationChecker();
 
   // >>>>>>>>>>>>>>>>>
   // Parse Inputs
@@ -203,6 +202,42 @@ void NBVLoop::initParameters()
   ros::param::param("~uav_obstacle_distance_min", uav_obstacle_distance_min, 1.0);
 }
 
+void NBVLoop::initTerminationChecker()
+{
+  int termination_method;
+  ros::param::param("~termination_type", termination_method, 0);
+
+  switch(termination_method)
+  {
+  default:
+  case 0:
+    termination_check_module_ = new TerminationCheckMaxIterations();
+    break;
+  case 1:
+    termination_check_module_ = new TerminationCheckEntropyStagnation();
+    break;
+  }
+
+  termination_check_module_->setViewSelecter(view_selecter_);
+}
+
+void NBVLoop::initVehicle()
+{
+  int vehicle_type;
+  ros::param::param("~vehicle_type", vehicle_type, 0);
+
+  switch(vehicle_type)
+  {
+  default:
+  case 0:
+    vehicle_ = new VehicleControlFloatingSensor();
+    break;
+  case 1:
+    vehicle_ = new VehicleControlIris();
+    break;
+  }
+}
+
 void NBVLoop::initViewGenerator()
 {
   int view_generator_method;
@@ -251,12 +286,6 @@ void NBVLoop::initViewSelecter()
 
   view_selecter_comparison_->setViewGenerator(view_generator_);
 
-}
-
-void NBVLoop::initVehicle()
-{
-  //vehicle_ = new VehicleControlIris();
-  vehicle_ = new VehicleControlFloatingSensor();
 }
 
 void NBVLoop::positionVehicleAfterProfiling()

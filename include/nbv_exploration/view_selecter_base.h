@@ -32,6 +32,12 @@ struct OctomapKeyCompare {
 class ViewSelecterBase
 {
 public:
+  int   info_iteration_;
+  float info_entropy_total_;
+  std::vector<float> info_utilities_;
+  float info_utility_max_;
+  float info_utility_med_;
+
   ViewSelecterBase();
 
   void evaluate();
@@ -57,12 +63,6 @@ protected:
   double range_min_;
   double tree_resolution_;
 
-  int info_iteration_;
-  float info_entropy_total_;
-  std::vector<float> info_utilities_;
-  float info_utility_max_;
-  float info_utility_med_;
-  
   bool is_debug_;
   bool must_see_occupied_;
   bool is_ignoring_clamping_entropies_;
