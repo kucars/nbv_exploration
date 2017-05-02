@@ -6,6 +6,7 @@ from numpy import mean, array, hypot, diff, convolve, arange, sin, cos, ones, pi
 import time
 import signal
 import sys
+import csv
 
 from matplotlib import pyplot
 
@@ -16,7 +17,8 @@ iterations = {}
 total_entropy = {}
 max_utility = {}
 med_utility = {}
-
+file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
+files_csv = {} #Array of open csv files
 
 def main():
   rospy.init_node('plot_iteration_info', anonymous=True)
@@ -68,10 +70,47 @@ def callback(data):
     max_utility[method] = []
     med_utility[method] = []
 
+    # Open csv file in append mode
+    files_csv[method] = open(file_prefix + method + ".csv", "a")
+    csvwriter = csv.writer(files_csv[method], delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    csvwriter.writerow([
+      'Iteration',
+      'Entropy Total',
+      'Entropy Change %',
+      'Utility Max',
+      'Utility Median',
+      'Count',
+      'Utility 1', 'Utility 2', 'Utility 3', '...'
+      ])
+
+
   iterations[method].append(data.iteration)
   total_entropy[method].append(data.total_entropy)
   max_utility[method].append(data.max_utility)
   med_utility[method].append(data.med_utility)
+
+  entropy_change = '';
+  if (len(total_entropy[method]) > 1):
+    prev = total_entropy[method][-2]
+    curr = total_entropy[method][-1]
+    entropy_change = (curr - prev)/((curr + prev)/2) * 100
+
+  csvwriter = csv.writer(files_csv[method], delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+  csvwriter.writerow([
+    data.iteration,
+    data.total_entropy,
+    entropy_change,
+    data.max_utility,
+    data.med_utility,
+    len(data.utilities)
+    ]
+    + list(data.utilities) # Convert tuple to list
+    )
+
+def cleanup_before_exit():
+  # Close any open csv files
+  for key, file in files_csv.items():
+    file.close()
 
 def exit_gracefully(signum, frame):
   sys.exit(1)
@@ -81,4 +120,8 @@ if __name__ == '__main__':
   original_sigint = signal.getsignal(signal.SIGINT)
   signal.signal(signal.SIGINT, exit_gracefully)
 
-  main()
+  try:
+    main()
+  except:
+    cleanup_before_exit()
+    print('Application terminated')
