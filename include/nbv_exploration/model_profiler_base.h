@@ -5,8 +5,6 @@
 #include "control/vehicle_control_base.h"
 #include "nbv_exploration/mapping_module.h"
 
-#include "nbv_exploration/MappingSrv.h"
-
 class ModelProfilerBase
 {
 protected:
@@ -20,7 +18,6 @@ public:
   virtual bool run(PointCloudXYZ::Ptr profile_cloud_ptr){};
   virtual void scan(){};
 
-  bool callMappingService(int command);
   void setScanSpeed(double speed);
   void setMappingModule(MappingModule* v);
   void setVehicle(VehicleControlBase* v);

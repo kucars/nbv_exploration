@@ -33,7 +33,6 @@
 #include <pcl/registration/icp.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
-#include "nbv_exploration/MappingSrv.h"
 #include "nbv_exploration/common.h"
 #include "nbv_exploration/symmetry_detector.h"
 
@@ -44,10 +43,20 @@ public:
   // Methods
   // =========
   MappingModule();
+
+  bool commandGetCameraData();
+  bool commandFinalMapLoad();
+  bool commandFinalMapSave();
+  bool commandProfilingStart();
+  bool commandProfilingStop();
+  bool commandProfileLoad();
+  bool commandProfileSave();
+  bool commandScanningStart();
+  bool commandScanningStop();
+
   octomap::OcTree*   getOctomap();
   octomap::OcTree*   getOctomapPredicted();
   PointCloudXYZ::Ptr getPointCloud();
-  bool processCommand(int command);
   void run();
 
 private:
@@ -115,7 +124,9 @@ private:
 
   // == Strings
   std::string filename_octree_;
+  std::string filename_octree_final_;
   std::string filename_pcl_;
+  std::string filename_pcl_final_;
   std::string filename_pcl_symmetry_;
 
   std::string topic_depth_;

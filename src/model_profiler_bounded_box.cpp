@@ -127,9 +127,9 @@ bool ModelProfilerBoundedBox::run(PointCloudXYZ::Ptr profile_cloud_ptr)
   {
     std::cout << cc.green << "Profiling complete\n" << cc.reset;
 
-    callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
+    mapping_module_->commandProfilingStop();
 
-    if (callMappingService(nbv_exploration::MappingSrv::Request::SAVE_MAP))
+    if ( mapping_module_->commandProfileSave() )
       std::cout << "Successfully saved profile\n";
 
     else
@@ -154,8 +154,8 @@ void ModelProfilerBoundedBox::scan()
     ros::spinOnce();
   }
 
-  // Request START_SCANNING
-  callMappingService(nbv_exploration::MappingSrv::Request::START_SCANNING);
+  // Stop scanning
+  mapping_module_->commandScanningStart();
 
   // Scan
   if (is_sensor_rising_)
@@ -183,6 +183,6 @@ void ModelProfilerBoundedBox::scan()
     }
   }
 
-  // Request STOP_SCANNING
-  callMappingService(nbv_exploration::MappingSrv::Request::STOP_SCANNING);
+  // Stop scanning
+  mapping_module_->commandScanningStop();
 }

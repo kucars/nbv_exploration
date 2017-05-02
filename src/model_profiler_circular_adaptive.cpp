@@ -25,9 +25,8 @@ bool ModelProfilerCircularAdaptive::run(PointCloudXYZ::Ptr profile_cloud_ptr)
   {
     std::cout << cc.green << "Profiling complete\n" << cc.reset;
 
-    callMappingService(nbv_exploration::MappingSrv::Request::STOP_PROFILING);
-
-    if (callMappingService(nbv_exploration::MappingSrv::Request::SAVE_MAP))
+    mapping_module_->commandProfilingStop();
+    if ( mapping_module_->commandProfileSave() )
       std::cout << "Successfully saved profile\n";
 
     else
@@ -131,9 +130,8 @@ bool ModelProfilerCircularAdaptive::run(PointCloudXYZ::Ptr profile_cloud_ptr)
 
 void ModelProfilerCircularAdaptive::scan()
 {
-  // Request START_SCANNING
-  callMappingService(nbv_exploration::MappingSrv::Request::START_SCANNING);
-
+  //Start scanning
+  mapping_module_->commandScanningStart();
 
   // Scan
   if (is_sensor_rising_)
@@ -161,6 +159,6 @@ void ModelProfilerCircularAdaptive::scan()
     }
   }
 
-  // Request STOP_SCANNING
-  callMappingService(nbv_exploration::MappingSrv::Request::STOP_SCANNING);
+  // Stop scanning
+  mapping_module_->commandScanningStop();
 }

@@ -1,5 +1,5 @@
-#ifndef MODELPROFILERCIRCULARADAPTIVE_H
-#define MODELPROFILERCIRCULARADAPTIVE_H
+#ifndef MODEL_PROFILER_CIRCULAR_ADAPTIVE_H
+#define MODEL_PROFILER_CIRCULAR_ADAPTIVE_H
 
 #include "nbv_exploration/common.h"
 #include "nbv_exploration/model_profiler_base.h"

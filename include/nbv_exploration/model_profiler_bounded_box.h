@@ -1,5 +1,5 @@
-#ifndef MODELPROFILERBOUNDEDBOX_H
-#define MODELPROFILERBOUNDEDBOX_H
+#ifndef MODEL_PROFILER_BOUNDED_BOX_H
+#define MODEL_PROFILER_BOUNDED_BOX_H
 
 #include "nbv_exploration/common.h"
 #include "nbv_exploration/model_profiler_base.h"

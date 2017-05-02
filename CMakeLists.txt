@@ -53,11 +53,6 @@ add_message_files(
   IterationInfo.msg
 )
 
-add_service_files(
-  FILES
-  MappingSrv.srv
-)
-
 generate_messages(
   DEPENDENCIES
   std_msgs
