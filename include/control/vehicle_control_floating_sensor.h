@@ -1,5 +1,5 @@
-#ifndef VEHICLECONTROLIRIS_H
-#define VEHICLECONTROLIRIS_H
+#ifndef VEHICLE_CONTROL_FLOATING_SENSOR_H
+#define VEHICLE_CONTROL_FLOATING_SENSOR_H
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>

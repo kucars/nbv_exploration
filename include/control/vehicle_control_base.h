@@ -1,5 +1,5 @@
-#ifndef VEHICLECONTROLBASE_H
-#define VEHICLECONTROLBASE_H
+#ifndef VEHICLE_CONTROL_BASE_H
+#define VEHICLE_CONTROL_BASE_H
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
