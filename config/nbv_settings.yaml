@@ -26,6 +26,14 @@ object_bounds_z_min: 0
 
 
 ############
+## Mapping settings
+############
+mapping_voxel_grid_res_profile: 0.1
+mapping_voxel_grid_res_rgbd: 0.02
+mapping_octree_resolution: 0.2
+mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
+
+############
 ## Vehicle settings
 ############
 # 0: floating sensor
@@ -66,8 +74,8 @@ profiling_complete_pose_yaw: 1.571
 ############
 # 0: Max iterations
 # 1: Entropy Stagnation
-termination_type: 1
-termination_iterations_max: 300
+termination_type: 0
+termination_iterations_max: 10
 termination_entropy_min_change_threshold: 0.0001
 termination_entropy_window_size: 5
 
@@ -90,8 +98,8 @@ view_generator_nn_pos_res_yaw: rad(pi/4)
 # 0: Information Gain (IG)
 # 1: Information Gain with exponential Distance
 # 2: Prediction based on symmetry
-view_selecter_type: 2
+view_selecter_type: 0
 view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
 view_selecter_ignore_entropies_at_clamping_points: true
-view_selecter_weight_distance: 1.1
+view_selecter_weight_distance: 0.5
 

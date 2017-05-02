@@ -26,9 +26,3 @@ laser_range_upper_adjustment: 0.1
 
 ## Camera correction
 depth_range_upper_adjustment: 0.1
-
-## Mapping settings
-octree_resolution: 0.2
-sensor_data_min_height: 0.3 #Min height from floor in order to register points
-voxel_grid_resolution_profile: 0.05 #Resolution to use for point cloud filtering
-voxel_grid_resolution_depth_sensor: 0.05 #Resolution to use for point cloud filtering

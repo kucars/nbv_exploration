@@ -54,9 +54,11 @@ private:
   // =========
   // Methods
   // =========
+  void addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, double filter_res);
+  void addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out);
   void addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in);
   void addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
-  void addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter = true);
+
 
   void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
   void callbackScan(const sensor_msgs::LaserScan& laser_msg);

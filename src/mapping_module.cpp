@@ -150,56 +150,56 @@ void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXY
   }
 }
 
-void MappingModule::addToGlobalCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, bool should_filter) {
-    if (is_debugging_)
-    {
-        std::cout << "[Mapping] " << cc.green << "MAPPING\n" << cc.reset;
-    }
+void MappingModule::addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out) {
+  if (is_debugging_)
+  {
+      std::cout << "[Mapping] " << cc.green << "MAPPING\n" << cc.reset;
+  }
 
-    // Initialize global cloud if not already done so
-    if (!cloud_out)
-    {
-        cloud_out = cloud_in;
-        return;
-    }
+  // Initialize cloud if not already done so
+  if (!cloud_out)
+  {
+      cloud_out = cloud_in;
+      return;
+  }
 
-    // Only add points that meet the min height requirement
-    for (int i=0; i<cloud_in->points.size(); i++)
-      if (cloud_in->points[i].z >= sensor_data_min_height_)
-        cloud_out->push_back(cloud_in->points[i]);
+  // Only add points that meet the min height requirement
+  for (int i=0; i<cloud_in->points.size(); i++)
+    if (cloud_in->points[i].z >= sensor_data_min_height_)
+      cloud_out->push_back(cloud_in->points[i]);
+}
+void MappingModule::addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, double filter_res) {
+  // Add two point clouds
+  addPointCloudToPointCloud(cloud_in, cloud_out);
 
-    // Perform voxelgrid filtering
-    if (should_filter)
-    {
-      // == Voxel grid filter
-      PointCloudXYZ::Ptr voxel_filtered(new PointCloudXYZ);
+  // Perform voxelgrid filtering
+  PointCloudXYZ::Ptr voxel_filtered(new PointCloudXYZ);
 
-      pcl::VoxelGrid<PointXYZ> vox_sor;
-      vox_sor.setInputCloud (cloud_out);
-      vox_sor.setLeafSize (profile_grid_res_, profile_grid_res_, profile_grid_res_);
-      vox_sor.filter (*voxel_filtered);
+  pcl::VoxelGrid<PointXYZ> vox_sor;
+  vox_sor.setInputCloud (cloud_out);
+  vox_sor.setLeafSize (filter_res, filter_res, filter_res);
+  vox_sor.filter (*voxel_filtered);
 
-      cloud_out = voxel_filtered;
+  cloud_out = voxel_filtered;
 
 
-      // == Statistical outlier removal
-      /*
-      PointCloudXYZ::Ptr stat_filtered(new PointCloudXYZ);
+  // == Statistical outlier removal
+  /*
+  PointCloudXYZ::Ptr stat_filtered(new PointCloudXYZ);
 
-      pcl::StatisticalOutlierRemoval<PointXYZ> stat_sor;
-      stat_sor.setInputCloud (voxel_filtered);
-      stat_sor.setMeanK (10);
-      stat_sor.setStddevMulThresh (0.5);
-      stat_sor.filter (*stat_filtered);
+  pcl::StatisticalOutlierRemoval<PointXYZ> stat_sor;
+  stat_sor.setInputCloud (voxel_filtered);
+  stat_sor.setMeanK (10);
+  stat_sor.setStddevMulThresh (0.5);
+  stat_sor.filter (*stat_filtered);
 
-      cloud_out = stat_filtered;
-      */
-    }
+  cloud_out = stat_filtered;
+  */
 
-    if (is_debugging_)
-    {
-      std::cout << "[Mapping] " << cc.blue << "Number of points in global map: " << cloud_out->points.size() << "\n" << cc.reset;
-    }
+  if (is_debugging_)
+  {
+    std::cout << "[Mapping] " << cc.blue << "Number of points in filtered map: " << cloud_out->points.size() << "\n" << cc.reset;
+  }
 }
 
 
@@ -278,7 +278,7 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   }
 
   // == Add to global map
-  addToGlobalCloud(scan_ptr_filtered, cloud_ptr_profile_, true);
+  addPointCloudToPointCloud(scan_ptr_filtered, cloud_ptr_profile_, profile_grid_res_);
 
   // == Add to vectors for later octomap processing
   octomap::point3d sensor_origin (transform.getOrigin().x(),
@@ -352,7 +352,7 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     pcl::transformPointCloud(*cloud_distance_ptr, *cloud_distance_ptr, tf_eigen);
 
     // == Add filtered to final cloud
-    addToGlobalCloud(cloud_distance_ptr, cloud_ptr_rgbd_, true);
+    addPointCloudToPointCloud(cloud_distance_ptr, cloud_ptr_rgbd_, depth_grid_res_);
 
     // == Update octomap
     octomap::point3d origin (transform.getOrigin().x(),
@@ -525,10 +525,10 @@ void MappingModule::initializeParameters()
   ros::param::param("~profiling_fill_octomap_continuously", is_filling_octomap_continuously_, true);
 
   ros::param::param("~depth_range_max", max_rgbd_range_, 5.0);
-  ros::param::param("~octree_resolution", octree_res_, 0.2);
-  ros::param::param("~sensor_data_min_height_", sensor_data_min_height_, 0.5);
-  ros::param::param("~voxel_grid_resolution_profile", profile_grid_res_, 0.1);
-  ros::param::param("~voxel_grid_resolution_depth_sensor", depth_grid_res_, 0.1);
+  ros::param::param("~mapping_octree_resolution", octree_res_, 0.2);
+  ros::param::param("~mapping_sensor_data_min_height_", sensor_data_min_height_, 0.5);
+  ros::param::param("~mapping_voxel_grid_res_profile", profile_grid_res_, 0.1);
+  ros::param::param("~mapping_voxel_grid_res_rgbd", depth_grid_res_, 0.1);
 
   double obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max;
   ros::param::param("~object_bounds_x_min", obj_x_min,-1.0);
