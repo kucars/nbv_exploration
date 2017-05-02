@@ -375,6 +375,8 @@ void NBVLoop::runStateMachine()
 
       case NBVState::MOVING_COMPLETE:
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
+
+        ros::Duration(0.2).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
         model_profiler_->callMappingService(nbv_exploration::MappingSrv::Request::GET_CAMERA_DATA);
 
         state = NBVState::TERMINATION_CHECK;
@@ -411,6 +413,10 @@ void NBVLoop::runStateMachine()
     ros::spinOnce();
     loop_rate.sleep();
   }
+
+  // Node achieved termination condition, spin to continue publishing visualization data
+  if (is_terminating)
+    ros::spin();
 
   return;
 }
