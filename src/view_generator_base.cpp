@@ -135,14 +135,10 @@ bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
 bool ViewGeneratorBase::isValidViewpoint(Pose p)
 {
   if (!isInsideBounds(p) )
-  {
     return false;
-  }
     
   if (isCollidingWithOctree(p) )
-  {
     return false;
-  }
     
   return true;
 }
@@ -180,6 +176,11 @@ void ViewGeneratorBase::setNavigationBounds(double x_min, double x_max, double y
 void ViewGeneratorBase::setMap(octomap::OcTree* oct){
   tree_ = oct;
   updateCollisionBoxesFromOctomap();
+}
+
+void ViewGeneratorBase::setMapPrediction(octomap::OcTree* oct)
+{
+  tree_prediction_ = oct;
 }
 
 void ViewGeneratorBase::setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)

@@ -53,10 +53,8 @@ void ViewGeneratorNN::generateViews()
         {
           for (int i_yaw=-1; i_yaw<=1; i_yaw++)
           {
-            /*
             if (i_x==0 && i_y==0 && i_z==0 && i_yaw==0)
               continue;
-            */
             
             Pose p;
             p.position.x = currX + res_x_*i_x*cos(currYaw) + res_y_*i_y*sin(currYaw);

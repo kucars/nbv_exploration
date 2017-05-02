@@ -40,8 +40,9 @@ def main():
 
         # Add legends
         legends = []
-        legends.append( ax_plot[1].legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True) )
-        legends.append( ax_plot[2].legend(loc='center left', bbox_to_anchor=(1, 0.5)) )
+        legends.append( ax_plot[0].legend(loc='upper center', bbox_to_anchor=(0.5, 1.3), shadow=True) )
+        #legends.append( ax_plot[1].legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True) )
+        #legends.append( ax_plot[2].legend(loc='center left', bbox_to_anchor=(1, 0.5)) )
 
         # Set the fontsize
         for leg in legends:

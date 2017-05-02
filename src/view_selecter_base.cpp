@@ -411,7 +411,7 @@ double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
 {
 	double p = getNodeOccupancy(node);
 	
-  if (is_ignoring_clamping_entropies_ && p <= tree_->getClampingThresMin() || p >= tree_->getClampingThresMax() )
+  if (is_ignoring_clamping_entropies_ && (p <= tree_->getClampingThresMin() || p >= tree_->getClampingThresMax()) )
 		return 0;
 		
 	return - p*log(p) - (1-p)*log(1-p);

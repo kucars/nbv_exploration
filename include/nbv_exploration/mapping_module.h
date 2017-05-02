@@ -69,6 +69,7 @@ private:
   void initializeParameters();
   void initializeTopicHandlers();
   void processScans();
+  void updatePrediction(octomap::OcTree* octree_in, PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar);
 
   // =========
   // Variables

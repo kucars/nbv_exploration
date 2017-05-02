@@ -43,7 +43,7 @@ void MappingModule::run()
       i=30;
 
       // Publish profile Cloud
-      if (cloud_ptr_profile_)
+      if (cloud_ptr_profile_ && pub_scan_cloud_.getNumSubscribers() > 0)
       {
         sensor_msgs::PointCloud2 cloud_msg;
         pcl::toROSMsg(*cloud_ptr_profile_, cloud_msg);
@@ -53,7 +53,7 @@ void MappingModule::run()
       }
 
       // Publish RGB-D Cloud
-      if (cloud_ptr_rgbd_)
+      if (cloud_ptr_rgbd_ && pub_rgbd_cloud_.getNumSubscribers() > 0)
       {
         sensor_msgs::PointCloud2 cloud_msg;
         pcl::toROSMsg(*cloud_ptr_rgbd_, cloud_msg);
@@ -63,7 +63,7 @@ void MappingModule::run()
       }
 
       // Publish octomap
-      if (octree_)
+      if (octree_ /*&& pub_tree_.getNumSubscribers() > 0*/)
       {
         octomap_msgs::Octomap msg;
         octomap_msgs::fullMapToMsg (*octree_, msg);
@@ -73,7 +73,7 @@ void MappingModule::run()
         pub_tree_.publish(msg);
       }
 
-      if (octree_prediction_)
+      if (octree_prediction_ /*&& pub_tree_prediction_.getNumSubscribers() > 0*/)
       {
         octomap_msgs::Octomap msg;
         octomap_msgs::fullMapToMsg (*octree_prediction_, msg);
@@ -307,12 +307,14 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
 {
     if (is_debugging_)
     {
-        std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
+      std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
     }
 
     if (!is_get_camera_data_)
     {
-      //std::cout << "Not allowed to process depth data yet\n";
+      if (is_debugging_)
+        std::cout << "[Mapping]" << cc.yellow << "Not allowed to process depth data yet\n";
+
       return;
     }
 
@@ -359,6 +361,10 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     octomap::point3d sensor_dir = pose_conversion::getOctomapDirectionVectorFromTransform(transform);
 
     addPointCloudToTree(octree_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+
+    // == Update prediction, if necessary
+    if (is_checking_symmetry_)
+      updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
 
     // == Done updating
     is_get_camera_data_ = false;
@@ -799,4 +805,36 @@ void MappingModule::processScans()
   t_end = ros::Time::now().toSec();
   std::cout << "[Mapping] " << cc.green << "Done processing.\n" << cc.reset;
   std::cout << "   Total time: " << t_end-t_start << " sec\tTotal scan: " << count << "\t(" << (t_end-t_start)/count << " sec/scan)\n";
+}
+
+void MappingModule::updatePrediction(octomap::OcTree* octree_in, PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar)
+{
+  // Clear predictions along rays
+  // Modified version of from MappingModule::addPointCloudToTree()
+
+  if (!is_checking_symmetry_)
+    return;
+
+  octomap::Pointcloud ocCloud;
+  for (int j=0; j<cloud_in.points.size(); j++)
+  {
+    ocCloud.push_back(cloud_in.points[j].x,
+                      cloud_in.points[j].y,
+                      cloud_in.points[j].z);
+  }
+
+  // == Insert point cloud based on planar (camera) or spherical (laser) scan data
+  octomap::KeySet free_cells, occupied_cells;
+
+  if (isPlanar)
+    computeTreeUpdatePlanar(octree_in, ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
+  else
+    octree_in->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
+
+  // Clear all predicted values
+  for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
+    octree_in->updateNode(*it, -5.0f);
+
+  for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
+    octree_in->updateNode(*it, -5.0f);
 }

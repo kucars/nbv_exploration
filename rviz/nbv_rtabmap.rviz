@@ -3,11 +3,9 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /TF1/Frames1
-        - /OccupancyGrid1
+      Expanded: ~
       Splitter Ratio: 0.5
-    Tree Height: 328
+    Tree Height: 476
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -48,45 +46,6 @@ Visualization Manager:
       Plane Cell Count: 40
       Reference Frame: <Fixed Frame>
       Value: true
-    - Class: rviz/TF
-      Enabled: true
-      Frame Timeout: 15
-      Frames:
-        All Enabled: false
-        floating_sensor/base_link:
-          Value: true
-        floating_sensor/camera_depth_optical_frame:
-          Value: true
-        floating_sensor/laser_frame:
-          Value: true
-        world:
-          Value: false
-      Marker Scale: 1
-      Name: TF
-      Show Arrows: true
-      Show Axes: true
-      Show Names: true
-      Tree:
-        world:
-          floating_sensor/base_link:
-            floating_sensor/camera_depth_optical_frame:
-              {}
-            floating_sensor/laser_frame:
-              {}
-      Update Interval: 0
-      Value: true
-    - Class: rviz/Image
-      Enabled: true
-      Image Topic: /iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: Image
-      Normalize Range: true
-      Queue Size: 2
-      Transport Hint: raw
-      Unreliable: false
-      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -117,36 +76,6 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud2
-      Color: 255; 255; 0
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 4096
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: Global Cloud
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.03
-      Style: Flat Squares
-      Topic: /global_cloud
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -219,24 +148,24 @@ Visualization Manager:
       Color: 0; 85; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: Profile
+      Name: RGBD Cloud
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.05
       Style: Flat Squares
-      Topic: /nbv_exploration/profile_cloud
+      Topic: /nbv_exploration/rgbd_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -249,13 +178,13 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: Scan Cloud
+      Name: Profile Cloud
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
@@ -266,7 +195,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 0.2
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -279,7 +208,7 @@ Visualization Manager:
       Color: 0; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -296,38 +225,23 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.1
-      Class: rviz/Pose
-      Color: 255; 170; 0
-      Enabled: true
-      Head Length: 0.25
-      Head Radius: 0.25
-      Name: Ground Truth
-      Shaft Length: 0.5
-      Shaft Radius: 0.125
-      Shape: Arrow
-      Topic: /iris/ground_truth/pose
-      Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 0.1
       Class: octomap_rviz_plugin/OccupancyMap
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Max. Octree Depth: 16
       Name: OccupancyMap
       Octomap Binary Topic: /nbv_exploration/output_tree
       Unreliable: false
-      Value: true
+      Value: false
     - Class: octomap_rviz_plugin/OccupancyGrid
       Enabled: true
       Max. Height Display: 3.40282e+38
       Max. Octree Depth: 16
       Min. Height Display: -3.40282e+38
-      Name: OccupancyGrid
+      Name: OcTree
       Octomap Topic: /nbv_exploration/output_tree
       Queue Size: 1
       Unknown voxel distance: 1
@@ -335,105 +249,157 @@ Visualization Manager:
       Voxel Alpha: 1
       Voxel Coloring: Cell Probability
       Voxel Rendering: Unknown Near Occupied 2
-    - Class: rviz/Marker
+    - Class: octomap_rviz_plugin/OccupancyGrid
       Enabled: false
-      Marker Topic: collision_marker
-      Name: Collision Marker
-      Namespaces:
-        {}
-      Queue Size: 100
+      Max. Height Display: 3.40282e+38
+      Max. Octree Depth: 16
+      Min. Height Display: -3.40282e+38
+      Name: OcTree Predicted
+      Octomap Topic: /nbv_exploration/output_tree_predicted
+      Queue Size: 1
+      Unknown voxel distance: 2
       Value: false
-    - Class: rviz/Marker
+      Voxel Alpha: 1
+      Voxel Coloring: Cell Probability
+      Voxel Rendering: Occupied
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.1
+          Class: rviz/Pose
+          Color: 255; 170; 0
+          Enabled: true
+          Head Length: 0.25
+          Head Radius: 0.25
+          Name: Ground Truth
+          Shaft Length: 0.5
+          Shaft Radius: 0.125
+          Shape: Arrow
+          Topic: /iris/ground_truth/pose
+          Unreliable: false
+          Value: true
+        - Class: rviz/Image
+          Enabled: true
+          Image Topic: /iris/xtion_sensor/iris/xtion_sensor_camera/rgb/image_raw
+          Max Value: 1
+          Median window: 5
+          Min Value: 0
+          Name: Image
+          Normalize Range: true
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+      Enabled: false
+      Name: Iris
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: RGB8
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 4096
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: FS Depth Points
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.01
+          Style: Flat Squares
+          Topic: /floating_sensor/camera/depth/points
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/LaserScan
+          Color: 255; 255; 255
+          Color Transformer: Intensity
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 4.48416e-44
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: FS Scan
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.01
+          Style: Flat Squares
+          Topic: /floating_sensor/scan
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
       Enabled: true
-      Marker Topic: /visualization_marker
-      Name: Evaluation Rays
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Alpha: 1
-      Axes Length: 1
-      Axes Radius: 0.1
-      Class: rviz/Pose
-      Color: 85; 170; 0
+      Name: Floating Sensor
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /visualization_marker
+          Name: Evaluation Rays
+          Namespaces:
+            "": true
+          Queue Size: 100
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.1
+          Class: rviz/Pose
+          Color: 85; 170; 0
+          Enabled: true
+          Head Length: 0.2
+          Head Radius: 0.3
+          Name: Evaluation Pose
+          Shaft Length: 0.4
+          Shaft Radius: 0.15
+          Shape: Arrow
+          Topic: /visualization_marker_pose
+          Unreliable: false
+          Value: true
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: generated_pose_marker_array
+          Name: Viewpoint Array
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: false
+          Marker Topic: collision_marker
+          Name: Collision Marker
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
       Enabled: true
-      Head Length: 0.2
-      Head Radius: 0.3
-      Name: Evaluation Pose
-      Shaft Length: 0.4
-      Shaft Radius: 0.15
-      Shape: Arrow
-      Topic: /visualization_marker_pose
-      Unreliable: false
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: generated_pose_marker_array
-      Name: Viewpoint Array
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/LaserScan
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 6.72623e-44
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: LaserScan
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.01
-      Style: Flat Squares
-      Topic: /floating_sensor/scan
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: RGB8
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 4096
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: PointCloud2
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.01
-      Style: Flat Squares
-      Topic: /floating_sensor/camera/depth/points
-      Unreliable: false
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
+      Name: Viewpoints
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -458,32 +424,32 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 45.4566
+      Distance: 48.4752
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -1.63095
-        Y: -0.468762
-        Z: -0.583303
+        X: 4.03293
+        Y: 0.7759
+        Z: 5.0916
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.589797
+      Pitch: 1.5698
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.15358
+      Yaw: 4.70857
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 838
+  Height: 1056
   Hide Left Dock: false
   Hide Right Dock: true
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000016a000002bcfc020000000bfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006400fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000028000001d7000000dd00fffffffb0000000a0049006d0061006700650100000205000000df0000001600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000002390000009a0000000000000000fb0000000a0049006d0061006700650100000239000001690000000000000000000000010000010f000002bcfc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000028000002bc000000b000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004630000003efc0100000002fb0000000800540069006d0065010000000000000463000002f600fffffffb0000000800540069006d00650100000000000004500000000000000000000002f3000002bc00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000016a00000396fc020000000bfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006400fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c00610079007301000000280000026b000000dd00fffffffb0000000a0049006d0061006700650100000299000001250000001600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000c00430061006d00650072006100000002390000009a0000000000000000fb0000000a0049006d0061006700650100000239000001690000000000000000000000010000010f000002bcfc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000028000002bc000000b000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007490000003efc0100000002fb0000000800540069006d0065010000000000000749000002f600fffffffb0000000800540069006d00650100000000000004500000000000000000000005d90000039600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -492,6 +458,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: true
-  Width: 1123
-  X: 607
+  Width: 1865
+  X: 55
   Y: 24

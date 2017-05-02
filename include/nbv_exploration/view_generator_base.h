@@ -37,6 +37,7 @@ public:
   
   PointCloudXYZ::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
+  octomap::OcTree* tree_prediction_;
   Pose current_pose_;
   std::vector<Pose> generated_poses;
 
@@ -66,6 +67,7 @@ public:
   void setDebug(bool b);
   void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
   void setMap(octomap::OcTree* oct);
+  void setMapPrediction(octomap::OcTree* oct);
   void setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
   
   virtual void updateCollisionBoxesFromOctomap();

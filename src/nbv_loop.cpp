@@ -112,6 +112,7 @@ void NBVLoop::generateViewpoints()
 
   view_generator_->setCloud(mapping_module_->getPointCloud());
   view_generator_->setMap(mapping_module_->getOctomap());
+  view_generator_->setMapPrediction(mapping_module_->getOctomapPredicted());
   view_generator_->setCurrentPose(vehicle_->getPose());
   view_generator_->generateViews();
 
@@ -223,7 +224,7 @@ void NBVLoop::initViewGenerator()
 void NBVLoop::initViewSelecter()
 {
   int view_selecter_method;
-  ros::param::param("~view_generator_type", view_selecter_method, 0);
+  ros::param::param("~view_selecter_type", view_selecter_method, 0);
 
   switch(view_selecter_method)
   {

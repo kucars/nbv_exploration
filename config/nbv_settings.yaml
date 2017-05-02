@@ -30,15 +30,18 @@ uav_collision_radius: 0.8
 ############
 ## Profiling settings
 ############
-profiling_skip: false
+profiling_skip: true
 profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
 profiling_use_symmetry: true
-# Other
+
+# 0: adaptive circular
+# 1: bounded box
+profiling_method: 1
 profiling_scan_speed: 1.0
-profiling_method: 1 # 0 for adaptive circular, 1 for bounded box
+
 ## Adaptive Circular
 profiling_circular_waypoints: 5
 # UAV position after profiling
