@@ -26,8 +26,10 @@ public:
   ViewSelecterSymmetryPrediction();
 
 protected:
+  octomap::OcTree* tree_predicted_;
   double calculateUtility(Pose p);
   std::string getMethodName();
+  void update();
 };
 
 #endif

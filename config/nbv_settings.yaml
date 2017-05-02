@@ -1,15 +1,19 @@
+############
 ## Debug settings
+############
 debug_nbv_main_states: true
 debug_mapping: false
 debug_view_generator: false
 debug_view_selecter: false
 
+############
 ## Scenario settings
+############
 nav_bounds_x_max: 20
 nav_bounds_x_min: -20
 nav_bounds_y_max: 20
 nav_bounds_y_min: -20
-nav_bounds_z_max: 7
+nav_bounds_z_max: 20
 nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may collide with the floor
 
 object_bounds_x_max: 20
@@ -23,23 +27,48 @@ object_bounds_z_min: 0
 uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
 
-## UAV position after profiling
+############
+## Profiling settings
+############
+profiling_skip: false
+profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
+profiling_check_symmetry: true
+profiling_fill_octomap: true  #Create an octomap in the initial scans?
+profiling_fill_octomap_continuously: false
+profiling_use_symmetry: true
+# Other
+profiling_scan_speed: 1.0
+profiling_method: 1 # 0 for adaptive circular, 1 for bounded box
+## Adaptive Circular
+profiling_circular_waypoints: 5
+# UAV position after profiling
 profiling_complete_pose_x: 0
 profiling_complete_pose_y: -20
 profiling_complete_pose_z: 5
 profiling_complete_pose_yaw: 1.571
 
+############
+## Termination settings
+############
+termination_max_iterations: 300
 
+############
 ## View Generation settings
+############
 view_generator_type: 0 # 0 for nearest Neighbor (NN), 1 for frontier
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
 view_generator_nn_pos_res_yaw: rad(pi/4)
 
+############
 ## View Selecter settings
+############
 # 0: Information Gain (IG)
 # 1: Information Gain with exponential Distance
 # 2: Prediction based on symmetry
-view_selecter_type: 0
+view_selecter_type: 2
+view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
+view_selecter_ignore_entropies_at_clamping_points: true
 view_selecter_weight_distance: 1.1
+

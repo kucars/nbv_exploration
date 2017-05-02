@@ -5,7 +5,7 @@
 TerminationCheckBase::TerminationCheckBase():
   current_iteration_(0)
 {
-  ros::param::param("~max_iterations", max_iterations_, 300);
+  ros::param::param("~termination_max_iterations", max_iterations_, 300);
 }
 
 void TerminationCheckBase::update()

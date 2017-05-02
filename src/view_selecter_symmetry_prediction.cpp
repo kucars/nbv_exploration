@@ -25,3 +25,9 @@ std::string ViewSelecterSymmetryPrediction::getMethodName()
 {
   return "Symmetry Prediction";
 }
+
+void ViewSelecterSymmetryPrediction::update()
+{
+  ViewSelecterSymmetryPrediction::update(); //Call base class update
+  tree_predicted_ = view_gen_->tree_;
+}

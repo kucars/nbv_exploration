@@ -28,6 +28,10 @@ ViewSelecterBase::ViewSelecterBase():
   // Read parameters
   // >>>>>>>>>>>>>>>>>
   ros::param::param("~debug_view_selecter", is_debug_, true);
+  ros::param::param("~view_selecter_must_see_occupied", must_see_occupied_, true);
+  ros::param::param("~view_selecter_ignore_entropies_at_clamping_points", is_ignoring_clamping_entropies_, true);
+
+
 
   double fov_h, fov_v, r_max, r_min;
   ros::param::param("~fov_horizontal", fov_h, 60.0);
@@ -218,6 +222,11 @@ double ViewSelecterBase::calculateIG(Pose p)
 
   int nodes_processed = nodes_traversed;
 
+  // Views that do not see a single occupied cell are discarded
+  // This is to encourage the vehivle to look at the object at all times
+  if (must_see_occupied_ && nodes_occ == 0)
+    ig_total = -1;
+
   t_end = ros::Time::now().toSec();
   if(is_debug_)
   {
@@ -226,7 +235,6 @@ double ViewSelecterBase::calculateIG(Pose p)
     std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
     std::cout << "\tAverage nodes per ray: " << nodes_traversed/rays_far_plane_.size() << "\n";
   }
-
   return ig_total;
 }
 
@@ -342,7 +350,10 @@ void ViewSelecterBase::evaluate()
     computeOrientationMatrix(p);
 
     double utility = calculateUtility(p);
-    info_utilities_.push_back(utility);
+
+    // Ignore invalid utility values (may arise if we rejected pose based on IG requirements)
+    if (utility>=0)
+      info_utilities_.push_back(utility);
 
     if (utility > info_utility_max_)
     {
@@ -400,7 +411,7 @@ double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
 {
 	double p = getNodeOccupancy(node);
 	
-	if (p <= tree_->getClampingThresMin() || p >= tree_->getClampingThresMax() )
+  if (is_ignoring_clamping_entropies_ && p <= tree_->getClampingThresMin() || p >= tree_->getClampingThresMax() )
 		return 0;
 		
 	return - p*log(p) - (1-p)*log(1-p);

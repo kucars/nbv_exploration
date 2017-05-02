@@ -33,15 +33,13 @@ class ViewSelecterBase
 {
 public:
   ViewSelecterBase();
-  ~ViewSelecterBase(){};
 
   void evaluate();
-
   virtual std::string getMethodName();
   Pose  getTargetPose();
   void setCameraSettings(double fov_h, double fov_v, double r_max, double r_min);
   void setViewGenerator(ViewGeneratorBase* v);
-  void update();
+  virtual void update();
 
 protected:
   ViewGeneratorBase* view_gen_;
@@ -66,6 +64,8 @@ protected:
   float info_utility_med_;
   
   bool is_debug_;
+  bool must_see_occupied_;
+  bool is_ignoring_clamping_entropies_;
   
   std::vector<Eigen::Vector3d> rays_near_plane_;
   std::vector<Eigen::Vector3d> rays_far_plane_;
