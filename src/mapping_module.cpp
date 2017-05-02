@@ -182,20 +182,6 @@ void MappingModule::addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in
 
   cloud_out = voxel_filtered;
 
-
-  // == Statistical outlier removal
-  /*
-  PointCloudXYZ::Ptr stat_filtered(new PointCloudXYZ);
-
-  pcl::StatisticalOutlierRemoval<PointXYZ> stat_sor;
-  stat_sor.setInputCloud (voxel_filtered);
-  stat_sor.setMeanK (10);
-  stat_sor.setStddevMulThresh (0.5);
-  stat_sor.filter (*stat_filtered);
-
-  cloud_out = stat_filtered;
-  */
-
   if (is_debugging_)
   {
     std::cout << "[Mapping] " << cc.blue << "Number of points in filtered map: " << cloud_out->points.size() << "\n" << cc.reset;
