@@ -422,6 +422,9 @@ bool MappingModule::commandProfileLoad()
     return false;
   }
 
+  // Initialize cloud_ptr_rgbd_ with profile data
+  copyPointCloud(*cloud_ptr_profile_, *cloud_ptr_rgbd_);
+
   // Symmetry
   if (is_checking_symmetry_)
   {
@@ -536,6 +539,9 @@ bool MappingModule::commandProfilingStop()
 {
   std::cout << "[Mapping] " << cc.green << "Done profiling\n" << cc.reset;
   is_scanning_ = false;
+
+  // Initialize cloud_ptr_rgbd_ with profile data
+  copyPointCloud(*cloud_ptr_profile_, *cloud_ptr_rgbd_);
 
   if (is_checking_symmetry_)
   {
