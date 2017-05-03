@@ -58,13 +58,13 @@
       <!-- full size -->
       <arg name="world_name"
         if="$(arg world_type_full_size)"
-        value="$(find rotors_gazebo)/worlds/etihad_aircraft_world.world"
+        value="$(find nbv_exploration)/worlds/etihad_aircraft_world.world"
       />
 
       <!-- half size -->
       <arg name="world_name"
         if="$(arg world_type_half_size)"
-        value="$(find rotors_gazebo)/worlds/etihad_aircraft_world_half.world"
+        value="$(find nbv_exploration)/worlds/etihad_aircraft_world_half.world"
       />
     </include>
 

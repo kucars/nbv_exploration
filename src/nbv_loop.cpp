@@ -419,7 +419,13 @@ void NBVLoop::runStateMachine()
 
   // Node achieved termination condition, spin to continue publishing visualization data
   if (is_terminating)
-    ros::spin();
+  {
+    bool should_spin;
+    ros::param::param("~termination_ros_spin_afterwards", should_spin, true);
+
+    if (should_spin)
+      ros::spin();
+  }
 
   return;
 }
