@@ -17,6 +17,7 @@
 
 ViewSelecterBase::ViewSelecterBase():
   info_iteration_(0),
+  info_distance_total_(0),
   info_utility_max_(-std::numeric_limits<float>::infinity()) //-inf
 {
 	ros::NodeHandle n;
@@ -376,9 +377,13 @@ void ViewSelecterBase::evaluate()
   std::sort(sorted_utilities.begin(), sorted_utilities.end());
   info_utility_med_ = sorted_utilities[sorted_utilities.size()/2];
 
+  // Increase total distance travelled
+  info_distance_total_ += calculateDistance(selected_pose_);
+
   // Publish information about our viewpoint selection scheme
   nbv_exploration::IterationInfo iteration_msg;
   iteration_msg.iteration = info_iteration_;
+  iteration_msg.total_distance = info_distance_total_;
   iteration_msg.total_entropy = info_entropy_total_;
   iteration_msg.method = getMethodName();
   iteration_msg.utilities = info_utilities_;

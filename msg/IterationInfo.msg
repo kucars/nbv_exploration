@@ -4,3 +4,4 @@ string method
 float32 max_utility
 float32 med_utility
 float32[] utilities
+float32 total_distance

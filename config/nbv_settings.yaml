@@ -26,14 +26,6 @@ object_bounds_z_min: 0
 
 
 ############
-## Mapping settings
-############
-mapping_voxel_grid_res_profile: 0.1
-mapping_voxel_grid_res_rgbd: 0.02
-mapping_octree_resolution: 0.2
-mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
-
-############
 ## Vehicle settings
 ############
 # 0: floating sensor
@@ -44,6 +36,14 @@ vehicle_type: 0
 uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
 
+
+############
+## Mapping settings
+############
+mapping_voxel_grid_res_profile: 0.1
+mapping_voxel_grid_res_rgbd: 0.04
+mapping_octree_resolution: 0.2
+mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
 
 ############
 ## Profiling settings
@@ -74,8 +74,8 @@ profiling_complete_pose_yaw: 1.571
 ############
 # 0: Max iterations
 # 1: Entropy Stagnation
-termination_type: 0
-termination_iterations_max: 10
+termination_type: 1
+termination_iterations_max: 300
 termination_entropy_min_change_threshold: 0.0001
 termination_entropy_window_size: 5
 

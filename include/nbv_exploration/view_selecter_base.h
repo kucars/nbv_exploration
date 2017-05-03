@@ -33,6 +33,7 @@ class ViewSelecterBase
 {
 public:
   int   info_iteration_;
+  float info_distance_total_;
   float info_entropy_total_;
   std::vector<float> info_utilities_;
   float info_utility_max_;

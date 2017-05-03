@@ -17,6 +17,7 @@ iterations = {}
 total_entropy = {}
 max_utility = {}
 med_utility = {}
+distance = {}
 file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
 files_csv = {} #Array of open csv files
 
@@ -33,11 +34,11 @@ def main():
         for key in iterations:
           ax_plot[0].plot(iterations[key], total_entropy[key], label=key)
           ax_plot[1].plot(iterations[key], max_utility[key], label=key)
-          ax_plot[2].plot(iterations[key], med_utility[key], label=key)
+          ax_plot[2].plot(iterations[key], distance[key], label=key)
 
         ax_plot[0].set_ylabel('Global Entropy')
         ax_plot[1].set_ylabel('Max Utility')
-        ax_plot[2].set_ylabel('Median Utility')
+        ax_plot[2].set_ylabel('Distance (m)')
         ax_plot[2].set_xlabel('Iterations')
 
         # Add legends
@@ -69,6 +70,7 @@ def callback(data):
     total_entropy[method] = []
     max_utility[method] = []
     med_utility[method] = []
+    distance[method] = []
 
     # Open csv file in append mode
     files_csv[method] = open(file_prefix + method + ".csv", "a")
@@ -77,6 +79,7 @@ def callback(data):
       'Iteration',
       'Entropy Total',
       'Entropy Change %',
+      'Distance Travelled',
       'Utility Max',
       'Utility Median',
       'Count',
@@ -88,6 +91,7 @@ def callback(data):
   total_entropy[method].append(data.total_entropy)
   max_utility[method].append(data.max_utility)
   med_utility[method].append(data.med_utility)
+  distance[method].append(data.total_distance)
 
   entropy_change = '';
   if (len(total_entropy[method]) > 1):
@@ -100,6 +104,7 @@ def callback(data):
     data.iteration,
     data.total_entropy,
     entropy_change,
+    data.total_distance,
     data.max_utility,
     data.med_utility,
     len(data.utilities)
