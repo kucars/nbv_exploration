@@ -116,7 +116,8 @@ add_executable(nbv_main
   src/symmetry_detector.cpp
 
   src/termination_check_base.cpp
-  src/termination_check_entropy_stagnation.cpp
+  src/termination_check_global_entropy_percent_diff.cpp
+  src/termination_check_local_entropy_per_voxel.cpp
   src/termination_check_max_iterations.cpp
 
   src/view_generator_base.cpp

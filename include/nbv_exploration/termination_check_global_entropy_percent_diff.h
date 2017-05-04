@@ -1,12 +1,12 @@
-#ifndef TERMINATION_CHECK_ENTROPY_STAGNATION_H
-#define TERMINATION_CHECK_ENTROPY_STAGNATION_H
+#ifndef TERMINATION_CHECK_GLOBAL_ENTROPY_PERCENTAGE_DIFFERENCE_H
+#define TERMINATION_CHECK_GLOBAL_ENTROPY_PERCENTAGE_DIFFERENCE_H
 
 #include "nbv_exploration/termination_check_base.h"
 
-class TerminationCheckEntropyStagnation: public TerminationCheckBase
+class TerminationCheckGlobalEntropyPercentageDifference: public TerminationCheckBase
 {
 public:
-  TerminationCheckEntropyStagnation();
+  TerminationCheckGlobalEntropyPercentageDifference();
   void update();
   bool isTerminated();
 

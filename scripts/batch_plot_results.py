@@ -141,6 +141,8 @@ def main():
 
   for r in range(total_runs):
     for key, method in methods.items():
+      if (r >= len(method)):
+        continue
       ax_plot[r].plot(method[r].iterations, method[r].entropy_total, label=key)
       ax_plot[r].set_ylabel('Total Entropy')
       ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
@@ -151,6 +153,8 @@ def main():
 
   for r in range(total_runs):
     for key, method in methods.items():
+      if (r >= len(method)):
+        continue
       ax_plot[r].plot(method[r].iterations, method[r].distance, label=key)
       ax_plot[r].set_ylabel('Distance (m)')
       ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
@@ -162,6 +166,8 @@ def main():
 
   for r in range(total_runs):
     for key, method in methods.items():
+      if (r >= len(method)):
+        continue
       ax_plot[r].plot(method[r].iterations, method[r].utility_max, label=key)
       ax_plot[r].set_ylabel('Utility Max')
       ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)

@@ -1,12 +1,12 @@
-#include "nbv_exploration/termination_check_entropy_stagnation.h"
+#include "nbv_exploration/termination_check_global_entropy_percent_diff.h"
 
-TerminationCheckEntropyStagnation::TerminationCheckEntropyStagnation()
+TerminationCheckGlobalEntropyPercentageDifference::TerminationCheckGlobalEntropyPercentageDifference()
 {
-  ros::param::param<double>("~termination_entropy_min_change_threshold", min_entropy_threshold_, 0.01);
+  ros::param::param<double>("~termination_entropy_global_min_change_threshold", min_entropy_threshold_, 0.01);
   ros::param::param<int>("~termination_entropy_window_size", window_size_, 1);
 }
 
-bool TerminationCheckEntropyStagnation::isTerminated()
+bool TerminationCheckGlobalEntropyPercentageDifference::isTerminated()
 {
   // If we haven't gone through enough iterations, continue
   if (entropy_change_history_.size() < window_size_)
@@ -30,7 +30,7 @@ bool TerminationCheckEntropyStagnation::isTerminated()
   return false;
 }
 
-void TerminationCheckEntropyStagnation::update()
+void TerminationCheckGlobalEntropyPercentageDifference::update()
 {
   // Get last entropy value and append it
   float entropy_current = view_selecter_->info_entropy_total_;
@@ -48,5 +48,5 @@ void TerminationCheckEntropyStagnation::update()
     entropy_change_history_.push_back( change );
   }
 
-  std::cout << "[TerminationCheckEntropyStagnation]: " << cc.green << "Entropy: " << entropy_history_.back() << "\tEntropy change: " << entropy_change_history_.back()*100.0 << "%\n" << cc.reset;
+  std::cout << "[TerminationCheckGlobalEntropyPercentageDifference]: " << cc.green << "Entropy: " << entropy_history_.back() << "\tEntropy change: " << entropy_change_history_.back()*100.0 << "%\n" << cc.reset;
 }

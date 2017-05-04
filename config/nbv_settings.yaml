@@ -48,7 +48,7 @@ mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register
 ############
 ## Profiling settings
 ############
-profiling_skip: false
+profiling_skip: true
 profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
@@ -82,10 +82,12 @@ profiling_complete_pose_yaw: 1.571
 ## Termination settings
 ############
 # 0: Max iterations
-# 1: Entropy Stagnation
-termination_type: 1
+# 1: Global Entropy Change Percentage Difference
+# 2: Local Entropy Change Per Voxel
+termination_type: 2
 termination_iterations_max: 300
-termination_entropy_min_change_threshold: 0.0001
+termination_entropy_global_min_change_threshold: 0.0001
+termination_entropy_local_min_change_threshold: 0.001
 termination_entropy_window_size: 5
 termination_ros_spin_afterwards: true
 
@@ -94,8 +96,9 @@ termination_ros_spin_afterwards: true
 ## View Generation settings
 ############
 # 0: Nearest Neighbor (NN)
+# 1: Adaptive NN
 # 1: Frontier
-view_generator_type: 0
+view_generator_type: 1
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
@@ -108,7 +111,7 @@ view_generator_nn_pos_res_yaw: rad(pi/4)
 # 0: Information Gain (IG)
 # 1: Information Gain with exponential Distance
 # 2: Prediction based on symmetry
-view_selecter_type: 1
+view_selecter_type: 2
 view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
 view_selecter_ignore_entropies_at_clamping_points: true
 view_selecter_weight_distance: 0.5

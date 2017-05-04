@@ -214,7 +214,10 @@ void NBVLoop::initTerminationChecker()
     termination_check_module_ = new TerminationCheckMaxIterations();
     break;
   case 1:
-    termination_check_module_ = new TerminationCheckEntropyStagnation();
+    termination_check_module_ = new TerminationCheckGlobalEntropyPercentageDifference();
+    break;
+  case 2:
+    termination_check_module_ = new TerminationCheckLocalEntropyPerVoxel();
     break;
   }
 
