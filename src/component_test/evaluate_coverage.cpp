@@ -174,7 +174,11 @@ int main (int argc, char** argv)
   // ===============
   // Create voxel grids
   // ===============
-  double voxelRes = 0.1;
+  double voxelRes;
+  if (argc > 1)
+    voxelRes = atof(argv[1])  ;
+  else
+    voxelRes = 0.05;
 
   int grid_size_ref, grid_size_final;
   pcl::VoxelGridOcclusionEstimationT grid_ref, grid_final;
