@@ -54,7 +54,7 @@ int matchesForCloud1InCloud2(PointCloudXYZ::Ptr& cloud_match, PointCloudXYZ::Ptr
   return points_corresponding;
 }
 
-void readCloudFromFile(std::string filename, PointCloudXYZ::Ptr& cloud_ptr, double scale=1)
+void readCloudFromFile(std::string filename, PointCloudXYZ::Ptr& cloud_ptr)
 {
   if (pcl::io::loadPCDFile<PointXYZ> (filename, *cloud_ptr) == -1)
   {
@@ -69,13 +69,22 @@ void readCloudFromFile(std::string filename, PointCloudXYZ::Ptr& cloud_ptr, doub
   for (int i=0; i<cloud_ptr->points.size(); i++)
   {
     PointXYZ p = cloud_ptr->points[i];
+    cloud_scale->points.push_back(p);
+  }
 
-    if (scale != 1)
-    {
-      p.x *= scale;
-      p.y *= scale;
-      p.z *= scale;
-    }
+  cloud_ptr = cloud_scale;
+}
+
+void transformCloud(PointCloudXYZ::Ptr& cloud_ptr, double scale=1, double x_shift=0, double y_shift=0, double z_shift=0)
+{
+  PointCloudXYZ::Ptr cloud_scale (new PointCloudXYZ);
+  for (int i=0; i<cloud_ptr->points.size(); i++)
+  {
+    PointXYZ p = cloud_ptr->points[i];
+
+    p.x = p.x*scale + x_shift;
+    p.y = p.y*scale + y_shift;
+    p.z = p.z*scale + z_shift;
 
     cloud_scale->points.push_back(p);
   }
@@ -91,19 +100,24 @@ int main (int argc, char** argv)
   PointCloudXYZ::Ptr cloud_ref (new PointCloudXYZ);
   PointCloudXYZ::Ptr cloud_final (new PointCloudXYZ);
 
+  // ===============
   // Read input file
-  readCloudFromFile(filename_reference, cloud_ref, 0.5);
+  // ===============
+  readCloudFromFile(filename_reference, cloud_ref);
+  transformCloud(cloud_ref, 0.5, 0, 0, 1.5);
+
   readCloudFromFile(filename_final, cloud_final);
 
   // ================
   // Compute accuracy
   // ================
+  /*
   int true_positives = matchesForCloud1InCloud2(cloud_final, cloud_ref, 0.05);
   int false_positives = cloud_final->points.size() - true_positives;
 
   printf("Number of TP: %d/%lu\n", true_positives, cloud_final->points.size());
   printf("Number of FP: %d/%lu\n", false_positives, cloud_final->points.size());
-
+  */
 
   // ================
   // Compute coverage
