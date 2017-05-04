@@ -10,9 +10,9 @@ bool TerminationCheckBase::isTerminated()
   return false;
 }
 
-void TerminationCheckBase::setViewSelecter(ViewSelecterBase* v)
+void TerminationCheckBase::setHistory(NBVHistory* h)
 {
-  view_selecter_ = v;
+  nbv_history_ = h;
 }
 
 void TerminationCheckBase::update()

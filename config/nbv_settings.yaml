@@ -97,12 +97,14 @@ termination_ros_spin_afterwards: true
 ############
 # 0: Nearest Neighbor (NN)
 # 1: Adaptive NN
-# 1: Frontier
+# 2: Frontier
 view_generator_type: 1
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
 view_generator_nn_pos_res_yaw: rad(pi/4)
+view_generator_adaptive_nn_local_minima_threshold: 0.005
+view_generator_adaptive_nn_local_minima_iterations: 3
 
 
 ############
@@ -111,7 +113,7 @@ view_generator_nn_pos_res_yaw: rad(pi/4)
 # 0: Information Gain (IG)
 # 1: Information Gain with exponential Distance
 # 2: Prediction based on symmetry
-view_selecter_type: 2
+view_selecter_type: 0
 view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
 view_selecter_ignore_entropies_at_clamping_points: true
 view_selecter_weight_distance: 0.5

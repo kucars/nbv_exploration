@@ -1,3 +1,6 @@
+#ifndef NBV_EXPLORATION_MAIN_LOOP_H
+#define NBV_EXPLORATION_MAIN_LOOP_H
+
 #include <ros/ros.h>
 
 #include <geometry_msgs/Pose.h>
@@ -13,18 +16,19 @@
 #include "nbv_exploration/model_profiler_base.h"
 #include "nbv_exploration/model_profiler_bounded_box.h"
 #include "nbv_exploration/model_profiler_circular_adaptive.h"
+#include "nbv_exploration/nbv_history.h"
 #include "nbv_exploration/termination_check_base.h"
 #include "nbv_exploration/termination_check_global_entropy_percent_diff.h"
 #include "nbv_exploration/termination_check_local_entropy_per_voxel.h"
 #include "nbv_exploration/termination_check_max_iterations.h"
 #include "nbv_exploration/view_generator_base.h"
 #include "nbv_exploration/view_generator_frontier.h"
+#include "nbv_exploration/view_generator_adaptive_nn.h"
 #include "nbv_exploration/view_generator_nn.h"
 #include "nbv_exploration/view_selecter_base.h"
 #include "nbv_exploration/view_selecter_ig.h"
 #include "nbv_exploration/view_selecter_ig_exp_distance.h"
 #include "nbv_exploration/view_selecter_symmetry_prediction.h"
-
 
 #include "control/vehicle_control_base.h"
 #include "control/vehicle_control_floating_sensor.h"
@@ -54,6 +58,7 @@ public:
   // MODULES
   MappingModule*        mapping_module_;
   ModelProfilerBase*    model_profiler_;
+  NBVHistory*           history_;
   TerminationCheckBase* termination_check_module_;
   VehicleControlBase*   vehicle_;
   ViewGeneratorBase*    view_generator_;
@@ -109,8 +114,10 @@ public:
   void evaluateViewpoints();
   void positionVehicleAfterProfiling();
   void profilingProcessing();
+  void updateHistory();
 
   double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
   double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
 };
 
+#endif // end include

@@ -13,6 +13,7 @@
 #include <visualization_msgs/MarkerArray.h>
 
 #include "nbv_exploration/common.h"
+#include "nbv_exploration/nbv_history.h"
 
 typedef geometry_msgs::Pose Pose;
 
@@ -27,6 +28,7 @@ protected:
   double nav_bounds_x_min_, nav_bounds_y_min_, nav_bounds_z_min_;
   bool is_debug_;
   std::vector<fcl::CollisionObject*> collision_boxes_;
+  NBVHistory* nbv_history_;
   
 public:
   // ==========
@@ -65,6 +67,7 @@ public:
   void setCloud(PointCloudXYZ::Ptr in_occ_cloud);
   void setCurrentPose(Pose p);
   void setDebug(bool b);
+  void setHistory(NBVHistory* h);
   void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
   void setMap(octomap::OcTree* oct);
   void setMapPrediction(octomap::OcTree* oct);

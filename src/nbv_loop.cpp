@@ -58,12 +58,14 @@ NBVLoop::NBVLoop()
   // >>>>>>>>>>>>>>>>
   // Initialize modules
   // >>>>>>>>>>>>>>>>
+  history_ = new NBVHistory();
   initMappingModule();
   initViewGenerator();
   initViewSelecter();
   initVehicle();
   initModelProfiler();
   initTerminationChecker();
+
 
   // >>>>>>>>>>>>>>>>>
   // Parse Inputs
@@ -132,7 +134,11 @@ void NBVLoop::evaluateViewpoints()
 
   // Evaluate viewpoints
   view_selecter_->evaluate();
-  view_selecter_comparison_->evaluate();
+  //view_selecter_comparison_->evaluate();
+
+  // Update history
+  updateHistory();
+
 
   // Move to next best view
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
@@ -221,7 +227,7 @@ void NBVLoop::initTerminationChecker()
     break;
   }
 
-  termination_check_module_->setViewSelecter(view_selecter_);
+  termination_check_module_->setHistory(history_);
 }
 
 void NBVLoop::initVehicle()
@@ -253,9 +259,14 @@ void NBVLoop::initViewGenerator()
     view_generator_ = new ViewGeneratorNN();
     break;
   case 1:
+    view_generator_ = new ViewGeneratorAdaptiveNN();
+    break;
+  case 2:
     view_generator_ = new ViewGeneratorFrontier();
     break;
   }
+
+  view_generator_->setHistory(history_);
 
 }
 
@@ -312,7 +323,9 @@ void NBVLoop::positionVehicleAfterProfiling()
   vehicle_->setSpeed(-1); //Allow instant teleportation if using the floating sensor. Ignored by other vehicles
   vehicle_->moveVehicle();
 
-  state = NBVState::MOVING_COMPLETE;
+  // Do not process the termination condition, move to view generation
+  state = NBVState::TERMINATION_NOT_MET;
+  //state = NBVState::MOVING_COMPLETE;
 }
 
 void NBVLoop::profilingProcessing(){
@@ -452,4 +465,12 @@ void NBVLoop::terminationCheck()
     state = NBVState::TERMINATION_MET;
   else
     state = NBVState::TERMINATION_NOT_MET;
+}
+
+void NBVLoop::updateHistory()
+{
+  history_->selected_poses.push_back(view_selecter_->getTargetPose());
+  history_->selected_utility.push_back(view_selecter_->info_utility_max_);
+  history_->total_entropy.push_back(view_selecter_->info_entropy_total_);
+  history_->update();
 }

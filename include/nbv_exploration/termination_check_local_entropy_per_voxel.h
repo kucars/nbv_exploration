@@ -16,8 +16,6 @@ protected:
   double min_entropy_threshold_;
   int window_size_;
   double num_voxels_;
-
-  bool is_error_initializing_;
 };
 
 #endif // TERMINATIONCHECKBASE_H

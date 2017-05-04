@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include "nbv_exploration/common.h"
+#include "nbv_exploration/nbv_history.h"
 #include "nbv_exploration/view_selecter_base.h"
 
 class TerminationCheckBase
@@ -10,11 +11,11 @@ class TerminationCheckBase
 public:
   TerminationCheckBase();
   virtual bool isTerminated();
-  void setViewSelecter(ViewSelecterBase* v);
+  void setHistory(NBVHistory* h);
   virtual void update();
 
 protected:
-  ViewSelecterBase* view_selecter_;
+  NBVHistory* nbv_history_;
 };
 
 #endif // TERMINATIONCHECKBASE_H

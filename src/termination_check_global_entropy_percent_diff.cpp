@@ -33,7 +33,7 @@ bool TerminationCheckGlobalEntropyPercentageDifference::isTerminated()
 void TerminationCheckGlobalEntropyPercentageDifference::update()
 {
   // Get last entropy value and append it
-  float entropy_current = view_selecter_->info_entropy_total_;
+  float entropy_current = nbv_history_->total_entropy.back();
   entropy_history_.push_back(entropy_current);
 
   int end = entropy_history_.size()-1;

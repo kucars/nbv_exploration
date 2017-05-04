@@ -105,6 +105,7 @@ install(TARGETS
 
 add_executable(nbv_main
   src/nbv_main.cpp
+  src/nbv_history.cpp
   src/nbv_loop.cpp
 
   src/mapping_module.cpp
@@ -122,6 +123,7 @@ add_executable(nbv_main
 
   src/view_generator_base.cpp
   src/view_generator_frontier.cpp
+  src/view_generator_adaptive_nn.cpp
   src/view_generator_nn.cpp
 
   src/view_selecter_base.cpp

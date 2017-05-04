@@ -163,6 +163,11 @@ void ViewGeneratorBase::setDebug(bool b)
   is_debug_ = b;
 }
 
+void ViewGeneratorBase::setHistory(NBVHistory* h)
+{
+  nbv_history_ = h;
+}
+
 void ViewGeneratorBase::setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)
 {
   nav_bounds_x_min_ = x_min;
