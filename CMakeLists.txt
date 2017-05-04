@@ -152,7 +152,10 @@ add_executable(correct_laser_scan_and_depth src/correct_laser_scan_and_depth.cpp
 add_dependencies(correct_laser_scan_and_depth ${catkin_EXPORTED_TARGETS})
 target_link_libraries(correct_laser_scan_and_depth ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(evaluate_coverage src/component_test/evaluate_coverage.cpp)
+add_executable(evaluate_coverage
+  src/component_test/evaluate_coverage.cpp
+  src/component_test/voxel_grid_occlusion_estimation.cpp
+  )
 add_dependencies(evaluate_coverage ${catkin_EXPORTED_TARGETS})
 target_link_libraries(evaluate_coverage ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OCTOMAP_LIBRARIES})
 

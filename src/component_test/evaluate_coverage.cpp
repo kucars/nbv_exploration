@@ -18,11 +18,74 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
+#include "component_test/voxel_grid_occlusion_estimation.h"
+
 //convenient typedefs
 typedef pcl::PointXYZ PointXYZ;
 typedef pcl::Normal PointN;
 typedef pcl::PointCloud<PointXYZ> PointCloudXYZ;
 typedef pcl::PointCloud<PointN> PointCloudN;
+
+int matchesForGrid1InGrid2(pcl::VoxelGridOcclusionEstimationT g1, pcl::VoxelGridOcclusionEstimationT g2)
+{
+  Eigen::Vector3i min_b = g1.getMinBoxCoordinates ();
+  Eigen::Vector3i max_b = g1.getMaxBoxCoordinates ();
+
+  int MatchedVoxels=0 ;
+
+      //iterate through the entire coverage grid to check the number of matched voxel between the original and the covered ones
+  for (int kk = min_b.z (); kk <= max_b.z (); ++kk)
+  {
+    for (int jj = min_b.y (); jj <= max_b.y (); ++jj)
+    {
+      for (int ii = min_b.x (); ii <= max_b.x (); ++ii)
+      {
+        Eigen::Vector3i ijk (ii, jj, kk);
+        int index1 = g1.getCentroidIndexAt (ijk);
+        if(index1!=-1)
+        {
+          Eigen::Vector4f centroid = g1.getCentroidCoordinate (ijk);
+          Eigen::Vector3i ijk_in_Original= g2.getGridCoordinates(centroid[0],centroid[1],centroid[2]) ;
+
+          int index = g2.getCentroidIndexAt (ijk_in_Original);
+
+          if(index!=-1)
+            MatchedVoxels++;
+        }
+      }
+    }
+  }
+
+  return MatchedVoxels;
+}
+
+ int createVoxelGrid(pcl::VoxelGridOcclusionEstimationT& g1, PointCloudXYZ::Ptr& cloud_ptr, double voxelRes)
+{
+  int OriginalVoxelsSize=0;
+
+  g1.setInputCloud (cloud_ptr);
+  g1.setLeafSize (voxelRes, voxelRes, voxelRes);
+  g1.initializeVoxelGrid();
+  Eigen::Vector3i min_b1 = g1.getMinBoxCoordinates ();
+  Eigen::Vector3i max_b1 = g1.getMaxBoxCoordinates ();
+  for (int kk = min_b1.z (); kk <= max_b1.z (); ++kk)
+  {
+     for (int jj = min_b1.y (); jj <= max_b1.y (); ++jj)
+     {
+         for (int ii = min_b1.x (); ii <= max_b1.x (); ++ii)
+         {
+           Eigen::Vector3i ijk1 (ii, jj, kk);
+           int index1 = g1.getCentroidIndexAt (ijk1);
+           if(index1!=-1)
+           {
+               OriginalVoxelsSize++;
+           }
+         }
+     }
+  }
+
+  return OriginalVoxelsSize;
+}
 
 int matchesForCloud1InCloud2(PointCloudXYZ::Ptr& cloud_match, PointCloudXYZ::Ptr& cloud_ref, float dist_thresh)
 {
@@ -108,6 +171,17 @@ int main (int argc, char** argv)
 
   readCloudFromFile(filename_final, cloud_final);
 
+  // ===============
+  // Create voxel grids
+  // ===============
+  double voxelRes = 0.1;
+
+  int grid_size_ref, grid_size_final;
+  pcl::VoxelGridOcclusionEstimationT grid_ref, grid_final;
+
+  grid_size_ref = createVoxelGrid(grid_ref, cloud_ref, voxelRes);
+  grid_size_final = createVoxelGrid(grid_final, cloud_final, voxelRes);
+
   // ================
   // Compute accuracy
   // ================
@@ -122,8 +196,14 @@ int main (int argc, char** argv)
   // ================
   // Compute coverage
   // ================
-  int matched = matchesForCloud1InCloud2(cloud_ref, cloud_final, 0.05);
-  float coverage = float(matched)/cloud_ref->points.size();
+  int matched;
+  float coverage;
+
+  //matched = matchesForCloud1InCloud2(cloud_ref, cloud_final, 0.05);
+  //coverage = float(matched)/cloud_ref->points.size();
+
+  matched = matchesForGrid1InGrid2(grid_ref, grid_final);
+  coverage = float(matched)/grid_size_ref;
 
   printf("Coverage: %f%%\n", coverage*100);
 
