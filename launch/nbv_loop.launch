@@ -2,18 +2,20 @@
 <launch>
     <arg name="scan_topic" default="/nbv_exploration/scan"/>
     <arg name="debug" default="false"/>
+    <arg name="nbv_settings_file" default="$(find nbv_exploration)/config/nbv_settings.yaml"/>
+
 
     <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="true" output="screen" if="$(arg debug)" launch-prefix="gdb -ex run --args" >
+      <rosparam file="$(arg nbv_settings_file)" command="load" />
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
-      <rosparam file="$(find nbv_exploration)/config/nbv_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
 
       <remap from="scan_in"  to="$(arg scan_topic)"/>
     </node>
 
     <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="true" output="screen" unless="$(arg debug)">
+      <rosparam file="$(arg nbv_settings_file)" command="load" />
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
-      <rosparam file="$(find nbv_exploration)/config/nbv_settings.yaml" command="load" />
       <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
 
       <remap from="scan_in"  to="$(arg scan_topic)"/>

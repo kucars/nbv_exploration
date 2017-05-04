@@ -1,0 +1,105 @@
+############
+## Debug settings
+############
+debug_nbv_main_states: true
+debug_mapping: false
+debug_view_generator: false
+debug_view_selecter: false
+
+
+############
+## Scenario settings
+############
+nav_bounds_x_max: 20
+nav_bounds_x_min: -20
+nav_bounds_y_max: 20
+nav_bounds_y_min: -20
+nav_bounds_z_max: 20
+nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may collide with the floor
+
+object_bounds_x_max: 20
+object_bounds_x_min: -20
+object_bounds_y_max: 20
+object_bounds_y_min: -20
+object_bounds_z_max: 7
+object_bounds_z_min: 0
+
+
+############
+## Vehicle settings
+############
+# 0: floating sensor
+# 1: iris
+vehicle_type: 0
+
+## UAV dimensions (used in collision detection)
+uav_obstacle_distance_min: 4
+uav_collision_radius: 0.8
+
+
+############
+## Mapping settings
+############
+mapping_voxel_grid_res_profile: 0.1
+mapping_voxel_grid_res_rgbd: 0.04
+mapping_octree_resolution: 0.2
+mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
+
+############
+## Profiling settings
+############
+profiling_skip: true
+profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
+profiling_check_symmetry: true
+profiling_fill_octomap: true  #Create an octomap in the initial scans?
+profiling_fill_octomap_continuously: false
+profiling_use_symmetry: true
+
+# 0: adaptive circular
+# 1: bounded box
+profiling_method: 1
+profiling_scan_speed: 1.0
+
+## Adaptive Circular
+profiling_circular_waypoints: 5
+# UAV position after profiling
+profiling_complete_pose_x: 10
+profiling_complete_pose_y: 10
+profiling_complete_pose_z: 5
+profiling_complete_pose_yaw: 0.3
+
+############
+## Termination settings
+############
+# 0: Max iterations
+# 1: Entropy Stagnation
+termination_type: 0
+termination_iterations_max: 400
+termination_entropy_min_change_threshold: 0.0001
+termination_entropy_window_size: 5
+termination_ros_spin_afterwards: false
+
+
+############
+## View Generation settings
+############
+# 0: Nearest Neighbor (NN)
+# 1: Frontier
+view_generator_type: 0
+view_generator_nn_pos_res_x: 1.0
+view_generator_nn_pos_res_y: 1.0
+view_generator_nn_pos_res_z: 1.0
+view_generator_nn_pos_res_yaw: rad(pi/4)
+
+
+############
+## View Selecter settings
+############
+# 0: Information Gain (IG)
+# 1: Information Gain with exponential Distance
+# 2: Prediction based on symmetry
+view_selecter_type: 2
+view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
+view_selecter_ignore_entropies_at_clamping_points: true
+view_selecter_weight_distance: 0.5
+

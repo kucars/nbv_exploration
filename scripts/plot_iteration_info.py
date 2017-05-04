@@ -7,6 +7,7 @@ import time
 import signal
 import sys
 import csv
+import os
 
 from matplotlib import pyplot
 
@@ -22,6 +23,10 @@ file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
 files_csv = {} #Array of open csv files
 
 def main():
+  global file_prefix
+  if ( len(sys.argv) > 1):
+    file_prefix = sys.argv[1] + "_" + file_prefix
+
   rospy.init_node('plot_iteration_info', anonymous=True)
   rospy.Subscriber("nbv_exploration/iteration_info", IterationInfo, callback)
 
@@ -86,6 +91,10 @@ def callback(data):
       'Utility 1', 'Utility 2', 'Utility 3', '...'
       ])
 
+  # Iterations went back in time. Indicates start of new NBV loop. Exit program
+  if (len(iterations[method]) > 1 and
+      data.iteration < iterations[method][-1]):
+      exit_gracefully()
 
   iterations[method].append(data.iteration)
   total_entropy[method].append(data.total_entropy)
@@ -113,12 +122,14 @@ def callback(data):
     )
 
 def cleanup_before_exit():
+  print("[Plot] Closing all csv files")
   # Close any open csv files
   for key, file in files_csv.items():
     file.close()
 
-def exit_gracefully(signum, frame):
-  sys.exit(1)
+def exit_gracefully(signum = None, frame = None):
+  cleanup_before_exit()
+  os._exit(1)
 
 if __name__ == '__main__':
   # Workaround to force plots to close when pressing CTRL-C
@@ -129,4 +140,5 @@ if __name__ == '__main__':
     main()
   except:
     cleanup_before_exit()
+    print("Exception: " + sys.exc_info()[1])
     print('Application terminated')
