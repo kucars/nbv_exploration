@@ -19,6 +19,7 @@ total_entropy = {}
 max_utility = {}
 med_utility = {}
 distance = {}
+distance_inc = {}
 file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
 files_csv = {} #Array of open csv files
 
@@ -39,11 +40,11 @@ def main():
         for key in iterations:
           ax_plot[0].plot(iterations[key], total_entropy[key], label=key)
           ax_plot[1].plot(iterations[key], max_utility[key], label=key)
-          ax_plot[2].plot(iterations[key], distance[key], label=key)
+          ax_plot[2].plot(iterations[key], distance_inc[key], label=key)
 
         ax_plot[0].set_ylabel('Global Entropy')
         ax_plot[1].set_ylabel('Max Utility')
-        ax_plot[2].set_ylabel('Distance (m)')
+        ax_plot[2].set_ylabel('Distance Increment (m)')
         ax_plot[2].set_xlabel('Iterations')
 
         # Add legends
@@ -76,6 +77,7 @@ def callback(data):
     max_utility[method] = []
     med_utility[method] = []
     distance[method] = []
+    distance_inc[method] = []
 
     # Open csv file in append mode
     files_csv[method] = open(file_prefix + method + ".csv", "a")
@@ -102,11 +104,16 @@ def callback(data):
   med_utility[method].append(data.med_utility)
   distance[method].append(data.total_distance)
 
+
   entropy_change = '';
   if (len(total_entropy[method]) > 1):
     prev = total_entropy[method][-2]
     curr = total_entropy[method][-1]
     entropy_change = (curr - prev)/((curr + prev)/2) * 100
+
+    distance_inc[method].append(distance[method][-1] - distance[method][-2])
+  else:
+    distance_inc[method].append(0)
 
   csvwriter = csv.writer(files_csv[method], delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
   csvwriter.writerow([
@@ -138,7 +145,8 @@ if __name__ == '__main__':
 
   try:
     main()
-  except:
+  except Exception, e:
     cleanup_before_exit()
-    print("Exception: " + sys.exc_info()[1])
+    #print("Exception: " + sys.exc_info()[1])
+    print("Exception: " + str(e))
     print('Application terminated')

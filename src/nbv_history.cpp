@@ -53,7 +53,7 @@ void NBVHistory::computeEntropyDiff()
   {
     double diff = total_entropy[iteration] - total_entropy[iteration-1];
     entropy_diff.push_back(diff);
-    avg_entropy_diff_per_voxel.push_back(diff/num_voxels_);
+    avg_entropy_diff_per_voxel.push_back( fabs(diff/num_voxels_) );
   }
 }
 
@@ -68,7 +68,6 @@ double NBVHistory::getMaxEntropyDiffPerVoxel (int N_iterations)
   for (int i=0; i<N_iterations; i++)
   {
     float change = avg_entropy_diff_per_voxel[iteration-i];
-    std::cout << "[NBVHistory]: " << change << "\n";
     if (change > max_change)
       max_change = change;
   }
