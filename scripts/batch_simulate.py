@@ -27,7 +27,7 @@ for file in filenames:
   #os.system("rosrun nbv_exploration plot_iteration_info.py &")
 
   # Run NBV
-  os.system("roslaunch nbv_exploration nbv_loop.launch nbv_settings_file:=" + filepath)
+  os.system("roslaunch nbv_exploration nbv_loop.launch batch:=true nbv_settings_file:=" + filepath)
 
   # Copy results into folder for later analysis
   resultfolder = os.path.join(batchfolder, file_no_ext)
