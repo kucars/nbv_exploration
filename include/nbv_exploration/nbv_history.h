@@ -8,7 +8,7 @@ class NBVHistory
 {
 public:
   NBVHistory();
-  double getMaxEntropyDiffPerVoxel (int N_iterations = -1);
+  double getMaxEntropyDiffPerVoxel (int N_iterations);
   void update();
 
   int iteration;

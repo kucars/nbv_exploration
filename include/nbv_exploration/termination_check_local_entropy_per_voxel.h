@@ -11,8 +11,6 @@ public:
   bool isTerminated();
 
 protected:
-  std::vector<double> entropy_history_;
-  std::vector<double> entropy_change_history_;
   double min_entropy_threshold_;
   int window_size_;
   double num_voxels_;

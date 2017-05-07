@@ -22,7 +22,6 @@ bool ViewGeneratorAdaptiveNN::isStuckInLocalMinima()
     return false;
 
   double max_change = nbv_history_->getMaxEntropyDiffPerVoxel(minima_iterations_);
-  std::cout << "[NBVHistory]: " << cc.yellow << "Max entropy diff: " << max_change << "\n" << cc.reset;
 
   if (max_change < minima_threshold_)
     return true;
@@ -35,11 +34,11 @@ void ViewGeneratorAdaptiveNN::generateViews()
   if (isStuckInLocalMinima())
   {
     scale_factor_*= 1.5;
-    std::cout << "[NBVHistory]: " << cc.yellow << "Local minima detected. Increaseing scale factor to " << scale_factor_ << "\n" << cc.reset;
+    std::cout << "[ViewGeneratorAdaptiveNN]: " << cc.yellow << "Local minima detected. Increasing scale factor to " << scale_factor_ << "\n" << cc.reset;
 
-    if (scale_factor_ > 7.5)
+    if (scale_factor_ >= 7.5)
     {
-      std::cout << "[NBVHistory]: " << cc.red << "Warning: Scale factor very large: " << scale_factor_ << "\n" << cc.reset;
+      std::cout << "[ViewGeneratorAdaptiveNN]: " << cc.red << "Warning: Scale factor very large: " << scale_factor_ << "\n" << cc.reset;
       scale_factor_ = 7.5;
     }
   }

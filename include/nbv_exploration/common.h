@@ -1,20 +1,7 @@
-#ifndef NBVEXPLORATIONCOMMON_H
-#define NBVEXPLORATIONCOMMON_H
+#ifndef NBV_EXPLORATION_COMMON_H
+#define NBV_EXPLORATION_COMMON_H
 
 #include <ros/ros.h>
-
-/*
-#include "nbv_exploration/view_generator.h"
-#include "nbv_exploration/termination_check_base.h"
-#include "nbv_exploration/view_selecter.h"
-#include "nbv_exploration/model_profiler_base.h"
-#include "nbv_exploration/model_profiler_circular_adaptive.h"
-#include "nbv_exploration/nbv_loop.h"
-
-#include "control/vehicle_control_base.h"
-#include "control/vehicle_control_iris.h"
-*/
-
 #include <pcl/point_types.h>
 
 #include "utilities/console_utility.h"
@@ -27,4 +14,4 @@ typedef pcl::PointNormal PointN;
 typedef pcl::PointCloud<PointXYZ> PointCloudXYZ;
 typedef pcl::PointCloud<PointN> PointCloudN;
 
-#endif // NBVEXPLORATIONCOMMON_H
+#endif // NBV_EXPLORATION_COMMON_H

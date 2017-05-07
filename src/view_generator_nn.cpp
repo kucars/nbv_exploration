@@ -31,7 +31,7 @@ void ViewGeneratorNN::generateViews()
   
   if (cloud_occupied_ptr_->points.size() < 0)
   {
-    std::cout << "[ViewpointGen::NN] No points in map. Rotating" << std::endl;
+    std::cout << "[ViewGeneratorNN] No points in map. Rotating" << std::endl;
     
     Pose p;
     p.position.x = std::numeric_limits<double>::quiet_NaN(); //Set to NaN
@@ -43,7 +43,8 @@ void ViewGeneratorNN::generateViews()
   }
   else
   {
-    std::cout << "[ViewpointGen::NN] Generating 4-D state lattice" << std::endl;
+    if (is_debug_)
+      std::cout << "[ViewGeneratorNN] Generating 4-D state lattice" << std::endl;
     
     for (int i_x=-1; i_x<=1; i_x++)
     {
@@ -81,10 +82,7 @@ void ViewGeneratorNN::generateViews()
       }
     }
     
-    if (is_debug_)
-    {
-      std::cout << "[ViewpointGen::NN] Generated " << generated_poses.size() << " poses (" << rejected_poses.size() << " rejected)" << std::endl;
-      visualize(generated_poses, rejected_poses);
-    }
+    std::cout << "[ViewGeneratorNN] Generated " << generated_poses.size() << " poses (" << rejected_poses.size() << " rejected)" << std::endl;
+    visualize(generated_poses, rejected_poses);
   }
 }

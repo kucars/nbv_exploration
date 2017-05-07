@@ -9,11 +9,11 @@ TerminationCheckLocalEntropyPerVoxel::TerminationCheckLocalEntropyPerVoxel()
 bool TerminationCheckLocalEntropyPerVoxel::isTerminated()
 {
   // If we haven't gone through enough iterations, continue
-  if (entropy_change_history_.size() < window_size_)
+  if (window_size_ > nbv_history_->iteration)
     return false;
 
   // Find max entropy change in the past few iterations
-  float max_change = nbv_history_->getMaxEntropyDiffPerVoxel();
+  float max_change = nbv_history_->getMaxEntropyDiffPerVoxel(window_size_);
 
   if (max_change < min_entropy_threshold_)
     return true;
@@ -23,7 +23,9 @@ bool TerminationCheckLocalEntropyPerVoxel::isTerminated()
 
 void TerminationCheckLocalEntropyPerVoxel::update()
 {
+  /*
   std::cout << "[TerminationCheckLocalEntropyPerVoxel]: " << cc.green
             << "Entropy: " << nbv_history_->total_entropy.back()
             << "\tEntropy change: " << nbv_history_->avg_entropy_diff_per_voxel.back() << "\n" << cc.reset;
+  */
 }
