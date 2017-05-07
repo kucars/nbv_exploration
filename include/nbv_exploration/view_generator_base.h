@@ -8,6 +8,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <octomap/OcTree.h>
+#include <octomap/Pointcloud.h>
 #include <tf_conversions/tf_eigen.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -62,6 +63,7 @@ public:
   virtual bool isCollidingWithOctree(Pose p);
   virtual bool isInsideBounds(Pose p);
   virtual bool isValidViewpoint(Pose p);
+  bool isInFreeSpace(Pose p);
 
   void setCollisionRadius(double r);
   void setCloud(PointCloudXYZ::Ptr in_occ_cloud);

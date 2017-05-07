@@ -54,41 +54,6 @@ ViewGeneratorBase::ViewGeneratorBase():
   setCollisionRadius(collision_radius);
 }
 
-void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
-{
-  // convert the octomap::octree to fcl::octree fcl_octree object
-  fcl::OcTree* tree2 = new fcl::OcTree(boost::shared_ptr<const octomap::OcTree>(tree_));
-  std::vector<boost::array<fcl::FCL_REAL, 6> > boxes = tree2->toBoxes();
-  
-  collision_boxes_.clear();
-  for(std::size_t i = 0; i < boxes.size(); ++i)
-  {
-    fcl::FCL_REAL x = boxes[i][0];
-    fcl::FCL_REAL y = boxes[i][1];
-    fcl::FCL_REAL z = boxes[i][2];
-    fcl::FCL_REAL size = boxes[i][3];
-    fcl::FCL_REAL cost = boxes[i][4];
-    fcl::FCL_REAL threshold = boxes[i][5];
-    fcl::Box* box = new fcl::Box(size, size, size);
-    box->cost_density = cost;
-    box->threshold_occupied = threshold;
-    fcl::CollisionObject* obj = new fcl::CollisionObject(boost::shared_ptr<fcl::CollisionGeometry>(box), fcl::Transform3f(fcl::Vec3f(x, y, z)));
-    collision_boxes_.push_back(obj);
-  }
-}
-
-bool ViewGeneratorBase::isInsideBounds(Pose p)
-{
-  if (p.position.x < nav_bounds_x_min_ || p.position.x > nav_bounds_x_max_ ||
-      p.position.y < nav_bounds_y_min_ || p.position.y > nav_bounds_y_max_ ||
-      p.position.z < nav_bounds_z_min_ || p.position.z > nav_bounds_z_max_)
-  {
-    return false;
-  }
-  
-  return true;
-}
-
 bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
 {
   /* Collision detection based on octomap
@@ -132,14 +97,57 @@ bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
   return collisionDetected;
 }
 
+bool ViewGeneratorBase::isInFreeSpace(Pose p)
+{
+  // Create a cloud with the point to check
+
+  octomap::point3d pt (
+        p.position.x,
+        p.position.y,
+        p.position.z);
+
+  // Find key corresponding to this position
+  octomap::OcTreeKey key;
+  if ( !tree_->coordToKeyChecked(pt, key) )
+    return false;
+
+  // Get node
+  octomap::OcTreeNode* node = tree_->search(pt);
+
+  // Node not found in tree
+  if (!node)
+    return false;
+
+  // Is it free?
+  if (node->getOccupancy() > 1-tree_->getOccupancyThres())
+    return false;
+
+  return true;
+}
+
+bool ViewGeneratorBase::isInsideBounds(Pose p)
+{
+  if (p.position.x < nav_bounds_x_min_ || p.position.x > nav_bounds_x_max_ ||
+      p.position.y < nav_bounds_y_min_ || p.position.y > nav_bounds_y_max_ ||
+      p.position.z < nav_bounds_z_min_ || p.position.z > nav_bounds_z_max_)
+  {
+    return false;
+  }
+
+  return true;
+}
+
 bool ViewGeneratorBase::isValidViewpoint(Pose p)
 {
   if (!isInsideBounds(p) )
     return false;
+
+  if (!isInFreeSpace(p) )
+    return false;
     
   if (isCollidingWithOctree(p) )
     return false;
-    
+
   return true;
 }
 
@@ -198,6 +206,29 @@ void ViewGeneratorBase::setObjectBounds(double x_min, double x_max, double y_min
   obj_bounds_z_max_ = z_max;
 }
 
+void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
+{
+  // convert the octomap::octree to fcl::octree fcl_octree object
+  fcl::OcTree* tree2 = new fcl::OcTree(boost::shared_ptr<const octomap::OcTree>(tree_));
+  std::vector<boost::array<fcl::FCL_REAL, 6> > boxes = tree2->toBoxes();
+
+  collision_boxes_.clear();
+  for(std::size_t i = 0; i < boxes.size(); ++i)
+  {
+    fcl::FCL_REAL x = boxes[i][0];
+    fcl::FCL_REAL y = boxes[i][1];
+    fcl::FCL_REAL z = boxes[i][2];
+    fcl::FCL_REAL size = boxes[i][3];
+    fcl::FCL_REAL cost = boxes[i][4];
+    fcl::FCL_REAL threshold = boxes[i][5];
+    fcl::Box* box = new fcl::Box(size, size, size);
+    box->cost_density = cost;
+    box->threshold_occupied = threshold;
+    fcl::CollisionObject* obj = new fcl::CollisionObject(boost::shared_ptr<fcl::CollisionGeometry>(box), fcl::Transform3f(fcl::Vec3f(x, y, z)));
+    collision_boxes_.push_back(obj);
+  }
+}
+
 void ViewGeneratorBase::visualize(std::vector<Pose> valid_poses, std::vector<Pose> invalid_poses)
 {
   visualization_msgs::MarkerArray pose_array;
@@ -237,8 +268,11 @@ void ViewGeneratorBase::visualize(std::vector<Pose> valid_poses, std::vector<Pos
   vis_marker_array_prev_size_ = valid_poses.size() + invalid_poses.size();
   pub_view_marker_array_.publish(pose_array);
   
-  std::cout << "Press ENTER to continue\n";
-  std::cin.get();
+  if (is_debug_)
+  {
+    std::cout << "Press ENTER to continue\n";
+    std::cin.get();
+  }
 }
 
 visualization_msgs::Marker ViewGeneratorBase::visualizeDeleteArrowMarker(int id)

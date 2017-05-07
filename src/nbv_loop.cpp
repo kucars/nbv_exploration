@@ -117,7 +117,15 @@ void NBVLoop::generateViewpoints()
   view_generator_->setCurrentPose(vehicle_->getPose());
   view_generator_->generateViews();
 
-  state = NBVState::VIEWPOINT_GENERATION_COMPLETE;
+  if (view_generator_->generated_poses.size() == 0)
+  {
+    std::cout << "[NBVLoop] " << cc.red << "View generator created no poses. Terminating.\n" << cc.reset;
+    state = NBVState::TERMINATION_MET;
+  }
+  else
+  {
+    state = NBVState::VIEWPOINT_GENERATION_COMPLETE;
+  }
 }
 
 void NBVLoop::evaluateViewpoints()
