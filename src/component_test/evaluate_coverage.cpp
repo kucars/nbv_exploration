@@ -157,7 +157,7 @@ void transformCloud(PointCloudXYZ::Ptr& cloud_ptr, double scale=1, double x_shif
 
 int main (int argc, char** argv)
 {
-  std::string filename_reference = "/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/etihad/etihad.pcd";
+  std::string filename_reference = "/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/etihad/etihad_clean.pcd";
   std::string filename_final = "/home/abdullah/.ros/final_cloud.pcd";
 
   PointCloudXYZ::Ptr cloud_ref (new PointCloudXYZ);
@@ -174,42 +174,33 @@ int main (int argc, char** argv)
   // ===============
   // Create voxel grids
   // ===============
-  double voxelRes;
-  if (argc > 1)
-    voxelRes = atof(argv[1])  ;
+  std::vector<double> voxelRes;
+  if (argc == 1)
+    voxelRes.push_back(0.05);
   else
-    voxelRes = 0.05;
+  {
+    for (int i=1; i<argc; i++)
+    {
+      voxelRes.push_back( atof(argv[i]) );
+    }
+  }
 
-  int grid_size_ref, grid_size_final;
-  pcl::VoxelGridOcclusionEstimationT grid_ref, grid_final;
+  for (int i=0; i<voxelRes.size(); i++)
+  {
+    int grid_size_ref, grid_size_final;
+    pcl::VoxelGridOcclusionEstimationT grid_ref, grid_final;
 
-  grid_size_ref = createVoxelGrid(grid_ref, cloud_ref, voxelRes);
-  grid_size_final = createVoxelGrid(grid_final, cloud_final, voxelRes);
+    grid_size_ref = createVoxelGrid(grid_ref, cloud_ref, voxelRes[i]);
+    grid_size_final = createVoxelGrid(grid_final, cloud_final, voxelRes[i]);
 
-  // ================
-  // Compute accuracy
-  // ================
-  /*
-  int true_positives = matchesForCloud1InCloud2(cloud_final, cloud_ref, 0.05);
-  int false_positives = cloud_final->points.size() - true_positives;
+    // ================
+    // Compute coverage
+    // ================
+    int matched = matchesForGrid1InGrid2(grid_ref, grid_final);
+    float coverage = float(matched)/grid_size_ref;
 
-  printf("Number of TP: %d/%lu\n", true_positives, cloud_final->points.size());
-  printf("Number of FP: %d/%lu\n", false_positives, cloud_final->points.size());
-  */
-
-  // ================
-  // Compute coverage
-  // ================
-  int matched;
-  float coverage;
-
-  //matched = matchesForCloud1InCloud2(cloud_ref, cloud_final, 0.05);
-  //coverage = float(matched)/cloud_ref->points.size();
-
-  matched = matchesForGrid1InGrid2(grid_ref, grid_final);
-  coverage = float(matched)/grid_size_ref;
-
-  printf("Coverage: %f%%\n", coverage*100);
+    printf("Resolution: %f, Coverage: %f%%\n", voxelRes[i], coverage*100);
+  }
 
   // =========
   // Visualize

@@ -150,6 +150,13 @@ void NBVLoop::evaluateViewpoints()
 
   // Move to next best view
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
+  if ( isnan(p.position.x) )
+  {
+    std::cout << "[NBVLoop] " << cc.red << "View selecter determined all poses are invalid. Terminating.\n" << cc.reset;
+    state = NBVState::TERMINATION_MET;
+    return;
+  }
+
   vehicle_->setWaypoint(p);
 
   std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;

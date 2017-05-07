@@ -340,9 +340,10 @@ void ViewSelecterBase::evaluate()
   update();
 
   // Reset all variables of interest
-  info_utility_max_ = - std::numeric_limits<float>::infinity(); //-inf
-  info_utility_med_ = - std::numeric_limits<float>::infinity(); //-inf
+  info_utility_max_ = 0; //- std::numeric_limits<float>::infinity(); //-inf
+  info_utility_med_ = 0; //- std::numeric_limits<float>::infinity(); //-inf
   info_utilities_.clear();
+  selected_pose_.position.x = std::numeric_limits<double>::quiet_NaN();
 
 
   for (int i=0; i<view_gen_->generated_poses.size() && ros::ok(); i++)
@@ -371,6 +372,13 @@ void ViewSelecterBase::evaluate()
       std::cin.get();
     }
   } //end for
+
+
+  // No valid poses found, end
+  if ( isnan(selected_pose_.position.x) )
+  {
+    return;
+  }
 
   // Compute median value
   std::vector<float> sorted_utilities(info_utilities_);
