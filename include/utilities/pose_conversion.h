@@ -11,6 +11,23 @@ namespace pose_conversion{
   // ================
   // Point conversion
   // ================
+  static inline Eigen::Quaterniond convertToEigenQuaternoid(geometry_msgs::Quaternion p)
+  {
+    Eigen::Quaterniond q(p.x, p.y, p.z, p.w);
+    return q;
+
+    //tf::Matrix3x3(q1).getRPY(roll1, pitch1, yaw1);
+  }
+
+  static inline Eigen::Quaterniond convertToEigenQuaternoid(geometry_msgs::Pose p)
+  {
+    Eigen::Quaterniond q = convertToEigenQuaternoid(p.orientation);
+    return q;
+
+    //tf::Matrix3x3(q1).getRPY(roll1, pitch1, yaw1);
+    //Eigen::Matrix3d = q.toRotationMatrix();
+  }
+
   static inline Eigen::Vector3d convertToEigenVector(geometry_msgs::Point p_in)
   {
     Eigen::Vector3d v (p_in.x, p_in.y, p_in.z);
@@ -162,23 +179,7 @@ namespace pose_conversion{
     
     return tf_eigen;
   }
-  
-  static inline Eigen::Quaterniond convertToEigenQuaternoid(geometry_msgs::Quaternion p)
-  {
-    Eigen::Quaterniond q(p.x, p.y, p.z, p.w); 
-    return q;
-    
-    //tf::Matrix3x3(q1).getRPY(roll1, pitch1, yaw1);
-  }
 
-  static inline Eigen::Quaterniond convertToEigenQuaternoid(geometry_msgs::Pose p)
-  {
-    Eigen::Quaterniond q = convertToEigenQuaternoid(p.orientation); 
-    return q;
-    
-    //tf::Matrix3x3(q1).getRPY(roll1, pitch1, yaw1);
-    //Eigen::Matrix3d = q.toRotationMatrix();
-  }
 
   // ================
   // Angle conversion
@@ -237,5 +238,38 @@ namespace pose_conversion{
     
     octomap::point3d p(T1.x(), T1.y(), T1.z());
     return p;
+  }
+
+  static int signum(double x)
+  {
+    // Gets the sign of a number
+    return (x > 0) - (x < 0);
+
+    // Equivalent to:
+    //if (x > 0) return 1;
+    //if (x < 0) return -1;
+    //return 0;
+  }
+
+  static inline geometry_msgs::Quaternion getQuaternionFromDirectionVector(Eigen::Vector3d vec)
+  {
+    vec.normalize();
+
+    // Get angles using dot product with each axis
+    double R = acos(vec[0]) * signum(vec[0]);
+    double Y = acos(vec[1]) * signum(vec[1]);
+    double P = acos(vec[2]) * signum(vec[2]);
+
+    // Convert to quaternion
+    tf::Quaternion tf_q;
+    tf_q = tf::createQuaternionFromRPY(R, P, Y);
+
+    geometry_msgs::Quaternion quat;
+    quat.x = tf_q.getX();
+    quat.y = tf_q.getY();
+    quat.z = tf_q.getZ();
+    quat.w = tf_q.getW();
+
+    return quat;
   }
 }

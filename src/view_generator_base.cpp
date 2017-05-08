@@ -74,9 +74,7 @@ bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
   visualizeDrawSphere(p, collision_radius_);
   
   bool collisionDetected = false;
-  
-  double min_dist = 1/.0;
-  
+
   for(size_t i = 0; i < collision_boxes_.size(); ++i)
   {
     fcl::CollisionObject* box =  collision_boxes_[i];

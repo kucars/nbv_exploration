@@ -28,7 +28,7 @@ Folder structure is assumed to be the following:
 
 """
 
-dir = '/home/abdullah/2017-05-04'
+dir = '/home/abdullah/2017-05-06'
 methods = {}
 
 class RunStats(object):
