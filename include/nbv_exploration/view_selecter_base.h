@@ -76,7 +76,6 @@ protected:
   // Topic handlers
   ros::Publisher marker_pub;
   ros::Publisher pose_pub;
-  ros::Publisher ig_pub;
 
 protected:
   bool isEntropyLow();

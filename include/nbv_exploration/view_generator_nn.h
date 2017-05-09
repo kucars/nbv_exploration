@@ -12,6 +12,7 @@ public:
   ViewGeneratorNN();
 
   void generateViews();
+  std::string getMethodName();
 };
 
 #endif

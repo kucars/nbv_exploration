@@ -54,6 +54,11 @@ ViewGeneratorBase::ViewGeneratorBase():
   setCollisionRadius(collision_radius);
 }
 
+std::string ViewGeneratorBase::getMethodName()
+{
+  return "Base";
+}
+
 bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
 {
   /* Collision detection based on octomap

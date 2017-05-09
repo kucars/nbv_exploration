@@ -11,6 +11,7 @@ class ViewGeneratorNNFrontier : public ViewGeneratorBase
 public:
   ViewGeneratorNNFrontier();
   void generateViews();
+  std::string getMethodName();
 
 protected:
   double minima_iterations_;

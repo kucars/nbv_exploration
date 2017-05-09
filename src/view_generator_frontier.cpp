@@ -225,6 +225,11 @@ void ViewGeneratorFrontier::generateViews()
   ViewGeneratorBase::visualize(generated_poses, rejected_poses);
 }
 
+std::string ViewGeneratorFrontier::getMethodName()
+{
+  return "Frontier";
+}
+
 bool ViewGeneratorFrontier::isNear(octomap::OcTreeKey k1, octomap::OcTreeKey k2)
 {
   if (abs(k1[0]-k2[0]) <=2 &&

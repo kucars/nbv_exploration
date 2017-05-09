@@ -20,6 +20,7 @@ class ViewGeneratorFrontier : public ViewGeneratorBase
 public:
   ViewGeneratorFrontier();
   void generateViews();
+  std::string getMethodName();
 
 protected:
   int minimum_frontier_size_;

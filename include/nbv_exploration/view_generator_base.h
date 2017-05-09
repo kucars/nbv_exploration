@@ -60,6 +60,8 @@ public:
     std::cout << "[WARNING] Call to ViewGeneratorBase::generateViews(). Impliment function in derived class. No poses generated." << std::endl;
   }
 
+  virtual std::string getMethodName();
+
   virtual bool isCollidingWithOctree(Pose p);
   virtual bool isInsideBounds(Pose p);
   virtual bool isValidViewpoint(Pose p);

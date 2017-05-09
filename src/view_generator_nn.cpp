@@ -86,3 +86,8 @@ void ViewGeneratorNN::generateViews()
     visualize(generated_poses, rejected_poses);
   }
 }
+
+std::string ViewGeneratorNN::getMethodName()
+{
+  return "Frontier";
+}

@@ -39,6 +39,11 @@ void ViewGeneratorNNFrontier::generateViews()
   }
 }
 
+std::string ViewGeneratorNNFrontier::getMethodName()
+{
+  return "NN with Frontier at local minima";
+}
+
 void ViewGeneratorNNFrontier::setCollisionRadius(double r)
 {
   ViewGeneratorBase::setCollisionRadius(r);

@@ -17,6 +17,7 @@ public:
   std::vector<float> total_entropy;
   std::vector<float> entropy_diff;
   std::vector<float> avg_entropy_diff_per_voxel;
+  std::vector<float> time_per_iteration;
 
 protected:
   double num_voxels_;

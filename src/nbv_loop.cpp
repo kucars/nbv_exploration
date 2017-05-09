@@ -54,6 +54,7 @@ NBVLoop::NBVLoop()
   // Initialize parameters
   // >>>>>>>>>>>>>>>>>
   initParameters();
+  pub_iteration_info = ros_node.advertise<nbv_exploration::IterationInfo>("nbv_exploration/iteration_info", 10);
   
   // >>>>>>>>>>>>>>>>
   // Initialize modules
@@ -143,10 +144,6 @@ void NBVLoop::evaluateViewpoints()
   // Evaluate viewpoints
   view_selecter_->evaluate();
   //view_selecter_comparison_->evaluate();
-
-  // Update history
-  updateHistory();
-
 
   // Move to next best view
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
@@ -331,6 +328,7 @@ void NBVLoop::positionVehicleAfterProfiling()
     std::cout << "[NBVLoop] " << cc.green << "Moving vehicle after profiling\n" << cc.reset;
   }
   // @todo
+  chrono_start = std::chrono::high_resolution_clock::now();
   std::cout << "[NBVLoop] " << cc.yellow << "Note: Moving vehicle after profiling uses a fixed waypoint defined in config settings. Create adaptive method.\n" << cc.reset;
 
   double x, y, z, yaw;
@@ -413,11 +411,26 @@ void NBVLoop::runStateMachine()
       case NBVState::MOVING_COMPLETE:
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
 
-        ros::Duration(0.2).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
-        mapping_module_->commandGetCameraData();
+        chrono_tick = std::chrono::high_resolution_clock::now();
+        {
+          ros::Duration(0.2).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+          mapping_module_->commandGetCameraData();
+        }
+        chrono_toc = std::chrono::high_resolution_clock::now();
+        time_mapping_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
 
-        state = NBVState::TERMINATION_CHECK;
-        terminationCheck();
+
+        chrono_tick = std::chrono::high_resolution_clock::now();
+        {
+          state = NBVState::TERMINATION_CHECK;
+          terminationCheck();
+        }
+        chrono_toc = std::chrono::high_resolution_clock::now();
+        time_termination_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
+        time_total_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_start).count();
+
+        chrono_start = std::chrono::high_resolution_clock::now();
+
 
         break;
 
@@ -434,13 +447,25 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::TERMINATION_NOT_MET:
-        state = NBVState::VIEWPOINT_GENERATION;
-        generateViewpoints();
+        chrono_tick = std::chrono::high_resolution_clock::now();
+        {
+          state = NBVState::VIEWPOINT_GENERATION;
+          generateViewpoints();
+        }
+        chrono_toc = std::chrono::high_resolution_clock::now();
+        time_view_generation_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
+
         break;
 
       case NBVState::VIEWPOINT_GENERATION_COMPLETE:
-        state = NBVState::VIEWPOINT_EVALUATION;
-        evaluateViewpoints();
+        chrono_tick = std::chrono::high_resolution_clock::now();
+        {
+          state = NBVState::VIEWPOINT_EVALUATION;
+          evaluateViewpoints();
+        }
+        chrono_toc = std::chrono::high_resolution_clock::now();
+        time_view_selection_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
+
         break;
 
       case NBVState::VIEWPOINT_EVALUATION_COMPLETE:
@@ -478,14 +503,17 @@ void NBVLoop::terminationCheck()
   {
     std::cout << "[NBVLoop] " << cc.green << "Checking termination condition\n" << cc.reset;
   }
-
+  // Update history
+  updateHistory();
 
   termination_check_module_->update();
 
   if (termination_check_module_->isTerminated())
     state = NBVState::TERMINATION_MET;
   else
+  {
     state = NBVState::TERMINATION_NOT_MET;
+  }
 }
 
 void NBVLoop::updateHistory()
@@ -494,4 +522,25 @@ void NBVLoop::updateHistory()
   history_->selected_utility.push_back(view_selecter_->info_utility_max_);
   history_->total_entropy.push_back(view_selecter_->info_entropy_total_);
   history_->update();
+
+  printf("Time Total: %lf ms, Gen: %lf, Select: %lf, Mapping: %lf, Terminate: %lf\n", time_total_, time_view_generation_, time_view_selection_, time_mapping_, time_termination_);
+
+  // Publish information about this iteration
+  nbv_exploration::IterationInfo iteration_msg;
+  iteration_msg.iteration        = view_selecter_->info_iteration_;
+  iteration_msg.distance_total   = view_selecter_->info_distance_total_;
+  iteration_msg.entropy_total    = view_selecter_->info_entropy_total_;
+  iteration_msg.method_generation= view_generator_->getMethodName();
+  iteration_msg.method_selection = view_selecter_->getMethodName();
+  iteration_msg.time_iteration   = time_total_;
+  iteration_msg.time_generation  = time_view_generation_;
+  iteration_msg.time_selection   = time_view_selection_;
+  iteration_msg.time_mapping     = time_mapping_;
+  iteration_msg.time_termination = time_termination_;
+  iteration_msg.selected_pose    = view_selecter_->getTargetPose();
+  iteration_msg.utilities        = view_selecter_->info_utilities_;
+  iteration_msg.utility_max      = view_selecter_->info_utility_max_;
+  iteration_msg.utility_med      = view_selecter_->info_utility_med_;
+
+  pub_iteration_info.publish(iteration_msg);
 }

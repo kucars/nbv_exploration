@@ -64,3 +64,8 @@ void ViewGeneratorNNAdaptive::generateViews()
   res_y_ = backup_res_y_;
   res_z_ = backup_res_z_;
 }
+
+std::string ViewGeneratorNNAdaptive::getMethodName()
+{
+  return "NN Adaptive";
+}

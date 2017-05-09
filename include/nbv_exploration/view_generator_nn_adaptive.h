@@ -10,8 +10,8 @@ class ViewGeneratorNNAdaptive : public ViewGeneratorNN
 {
 public:
   ViewGeneratorNNAdaptive();
-
   void generateViews();
+  std::string getMethodName();
 
 protected:
   bool isStuckInLocalMinima();

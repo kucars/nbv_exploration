@@ -12,7 +12,6 @@
 #include "nbv_exploration/view_generator_base.h"
 #include "nbv_exploration/view_selecter_base.h"
 #include "nbv_exploration/common.h"
-#include "nbv_exploration/IterationInfo.h"
 
 
 ViewSelecterBase::ViewSelecterBase():
@@ -23,7 +22,6 @@ ViewSelecterBase::ViewSelecterBase():
 	ros::NodeHandle n;
 	marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
   pose_pub   = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
-  ig_pub     = n.advertise<nbv_exploration::IterationInfo>("nbv_exploration/iteration_info", 10);
 
   // >>>>>>>>>>>>>>>>>
   // Read parameters
@@ -385,17 +383,6 @@ void ViewSelecterBase::evaluate()
 
   // Increase total distance travelled
   info_distance_total_ += calculateDistance(selected_pose_);
-
-  // Publish information about our viewpoint selection scheme
-  nbv_exploration::IterationInfo iteration_msg;
-  iteration_msg.iteration = info_iteration_;
-  iteration_msg.total_distance = info_distance_total_;
-  iteration_msg.total_entropy = info_entropy_total_;
-  iteration_msg.method = getMethodName();
-  iteration_msg.utilities = info_utilities_;
-  iteration_msg.max_utility = info_utility_max_;
-  iteration_msg.med_utility = info_utility_med_;
-  ig_pub.publish(iteration_msg);
 }
 
 std::string ViewSelecterBase::getMethodName()

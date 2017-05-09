@@ -2,6 +2,7 @@
 #define NBV_EXPLORATION_MAIN_LOOP_H
 
 #include <ros/ros.h>
+#include <chrono>
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -11,6 +12,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include "nbv_exploration/common.h"
+#include "nbv_exploration/IterationInfo.h"
 
 #include "nbv_exploration/mapping_module.h"
 #include "nbv_exploration/model_profiler_base.h"
@@ -66,6 +68,20 @@ public:
   ViewGeneratorBase*    view_generator_;
   ViewSelecterBase*     view_selecter_;
   ViewSelecterBase*     view_selecter_comparison_;
+
+  // Topic handlers
+  ros::Publisher pub_iteration_info;
+
+  // Timing
+  double time_view_generation_;
+  double time_view_selection_;
+  double time_mapping_;
+  double time_termination_;
+  double time_total_;
+
+  std::chrono::high_resolution_clock::time_point chrono_start;
+  std::chrono::high_resolution_clock::time_point chrono_tick;
+  std::chrono::high_resolution_clock::time_point chrono_toc;
 
   // DEBUG
   bool is_debug_states;

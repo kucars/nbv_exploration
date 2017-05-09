@@ -11,17 +11,23 @@ import os
 
 from matplotlib import pyplot
 
-f, ax_plot = pyplot.subplots(3,1)
+f, ax_plot = pyplot.subplots(4,1)
 
 # Define as dict so we can support values from multiple methods
-iterations = {}
-total_entropy = {}
-max_utility = {}
-med_utility = {}
-distance = {}
-distance_inc = {}
 file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
 files_csv = {} #Array of open csv files
+
+iterations = {}
+distance = {}
+distance_inc = {}
+entropy_total = {}
+time_iteration = {}
+time_generation = {}
+time_selection = {}
+time_mapping = {}
+time_termination = {}
+utility_max = {}
+utility_med = {}
 
 def main():
   global file_prefix
@@ -36,16 +42,19 @@ def main():
         ax_plot[0].clear()
         ax_plot[1].clear()
         ax_plot[2].clear()
+        ax_plot[3].clear()
 
         for key in iterations:
-          ax_plot[0].plot(iterations[key], total_entropy[key], label=key)
-          ax_plot[1].plot(iterations[key], max_utility[key], label=key)
+          ax_plot[0].plot(iterations[key], entropy_total[key], label=key)
+          ax_plot[1].plot(iterations[key], utility_max[key], label=key)
           ax_plot[2].plot(iterations[key], distance_inc[key], label=key)
+          ax_plot[3].plot(iterations[key], time_iteration[key], label=key)
 
         ax_plot[0].set_ylabel('Global Entropy')
         ax_plot[1].set_ylabel('Max Utility')
         ax_plot[2].set_ylabel('Distance Increment (m)')
-        ax_plot[2].set_xlabel('Iterations')
+        ax_plot[3].set_ylabel('Iteration Time (ms)')
+        ax_plot[-1].set_xlabel('Iterations')
 
         # Add legends
         legends = []
@@ -67,17 +76,22 @@ def main():
 
 
 def callback(data):
-  method = data.method
+  method = data.method_selection + " ~ " + data.method_generation
 
   # Check if method is already defined as key in dict
   if not method in iterations:
     # Create blank arrays
     iterations[method] = []
-    total_entropy[method] = []
-    max_utility[method] = []
-    med_utility[method] = []
     distance[method] = []
     distance_inc[method] = []
+    entropy_total[method] = []
+    time_iteration[method] = []
+    time_generation[method] = []
+    time_selection[method] = []
+    time_mapping[method] = []
+    time_termination[method] = []
+    utility_max[method] = []
+    utility_med[method] = []
 
     # Open csv file in append mode
     files_csv[method] = open(file_prefix + method + ".csv", "a")
@@ -89,6 +103,11 @@ def callback(data):
       'Distance Travelled',
       'Utility Max',
       'Utility Median',
+      'Time Iteration (ms)',
+      'Time Generation (ms)',
+      'Time Selection (ms)',
+      'Time Mapping (ms)',
+      'Time Termination (ms)',
       'Count',
       'Utility 1', 'Utility 2', 'Utility 3', '...'
       ])
@@ -99,16 +118,20 @@ def callback(data):
       exit_gracefully()
 
   iterations[method].append(data.iteration)
-  total_entropy[method].append(data.total_entropy)
-  max_utility[method].append(data.max_utility)
-  med_utility[method].append(data.med_utility)
-  distance[method].append(data.total_distance)
-
+  entropy_total[method].append(data.entropy_total)
+  distance[method].append(data.distance_total)
+  time_iteration[method].append(data.time_iteration)
+  time_generation[method].append(data.time_generation)
+  time_selection[method].append(data.time_selection)
+  time_mapping[method].append(data.time_mapping)
+  time_termination[method].append(data.time_termination)
+  utility_max[method].append(data.utility_max)
+  utility_med[method].append(data.utility_med)
 
   entropy_change = '';
-  if (len(total_entropy[method]) > 1):
-    prev = total_entropy[method][-2]
-    curr = total_entropy[method][-1]
+  if (len(entropy_total[method]) > 1):
+    prev = entropy_total[method][-2]
+    curr = entropy_total[method][-1]
     entropy_change = (curr - prev)/((curr + prev)/2) * 100
 
     distance_inc[method].append(distance[method][-1] - distance[method][-2])
@@ -118,11 +141,16 @@ def callback(data):
   csvwriter = csv.writer(files_csv[method], delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
   csvwriter.writerow([
     data.iteration,
-    data.total_entropy,
+    data.entropy_total,
     entropy_change,
-    data.total_distance,
-    data.max_utility,
-    data.med_utility,
+    data.distance_total,
+    data.utility_max,
+    data.utility_med,
+    data.time_iteration,
+    data.time_generation,
+    data.time_selection,
+    data.time_mapping,
+    data.time_termination,
     len(data.utilities)
     ]
     + list(data.utilities) # Convert tuple to list
