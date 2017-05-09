@@ -5,18 +5,18 @@
 #include <Eigen/Geometry>
 #include <Eigen/Eigen>
 
-#include "nbv_exploration/view_generator_adaptive_nn.h"
+#include "nbv_exploration/view_generator_nn_adaptive.h"
 #include "nbv_exploration/common.h"
 
-ViewGeneratorAdaptiveNN::ViewGeneratorAdaptiveNN():
+ViewGeneratorNNAdaptive::ViewGeneratorNNAdaptive():
   ViewGeneratorNN(), //Call base class constructor
   scale_factor_(1)
 {
-  ros::param::param<double>("~view_generator_adaptive_nn_local_minima_iterations", minima_iterations_, 3);
-  ros::param::param<double>("~view_generator_adaptive_nn_local_minima_threshold", minima_threshold_, 0.01);
+  ros::param::param<double>("~view_generator_nn_adaptive_local_minima_iterations", minima_iterations_, 3);
+  ros::param::param<double>("~view_generator_nn_adaptive_local_minima_threshold", minima_threshold_, 0.01);
 }
 
-bool ViewGeneratorAdaptiveNN::isStuckInLocalMinima()
+bool ViewGeneratorNNAdaptive::isStuckInLocalMinima()
 {
   if (minima_iterations_ > nbv_history_->iteration)
     return false;
@@ -29,16 +29,16 @@ bool ViewGeneratorAdaptiveNN::isStuckInLocalMinima()
   return false;
 }
 
-void ViewGeneratorAdaptiveNN::generateViews()
+void ViewGeneratorNNAdaptive::generateViews()
 {
   if (isStuckInLocalMinima())
   {
     scale_factor_*= 1.5;
-    std::cout << "[ViewGeneratorAdaptiveNN]: " << cc.yellow << "Local minima detected. Increasing scale factor to " << scale_factor_ << "\n" << cc.reset;
+    std::cout << "[ViewGeneratorNNAdaptive]: " << cc.yellow << "Local minima detected. Increasing scale factor to " << scale_factor_ << "\n" << cc.reset;
 
     if (scale_factor_ >= 7.5)
     {
-      std::cout << "[ViewGeneratorAdaptiveNN]: " << cc.red << "Warning: Scale factor very large: " << scale_factor_ << "\n" << cc.reset;
+      std::cout << "[ViewGeneratorNNAdaptive]: " << cc.red << "Warning: Scale factor very large: " << scale_factor_ << "\n" << cc.reset;
       scale_factor_ = 7.5;
     }
   }

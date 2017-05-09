@@ -192,7 +192,7 @@ double ViewSelecterSymmetryPrediction::calculateUtility(Pose p)
 
 std::string ViewSelecterSymmetryPrediction::getMethodName()
 {
-  return "Symmetry Prediction";
+  return "Proposed Method";
 }
 
 void ViewSelecterSymmetryPrediction::update()

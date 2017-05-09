@@ -177,8 +177,6 @@ double ViewSelecterBase::calculateIG(Pose p)
         octomap::OcTreeKey end_key;
         if( tree_->coordToKeyChecked(endpoint, end_key) )
         {
-          octomap::OcTreeNode* node = tree_->search(end_key);
-
           nodes.insert(end_key);
           nodes_traversed++;
         }

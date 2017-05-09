@@ -23,5 +23,5 @@ double ViewSelecterIg::calculateUtility(Pose p)
 
 std::string ViewSelecterIg::getMethodName()
 {
-  return "IG";
+  return "Classic IG";
 }

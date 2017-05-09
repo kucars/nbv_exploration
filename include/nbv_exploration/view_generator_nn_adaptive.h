@@ -1,15 +1,15 @@
-#ifndef NBV_EXPLORATION_VIEW_GENERATOR_ADAPTIVE_NN_H
-#define NBV_EXPLORATION_VIEW_GENERATOR_ADAPTIVE_NN_H
+#ifndef NBV_EXPLORATION_VIEW_GENERATOR_NN_ADAPTIVE_H
+#define NBV_EXPLORATION_VIEW_GENERATOR_NN_ADAPTIVE_H
 
 #include "nbv_exploration/view_generator_nn.h"
 #include "nbv_exploration/common.h"
 
 
 // Nearest neighbor
-class ViewGeneratorAdaptiveNN : public ViewGeneratorNN
+class ViewGeneratorNNAdaptive : public ViewGeneratorNN
 {
 public:
-  ViewGeneratorAdaptiveNN();
+  ViewGeneratorNNAdaptive();
 
   void generateViews();
 

@@ -274,7 +274,7 @@ void NBVLoop::initViewGenerator()
     view_generator_ = new ViewGeneratorNN();
     break;
   case 1:
-    view_generator_ = new ViewGeneratorAdaptiveNN();
+    view_generator_ = new ViewGeneratorNNAdaptive();
     break;
   case 2:
     view_generator_ = new ViewGeneratorFrontier();
