@@ -55,6 +55,20 @@ profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
 profiling_use_symmetry: true
 
+############
+## View Generation settings
+############
+view_generator_nn_pos_res_x: 1.0
+view_generator_nn_pos_res_y: 1.0
+view_generator_nn_pos_res_z: 1.0
+view_generator_nn_pos_res_yaw: rad(pi/4)
+view_generator_nn_adaptive_local_minima_threshold: 0.005
+view_generator_nn_adaptive_local_minima_iterations: 3
+view_generator_frontier_minimum_size: 10
+view_generator_frontier_nearest_count: 50
+view_generator_frontier_cylinder_radius: 2.5
+view_generator_frontier_cylinder_height: 1
+
 # 0: adaptive circular
 # 1: bounded box
 profiling_method: 0
@@ -75,3 +89,11 @@ termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_entropy_window_size: 5
 termination_ros_spin_afterwards: false
+
+############
+## View Selecter settings
+############
+view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
+view_selecter_ignore_entropies_at_clamping_points: true
+view_selecter_weight_distance: 0.5
+view_selecter_proposed_predicted_weight: 0.5

@@ -6,16 +6,15 @@
 #include <visualization_msgs/Marker.h>
 
 #include <tf_conversions/tf_eigen.h>
-//#include <culling/occlusion_culling.h>
 
-#include "nbv_exploration/view_selecter_symmetry_prediction.h"
+#include "nbv_exploration/view_selecter_proposed_ray_length.h"
 
-ViewSelecterSymmetryPrediction::ViewSelecterSymmetryPrediction():
+ViewSelecterProposedRayLength::ViewSelecterProposedRayLength():
   ViewSelecterBase() //Call base class constructor
 {
 }
 
-double ViewSelecterSymmetryPrediction::calculateUtility(Pose p)
+double ViewSelecterProposedRayLength::calculateUtility(Pose p)
 {
   // Modified version of ViewSelecterBase::calculateIG()
   // Computes length of rays in original and predicted and uses those as weights for entropies
@@ -190,12 +189,12 @@ double ViewSelecterSymmetryPrediction::calculateUtility(Pose p)
   return ig_total;
 }
 
-std::string ViewSelecterSymmetryPrediction::getMethodName()
+std::string ViewSelecterProposedRayLength::getMethodName()
 {
-  return "Proposed Method";
+  return "Proposed (Ray Length)";
 }
 
-void ViewSelecterSymmetryPrediction::update()
+void ViewSelecterProposedRayLength::update()
 {
   ViewSelecterBase::update(); //Call base class update
   tree_predicted_ = view_gen_->tree_prediction_;

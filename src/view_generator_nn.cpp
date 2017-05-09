@@ -89,5 +89,5 @@ void ViewGeneratorNN::generateViews()
 
 std::string ViewGeneratorNN::getMethodName()
 {
-  return "Frontier";
+  return "NN";
 }

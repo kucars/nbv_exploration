@@ -143,7 +143,9 @@ void NBVLoop::evaluateViewpoints()
 
   // Evaluate viewpoints
   view_selecter_->evaluate();
-  //view_selecter_comparison_->evaluate();
+
+  if (is_view_selecter_compare)
+    view_selecter_comparison_->evaluate();
 
   // Move to next best view
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
@@ -208,6 +210,7 @@ void NBVLoop::initParameters()
   // >>>>>>>>>>>>>>>>>
   // DEBUG
   ros::param::param("~debug_nbv_main_states", is_debug_states, false);
+  ros::param::param("~view_selecter_compare", is_view_selecter_compare, false);
 
 
   // STATES
@@ -285,37 +288,44 @@ void NBVLoop::initViewGenerator()
 
 }
 
-void NBVLoop::initViewSelecter()
+ViewSelecterBase* NBVLoop::createViewSelecter(int type)
 {
-  int view_selecter_method;
-  ros::param::param("~view_selecter_type", view_selecter_method, 0);
-
-  switch(view_selecter_method)
+  ViewSelecterBase* v;
+  switch(type)
   {
   default:
   case 0:
-    view_selecter_ = new ViewSelecterIg();
+    v = new ViewSelecterIg();
     break;
   case 1:
-    view_selecter_ = new ViewSelecterIgExpDistance();
+    v = new ViewSelecterIgExpDistance();
     break;
   case 2:
-    view_selecter_ = new ViewSelecterSymmetryPrediction();
+    v = new ViewSelecterPointDensity();
     break;
-  case 3:
-    view_selecter_ = new ViewSelecterPointDensity();
+
+  case 10:
+    v = new ViewSelecterProposed();
+    break;
+  case 11:
+    v = new ViewSelecterProposedRayLength();
     break;
   }
 
+  return v;
+}
+
+void NBVLoop::initViewSelecter()
+{
+  int view_selecter_method, view_selecter_compare_method;
+  ros::param::param("~view_selecter_type", view_selecter_method, 0);
+  ros::param::param("~view_selecter_compare_type", view_selecter_compare_method, 0);
+
+  view_selecter_ = createViewSelecter(view_selecter_method);
   view_selecter_->setViewGenerator(view_generator_);
 
-
   // Another selecter to compare with
-  if (view_selecter_method != 0)
-    view_selecter_comparison_ = new ViewSelecterIg();
-  else
-    view_selecter_comparison_ = new ViewSelecterIgExpDistance();
-
+  view_selecter_comparison_ = createViewSelecter(view_selecter_compare_method);
   view_selecter_comparison_->setViewGenerator(view_generator_);
 
 }
@@ -541,6 +551,18 @@ void NBVLoop::updateHistory()
   iteration_msg.utilities        = view_selecter_->info_utilities_;
   iteration_msg.utility_max      = view_selecter_->info_utility_max_;
   iteration_msg.utility_med      = view_selecter_->info_utility_med_;
-
   pub_iteration_info.publish(iteration_msg);
+
+  if (is_view_selecter_compare)
+  {
+    iteration_msg.iteration        = view_selecter_comparison_->info_iteration_;
+    iteration_msg.distance_total   = view_selecter_comparison_->info_distance_total_;
+    iteration_msg.entropy_total    = view_selecter_comparison_->info_entropy_total_;
+    iteration_msg.method_selection = view_selecter_comparison_->getMethodName();
+    iteration_msg.selected_pose    = view_selecter_comparison_->getTargetPose();
+    iteration_msg.utilities        = view_selecter_comparison_->info_utilities_;
+    iteration_msg.utility_max      = view_selecter_comparison_->info_utility_max_;
+    iteration_msg.utility_med      = view_selecter_comparison_->info_utility_med_;
+    pub_iteration_info.publish(iteration_msg);
+  }
 }

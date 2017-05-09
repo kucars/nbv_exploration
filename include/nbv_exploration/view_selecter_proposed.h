@@ -1,5 +1,5 @@
-#ifndef NBV_EXPLORATION_VIEW_SELECTER_SYMMETRY_PREDICTION_H
-#define NBV_EXPLORATION_VIEW_SELECTER_SYMMETRY_PREDICTION_H
+#ifndef NBV_EXPLORATION_VIEW_SELECTER_PROPOSED_H
+#define NBV_EXPLORATION_VIEW_SELECTER_PROPOSED_H
 
 #include <iostream>
 #include <ros/ros.h>
@@ -20,16 +20,18 @@
 #include "nbv_exploration/common.h"
 
 
-class ViewSelecterSymmetryPrediction: public ViewSelecterBase
+class ViewSelecterProposed: public ViewSelecterBase
 {
 public:
-  ViewSelecterSymmetryPrediction();
+  ViewSelecterProposed();
 
 protected:
   octomap::OcTree* tree_predicted_;
   double calculateUtility(Pose p);
   std::string getMethodName();
   void update();
+
+  double weight_predicted_;
 };
 
 #endif

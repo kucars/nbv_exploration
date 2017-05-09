@@ -32,7 +32,8 @@
 #include "nbv_exploration/view_selecter_ig.h"
 #include "nbv_exploration/view_selecter_ig_exp_distance.h"
 #include "nbv_exploration/view_selecter_point_density.h"
-#include "nbv_exploration/view_selecter_symmetry_prediction.h"
+#include "nbv_exploration/view_selecter_proposed.h"
+#include "nbv_exploration/view_selecter_proposed_ray_length.h"
 
 #include "control/vehicle_control_base.h"
 #include "control/vehicle_control_floating_sensor.h"
@@ -85,6 +86,7 @@ public:
 
   // DEBUG
   bool is_debug_states;
+  bool is_view_selecter_compare;
 
   // STATE VARIABLES
   NBVState::State state;
@@ -136,6 +138,9 @@ public:
 
   double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
   double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
+
+private:
+  ViewSelecterBase* createViewSelecter(int type);
 };
 
 #endif // end include
