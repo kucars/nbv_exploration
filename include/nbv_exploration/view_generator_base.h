@@ -65,15 +65,15 @@ public:
   virtual bool isValidViewpoint(Pose p);
   bool isInFreeSpace(Pose p);
 
-  void setCollisionRadius(double r);
-  void setCloud(PointCloudXYZ::Ptr in_occ_cloud);
-  void setCurrentPose(Pose p);
-  void setDebug(bool b);
-  void setHistory(NBVHistory* h);
-  void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
-  void setMap(octomap::OcTree* oct);
-  void setMapPrediction(octomap::OcTree* oct);
-  void setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
+  virtual void setCollisionRadius(double r);
+  virtual void setCloud(PointCloudXYZ::Ptr in_occ_cloud);
+  virtual void setCurrentPose(Pose p);
+  virtual void setDebug(bool b);
+  virtual void setHistory(NBVHistory* h);
+  virtual void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
+  virtual void setMap(octomap::OcTree* oct);
+  virtual void setMapPrediction(octomap::OcTree* oct);
+  virtual void setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
   
   virtual void updateCollisionBoxesFromOctomap();
 

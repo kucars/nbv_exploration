@@ -97,7 +97,8 @@ termination_ros_spin_afterwards: true
 # 0: Nearest Neighbor (NN)
 # 1: Adaptive NN
 # 2: Frontier
-view_generator_type: 2
+# 3: NN with Frontier at local minima
+view_generator_type: 3
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0

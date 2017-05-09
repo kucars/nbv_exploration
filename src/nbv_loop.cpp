@@ -279,6 +279,9 @@ void NBVLoop::initViewGenerator()
   case 2:
     view_generator_ = new ViewGeneratorFrontier();
     break;
+  case 3:
+    view_generator_ = new ViewGeneratorNNFrontier();
+    break;
   }
 
   view_generator_->setHistory(history_);

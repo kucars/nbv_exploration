@@ -25,6 +25,7 @@
 #include "nbv_exploration/view_generator_frontier.h"
 #include "nbv_exploration/view_generator_nn.h"
 #include "nbv_exploration/view_generator_nn_adaptive.h"
+#include "nbv_exploration/view_generator_nn_frontier.h"
 #include "nbv_exploration/view_selecter_base.h"
 #include "nbv_exploration/view_selecter_ig.h"
 #include "nbv_exploration/view_selecter_ig_exp_distance.h"
