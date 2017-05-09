@@ -125,6 +125,7 @@ add_executable(nbv_main
   src/view_generator_frontier.cpp
   src/view_generator_nn.cpp
   src/view_generator_nn_adaptive.cpp
+  src/view_generator_nn_frontier.cpp
 
   src/view_selecter_base.cpp
   src/view_selecter_ig.cpp

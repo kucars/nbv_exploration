@@ -10,12 +10,6 @@
 #include "nbv_exploration/common.h"
 
 
-// Frontier
-struct Frontier{
-  std::vector<octomap::OcTreeKey> nodes;
-  std::vector<PointXYZ> centroids;
-};
-
 struct KeyIndex{
   octomap::OcTreeKey key;
   int index;
@@ -28,6 +22,11 @@ public:
   void generateViews();
 
 protected:
+  int minimum_frontier_size_;
+  int nearest_frontiers_count_; // number of frontiers to extract when finding the nearest frontiers
+  double cylinder_radius_; //radius of sampling cylinder
+  double cylinder_height_;
+
   std::vector<std::vector<octomap::OcTreeKey> > findFrontiers();
   std::vector<octomap::OcTreeKey> findFrontierCells();
 

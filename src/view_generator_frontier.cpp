@@ -16,6 +16,10 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
   ViewGeneratorBase() //Call base class constructor
 {
 
+  ros::param::param<int>("~view_generator_frontier_minimum_size", minimum_frontier_size_, 10);
+  ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 10);
+  ros::param::param<double>("~view_generator_frontier_cylinder_radius", cylinder_radius_, 3.0);
+  ros::param::param<double>("~view_generator_frontier_cylinder_height", cylinder_height_, 1.0);
 }
 
 std::vector<std::vector<octomap::OcTreeKey> > ViewGeneratorFrontier::findFrontiers()
@@ -74,8 +78,14 @@ std::vector<std::vector<octomap::OcTreeKey> > ViewGeneratorFrontier::findFrontie
       } //end checking for neighbors
     } //end queue
 
+    // Not enough frontier cells, do not count this as a frontier
+    if (key_list.size() < minimum_frontier_size_)
+      continue;
+
     frontier_list.push_back(key_list);
   } //end for
+
+  std::cout << "[ViewpointGeneratorFrontier] " << "Found " << frontier_list.size() << " frontiers, " << frontier_cells.size() << " frontier cells\n" << cc.reset;
 
   return frontier_list;
 }
@@ -131,38 +141,13 @@ std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findFrontierCells()
       frontier_keys.push_back(nKey);
   } //end for
 
-  std::cout << "[ViewpointGeneratorFrontier] " << cc.red << "Found " << frontier_keys.size() << " frontier cells\n" << cc.reset;
-
   return frontier_keys;
 }
 
 void ViewGeneratorFrontier::generateViews()
 {
   generated_poses.clear();
-
-  // ==========
-  // Estimate points normals (parallelized)
-  // ==========
-  PointCloudN::Ptr cloud_normals (new PointCloudN);
-  pcl::search::KdTree<PointXYZ>::Ptr kdtree_est (new pcl::search::KdTree<PointXYZ> ());
-  pcl::NormalEstimationOMP<PointXYZ, PointN> norm_est;
-
-  norm_est.setSearchMethod (kdtree_est);
-  norm_est.setInputCloud (cloud_occupied_ptr_);
-  norm_est.setKSearch (50);
-  norm_est.compute (*cloud_normals);
-
-  // ==========
-  // Set up nearest neighbor search
-  // ==========
-  pcl::KdTreeFLANN<PointN> kdtree;
-  kdtree.setInputCloud (cloud_normals);
-  int K = 1;
-  std::vector<int> pointIdxNKNSearch(K);
-  std::vector<float> pointNKNSquaredDistance(K);
-
-
-
+  std::vector<geometry_msgs::Pose> rejected_poses;
 
   // ==========
   // Find frontiers
@@ -172,6 +157,8 @@ void ViewGeneratorFrontier::generateViews()
   // ===========
   // Get centroids of frontiers
   // ===========
+  PointCloudXYZ::Ptr centroid_cloud (new PointCloudXYZ);
+
   for (int i_f=0; i_f<frontiers.size(); i_f++)
   {
     std::vector<octomap::OcTreeKey> f = frontiers[i_f];
@@ -186,93 +173,56 @@ void ViewGeneratorFrontier::generateViews()
       centroid.x += pt.x()/c_count;
       centroid.y += pt.y()/c_count;
       centroid.z += pt.z()/c_count;
-
-      /*
-      Pose pose;
-      pose.position.x = pt.x();
-      pose.position.y = pt.y();
-      pose.position.z = pt.z();
-      generated_poses.push_back(pose);
-      */
-
     }
 
-    // Get node normal
-    /*
-    std::vector< octomap::point3d > normals;
-    octomap::point3d centroid_octo(
-          centroid.x,
-          centroid.y,
-          centroid.z);
+    centroid_cloud->points.push_back(centroid);
+  }
 
-    tree_->getNormals(centroid_octo, normals);
+  // ============
+  // Get nearest frontiers
+  // ============
+  pcl::KdTreeFLANN<PointXYZ> kdtree;
+  kdtree.setInputCloud (centroid_cloud);
+  std::vector<int> pointIdxNKNSearch(nearest_frontiers_count_);
+  std::vector<float> pointNKNSquaredDistance(nearest_frontiers_count_);
 
-    printf("Centroid: [%3.2lf, %3.2lf, %3.2lf], Count: %d, Normals: %lu\n", centroid.x, centroid.y, centroid.z, c_count, normals.size());
+  PointXYZ current_pt (
+        current_pose_.position.x,
+        current_pose_.position.y,
+        current_pose_.position.z
+        );
 
-    Eigen::Vector3d v (0,0,0);
+  if ( kdtree.nearestKSearch (current_pt, nearest_frontiers_count_, pointIdxNKNSearch, pointNKNSquaredDistance) == 0 )
+    return;
 
-    for(unsigned i = 0; i < normals.size(); ++i)
+  for (int i=0; i<pointIdxNKNSearch.size(); i++)
+  {
+    int idx = pointIdxNKNSearch[i];
+    PointXYZ centroid = centroid_cloud->points[idx];
+
+    // Generate poses around the centroid
+    for (int z_inc=-1; z_inc<=1; z_inc+=1)
     {
-      v[0] += normals[i].x();
-      v[1] += normals[i].y();
-      v[2] += normals[i].z();
+      for (double theta=0; theta<=2*M_PI; theta+=M_PI_2)
+      {
+        Pose pose;
+        pose.position.x = centroid.x + cylinder_radius_*cos(theta);
+        pose.position.y = centroid.y + cylinder_radius_*sin(theta);
+        pose.position.z = centroid.z + z_inc*cylinder_height_;
+        pose.orientation = pose_conversion::getQuaternionFromYaw(M_PI+theta); // Point to center of cylinder
 
-      std::cout << "\t" << normals[i].x() << "; " << normals[i].y() << "; " << normals[i].z() << std::endl;
+        if ( isValidViewpoint(pose) )
+          generated_poses.push_back(pose);
+        else
+          rejected_poses.push_back(pose);
+
+      }
     }
-
-    v.normalize();
-    std::cout << "\tFinal: " << v[0] << "; " << v[1] << "; " << v[2] << std::endl;
-    */
-
-    // ==============
-    // Save pose for visualization
-    // =============
-    Pose pose;
-    pose.position.x = centroid.x;
-    pose.position.y = centroid.y;
-    pose.position.z = centroid.z;
-
-    /*
-    if (normals.size() > 0)
-      pose.orientation = pose_conversion::getQuaternionFromDirectionVector(v);
-    */
-
-    // ============
-    // Get node normal
-    // ============
-
-    PointN searchPoint;
-    searchPoint.x = centroid.x;
-    searchPoint.y = centroid.y;
-    searchPoint.z = centroid.z;
-
-    pointIdxNKNSearch.clear();
-    pointNKNSquaredDistance.clear();
-
-    if ( kdtree.nearestKSearch (searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0 )
-    {
-      // Find closest point in original cloud
-      int idx = pointIdxNKNSearch[0];
-      PointN pt_nn = cloud_normals->points[idx];
-
-      Eigen::Vector3d v(
-          pt_nn.normal[0],
-          pt_nn.normal[1],
-          pt_nn.normal[2]
-          );
-
-      std::cout << "\tFinal: " << v[0] << "; " << v[1] << "; " << v[2] << std::endl;
-      pose.orientation = pose_conversion::getQuaternionFromDirectionVector(v);
-    }
-
-
-    generated_poses.push_back(pose);
-
   }
 
   // Visualize
-  std::vector<geometry_msgs::Pose> invalid_poses;
-  ViewGeneratorBase::visualize(generated_poses, invalid_poses);
+  std::cout << "[ViewGeneratorNN] Generated " << generated_poses.size() << " poses (" << rejected_poses.size() << " rejected)" << std::endl;
+  ViewGeneratorBase::visualize(generated_poses, rejected_poses);
 }
 
 bool ViewGeneratorFrontier::isNear(octomap::OcTreeKey k1, octomap::OcTreeKey k2)

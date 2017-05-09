@@ -6,7 +6,6 @@ debug_mapping: false
 debug_view_generator: false
 debug_view_selecter: false
 
-
 ############
 ## Scenario settings
 ############
@@ -41,7 +40,7 @@ uav_collision_radius: 0.8
 ## Mapping settings
 ############
 mapping_voxel_grid_res_profile: 0.1
-mapping_voxel_grid_res_rgbd: 0.04
+mapping_voxel_grid_res_rgbd: 0.02
 mapping_octree_resolution: 0.2
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
 
@@ -103,8 +102,12 @@ view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
 view_generator_nn_pos_res_yaw: rad(pi/4)
-view_generator_adaptive_nn_local_minima_threshold: 0.005
-view_generator_adaptive_nn_local_minima_iterations: 3
+view_generator_nn_adaptive_local_minima_threshold: 0.005
+view_generator_nn_adaptive_local_minima_iterations: 3
+view_generator_frontier_minimum_size: 10
+view_generator_frontier_nearest_count: 50
+view_generator_frontier_cylinder_radius: 2.5
+view_generator_frontier_cylinder_height: 1
 
 
 ############
