@@ -707,7 +707,8 @@ octomap::OcTree* MappingModule::getOctomapPredicted()
 
 PointCloudXYZ::Ptr MappingModule::getPointCloud()
 {
-  return cloud_ptr_profile_;
+  return cloud_ptr_rgbd_;
+  //return cloud_ptr_profile_;
 }
 
 void MappingModule::initializeParameters()

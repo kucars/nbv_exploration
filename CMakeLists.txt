@@ -130,6 +130,7 @@ add_executable(nbv_main
   src/view_selecter_base.cpp
   src/view_selecter_ig.cpp
   src/view_selecter_ig_exp_distance.cpp
+  src/view_selecter_point_density.cpp
   src/view_selecter_symmetry_prediction.cpp
 
   src/control/vehicle_control_base.cpp

@@ -116,6 +116,7 @@ view_generator_frontier_cylinder_height: 1
 # 0: Information Gain (IG)
 # 1: Information Gain with exponential Distance
 # 2: Prediction based on symmetry
+# 3: Point Density
 view_selecter_type: 0
 view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
 view_selecter_ignore_entropies_at_clamping_points: true

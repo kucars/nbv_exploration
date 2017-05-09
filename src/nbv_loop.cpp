@@ -302,6 +302,9 @@ void NBVLoop::initViewSelecter()
   case 2:
     view_selecter_ = new ViewSelecterSymmetryPrediction();
     break;
+  case 3:
+    view_selecter_ = new ViewSelecterPointDensity();
+    break;
   }
 
   view_selecter_->setViewGenerator(view_generator_);
