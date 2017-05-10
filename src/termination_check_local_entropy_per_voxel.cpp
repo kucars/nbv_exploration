@@ -15,7 +15,7 @@ bool TerminationCheckLocalEntropyPerVoxel::isTerminated()
   // Find max entropy change in the past few iterations
   float max_change = nbv_history_->getMaxEntropyDiffPerVoxel(window_size_);
 
-  if (max_change < min_entropy_threshold_)
+  if (fabs(max_change) < min_entropy_threshold_)
     return true;
 
   return false;

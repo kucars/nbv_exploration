@@ -341,11 +341,16 @@ void NBVLoop::positionVehicleAfterProfiling()
   chrono_start = std::chrono::high_resolution_clock::now();
   std::cout << "[NBVLoop] " << cc.yellow << "Note: Moving vehicle after profiling uses a fixed waypoint defined in config settings. Create adaptive method.\n" << cc.reset;
 
+  int pose_number;
+  std::string pose_number_str;
+  ros::param::param<int>("~profiling_complete_pose_number", pose_number, 1);
+  pose_number_str = std::to_string(pose_number);
+
   double x, y, z, yaw;
-  ros::param::param<double>("~profiling_complete_pose_x", x, 0);
-  ros::param::param<double>("~profiling_complete_pose_y", y, 0);
-  ros::param::param<double>("~profiling_complete_pose_z", z, 10);
-  ros::param::param<double>("~profiling_complete_pose_yaw", yaw, 0);
+  ros::param::param<double>("~profiling_complete_pose_x_" + pose_number_str, x, 0);
+  ros::param::param<double>("~profiling_complete_pose_y_" + pose_number_str, y, 0);
+  ros::param::param<double>("~profiling_complete_pose_z_" + pose_number_str, z, 10);
+  ros::param::param<double>("~profiling_complete_pose_yaw_" + pose_number_str, yaw, 0);
 
   vehicle_->setWaypoint(x, y, z, yaw);
   vehicle_->setSpeed(1.0);

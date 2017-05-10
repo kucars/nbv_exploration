@@ -55,20 +55,6 @@ profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
 profiling_use_symmetry: true
 
-############
-## View Generation settings
-############
-view_generator_nn_pos_res_x: 1.0
-view_generator_nn_pos_res_y: 1.0
-view_generator_nn_pos_res_z: 1.0
-view_generator_nn_pos_res_yaw: rad(pi/4)
-view_generator_nn_adaptive_local_minima_threshold: 0.005
-view_generator_nn_adaptive_local_minima_iterations: 3
-view_generator_frontier_minimum_size: 10
-view_generator_frontier_nearest_count: 50
-view_generator_frontier_cylinder_radius: 2.5
-view_generator_frontier_cylinder_height: 1
-
 # 0: adaptive circular
 # 1: bounded box
 profiling_method: 0
@@ -76,6 +62,27 @@ profiling_scan_speed: 1.0
 
 ## Adaptive Circular
 profiling_circular_waypoints: 8
+
+
+############
+# UAV starting pose after profiling
+############
+# List poses
+profiling_complete_pose_x_1: 0
+profiling_complete_pose_y_1: -20
+profiling_complete_pose_z_1: 5
+profiling_complete_pose_yaw_1: 1.571
+
+profiling_complete_pose_x_2: -3
+profiling_complete_pose_y_2: 0
+profiling_complete_pose_z_2: 5
+profiling_complete_pose_yaw_2: 0
+
+profiling_complete_pose_x_3: 10
+profiling_complete_pose_y_3: 7
+profiling_complete_pose_z_3: 5
+profiling_complete_pose_yaw_3: -0.6
+
 
 ############
 ## Termination settings
@@ -90,10 +97,29 @@ termination_entropy_local_min_change_threshold: 0.001
 termination_entropy_window_size: 5
 termination_ros_spin_afterwards: false
 
+
+############
+## View Generation settings
+############
+view_generator_nn_pos_res_x: 1.0
+view_generator_nn_pos_res_y: 1.0
+view_generator_nn_pos_res_z: 1.0
+view_generator_nn_pos_res_yaw: rad(pi/4)
+view_generator_nn_adaptive_local_minima_threshold: 0.005
+view_generator_nn_adaptive_local_minima_iterations: 3
+view_generator_frontier_local_minima_threshold: 0.002
+view_generator_frontier_local_minima_iterations: 4
+view_generator_frontier_minimum_size: 10
+view_generator_frontier_nearest_count: 50
+view_generator_frontier_cylinder_radius: 2.5
+view_generator_frontier_cylinder_height: 1
+
+
 ############
 ## View Selecter settings
 ############
+view_selecter_compare: false
+view_selecter_compare_type: 0
+
 view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
 view_selecter_ignore_entropies_at_clamping_points: true
-view_selecter_weight_distance: 0.5
-view_selecter_proposed_predicted_weight: 0.5
