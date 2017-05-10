@@ -2,7 +2,7 @@
 
 import rospy
 from nbv_exploration.msg import IterationInfo
-from numpy import mean, array, hypot, diff, convolve, arange, sin, cos, ones, pi, matrix
+from numpy import mean, array, hypot, diff, convolve, arange, sin, cos, ones, pi, matrix, isfinite
 import time
 import signal
 import sys
@@ -28,7 +28,7 @@ Folder structure is assumed to be the following:
 
 """
 
-dir = '/home/abdullah/2017-05-06'
+dir = '/home/abdullah/NBV_Results'
 methods = {}
 
 class RunStats(object):
@@ -71,7 +71,17 @@ def ExtractRunData(folder):
     entropy_total.append( float(row[1]) )
     distance.append( float(row[3]) )
     utility_max.append( float(row[4]) )
-    time_iteration.append ( float(row[6]) )
+
+    t = 0
+    try:
+      t = float(row[6])
+      if not isfinite(t):
+        t = 0
+    except:
+      # Failure happens if number is blank
+      print('Failed to convert time to float in iteration ' + str(iterations[-1]) )
+
+    time_iteration.append ( t )
 
   # Create final stats
   stats = RunStats(file_no_ext, file_path)
@@ -123,7 +133,7 @@ def main():
       total_runs = runs
 
   # Display final statistcs
-  print ("Method, Runs, Iterations, Distance (m), Entropy Reduction, Total Time (ms), Avg Time Per Iteration (ms), Coverage (res = 0.05m), Coverage (res = 0.10m), Coverage (res = 0.50m)")
+  print ("Method, Runs, Iterations, Distance (m), Entropy Reduction, Total Time (s), Avg Time Per Iteration (ms), Coverage (res = 0.05m), Coverage (res = 0.10m), Coverage (res = 0.50m)")
 
   for m in methods:
     avg_IG = 0
@@ -136,13 +146,13 @@ def main():
       avg_IG += r.final_IG
       avg_distance += r.final_distance
       avg_iteration += r.final_iterations
-      avg_time += r.final_time
+      avg_time += r.final_time/1000
 
     avg_IG /= len(methods[m])
     avg_distance /= len(methods[m])
     avg_iteration /= len(methods[m])
     avg_time /= len(methods[m])
-    avg_time_per_iteration = avg_time/avg_iteration
+    avg_time_per_iteration = 1000*avg_time/avg_iteration
 
     print(m + ", " +
           str(len(methods[m])) + ", " +
@@ -187,6 +197,18 @@ def main():
         continue
       ax_plot[r].plot(method[r].iterations, method[r].utility_max, label=key)
       ax_plot[r].set_ylabel('Utility Max')
+      ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
+
+  # Display time per iteration in each run
+  f, ax_plot = pyplot.subplots(total_runs,1)
+  f.suptitle("Time Per Iteration")
+
+  for r in range(total_runs):
+    for key, method in methods.items():
+      if (r >= len(method)):
+        continue
+      ax_plot[r].plot(method[r].iterations, method[r].time_iteration, label=key)
+      ax_plot[r].set_ylabel('Time per Iteration (ms)')
       ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
 
 

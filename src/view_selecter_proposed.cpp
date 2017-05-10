@@ -144,7 +144,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         }
 
         // Add ray IG with wighted predicted IG
-        ig_total += ig_ray + weight_predicted_*ig_predicted;
+        ig_total += (1-weight_predicted_)*ig_ray + weight_predicted_*ig_predicted;
 
       }
     }
