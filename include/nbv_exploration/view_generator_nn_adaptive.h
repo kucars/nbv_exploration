@@ -13,13 +13,13 @@ public:
   void generateViews();
   std::string getMethodName();
 
-protected:
+private:
+  int minima_iterations_;
+  double minima_threshold_;
   bool isStuckInLocalMinima();
 
+protected:
   double scale_factor_;
-  double minima_iterations_;
-  double minima_threshold_;
-
 };
 
 #endif

@@ -565,4 +565,6 @@ void NBVLoop::updateHistory()
     iteration_msg.utility_med      = view_selecter_comparison_->info_utility_med_;
     pub_iteration_info.publish(iteration_msg);
   }
+
+  std::cout << "[NBVLoop] " << cc.yellow << "Iteration " << history_->iteration << " - Complete\n" << cc.reset;
 }

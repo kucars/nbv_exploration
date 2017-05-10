@@ -12,7 +12,7 @@ ViewGeneratorNNAdaptive::ViewGeneratorNNAdaptive():
   ViewGeneratorNN(), //Call base class constructor
   scale_factor_(1)
 {
-  ros::param::param<double>("~view_generator_nn_adaptive_local_minima_iterations", minima_iterations_, 3);
+  ros::param::param<int>("~view_generator_nn_adaptive_local_minima_iterations", minima_iterations_, 3);
   ros::param::param<double>("~view_generator_nn_adaptive_local_minima_threshold", minima_threshold_, 0.01);
 }
 
@@ -31,7 +31,7 @@ bool ViewGeneratorNNAdaptive::isStuckInLocalMinima()
 
 void ViewGeneratorNNAdaptive::generateViews()
 {
-  if (isStuckInLocalMinima())
+  if (ViewGeneratorNNAdaptive::isStuckInLocalMinima())
   {
     scale_factor_*= 1.5;
     std::cout << "[ViewGeneratorNNAdaptive]: " << cc.yellow << "Local minima detected. Increasing scale factor to " << scale_factor_ << "\n" << cc.reset;
