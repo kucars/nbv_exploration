@@ -46,6 +46,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
 
     octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint, endpoint_predicted;
+    double ray_length, ray_predicted_length;
 
     // Get length of beam to the far plane of sensor
     double range = rays_far_plane_[i].norm();
@@ -55,12 +56,25 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     if (!found_endpoint)
     {
       endpoint = origin + dir * range;
+      ray_length = range;
+    }
+    else
+    {
+      ray_length = (origin-endpoint).norm();
     }
 
     // Cast ray through predicted map
     found_endpoint = tree_predicted_->castRay(origin, dir, endpoint_predicted, true, range);
     if (found_endpoint)
-      ig_predicted += -log(0.5); //Entropy of a completely unknown cell
+    {
+      ray_predicted_length = (origin-endpoint_predicted).norm();
+
+      if (ray_length >= ray_predicted_length)
+        // Predicted voxel is not occluded, count it
+        ig_predicted += -log(0.5); //Entropy of a completely unknown cell
+    }
+
+
 
     octomap::point3d start_pt, end_pt;
     bool entered_valid_range = false;
@@ -144,7 +158,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         }
 
         // Add ray IG with wighted predicted IG
-        ig_total += (1-weight_predicted_)*ig_ray + weight_predicted_*ig_predicted;
+        ig_total += /*(1-weight_predicted_)*/ig_ray + weight_predicted_*ig_predicted;
 
       }
     }

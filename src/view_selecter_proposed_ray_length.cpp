@@ -55,6 +55,10 @@ double ViewSelecterProposedRayLength::calculateUtility(Pose p)
       endpoint = origin + dir * range;
       ray_len = range;
     }
+    else
+    {
+      ray_len = (origin-endpoint).norm();
+    }
 
     // Cast ray through predicted map
     found_endpoint = tree_predicted_->castRay(origin, dir, endpoint_predicted, true, range);

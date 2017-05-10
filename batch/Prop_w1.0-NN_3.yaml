@@ -24,4 +24,4 @@ view_generator_type: 0
 # 11: Proposed (ray length)
 view_selecter_type: 10
 view_selecter_weight_distance: 0.5
-view_selecter_proposed_predicted_weight: 0.5
+view_selecter_proposed_predicted_weight: 1.0
