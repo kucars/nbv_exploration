@@ -187,7 +187,7 @@ def main():
           )
 
   # Display entropy in each run
-  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True)
+  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
 
   for r in range(total_runs):
     for key, method in methods.items():
@@ -199,7 +199,7 @@ def main():
 
 
   # Display distance in each run
-  f, ax_plot = pyplot.subplots(total_runs,1)
+  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
 
   for r in range(total_runs):
     for key, method in methods.items():
@@ -211,7 +211,7 @@ def main():
 
 
   # Display utility in each run
-  f, ax_plot = pyplot.subplots(total_runs,1)
+  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
   f.suptitle("Utility")
 
   for r in range(total_runs):
@@ -223,7 +223,7 @@ def main():
       ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
 
   # Display time per iteration in each run
-  f, ax_plot = pyplot.subplots(total_runs,1)
+  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
   f.suptitle("Time Per Iteration")
 
   for r in range(total_runs):
