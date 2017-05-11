@@ -155,13 +155,48 @@ void transformCloud(PointCloudXYZ::Ptr& cloud_ptr, double scale=1, double x_shif
   cloud_ptr = cloud_scale;
 }
 
+bool isFloat(std::string s) {
+    std::istringstream iss(s);
+    float dummy;
+    iss >> std::noskipws >> dummy;
+    return iss && iss.eof();     // Result converted to bool
+}
+
 int main (int argc, char** argv)
 {
+  bool is_batch = false;
+
   std::string filename_reference = "/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/etihad/etihad_clean.pcd";
   std::string filename_final = "/home/abdullah/.ros/final_cloud.pcd";
 
   PointCloudXYZ::Ptr cloud_ref (new PointCloudXYZ);
   PointCloudXYZ::Ptr cloud_final (new PointCloudXYZ);
+
+  // ==========
+  // Process inputs
+  // ==========
+  std::vector<double> voxelRes;
+  for (int i=1; i<argc; i++)
+  {
+    std::string arg_str = std::string(argv[i]);
+
+    if (arg_str == "-b")
+    {
+      is_batch = true;
+    }
+    else if (arg_str == "-i")
+    {
+      filename_final = std::string(argv[i+1]);
+      i++;
+    }
+    else
+    {
+      voxelRes.push_back( atof(argv[i]) );
+    }
+  }
+
+  if (voxelRes.size() == 0)
+    voxelRes.push_back(0.05);
 
   // ===============
   // Read input file
@@ -174,17 +209,6 @@ int main (int argc, char** argv)
   // ===============
   // Create voxel grids
   // ===============
-  std::vector<double> voxelRes;
-  if (argc == 1)
-    voxelRes.push_back(0.05);
-  else
-  {
-    for (int i=1; i<argc; i++)
-    {
-      voxelRes.push_back( atof(argv[i]) );
-    }
-  }
-
   for (int i=0; i<voxelRes.size(); i++)
   {
     int grid_size_ref, grid_size_final;
@@ -199,29 +223,40 @@ int main (int argc, char** argv)
     int matched = matchesForGrid1InGrid2(grid_ref, grid_final);
     float coverage = float(matched)/grid_size_ref;
 
-    printf("Resolution: %f, Coverage: %f%%\n", voxelRes[i], coverage*100);
+    if (is_batch)
+    {
+      printf("%3.2f\n", coverage*100);
+    }
+    else
+    {
+      printf("Resolution: %f, Coverage: %3.2f%%\n", voxelRes[i], coverage*100);
+    }
+
   }
 
   // =========
   // Visualize
   // =========
-  int vp_1;
-  pcl::visualization::PCLVisualizer *p = new pcl::visualization::PCLVisualizer ("Coverage");
-  p->createViewPort (0.0, 0.0, 1.0, 1.0, vp_1);
-  p->setBackgroundColor(255, 255, 255);
-  p->setCameraClipDistances(65.3496, 129.337);
-  p->setCameraPosition(35.1704, -68.6111, 63.8152,       0.0329489, 0.689653, 0.72339, 1);//, 0.0427789, -0.185814, 0.0496169, -0.0956887, -0.992963, 0.0697719);
-  p->setCameraFieldOfView(0.523599);
-  p->setSize(1366, 700);
-  p->setPosition(0, 300);
+  if (!is_batch)
+  {
+    int vp_1;
+    pcl::visualization::PCLVisualizer *p = new pcl::visualization::PCLVisualizer ("Coverage");
+    p->createViewPort (0.0, 0.0, 1.0, 1.0, vp_1);
+    p->setBackgroundColor(255, 255, 255);
+    p->setCameraClipDistances(65.3496, 129.337);
+    p->setCameraPosition(35.1704, -68.6111, 63.8152,       0.0329489, 0.689653, 0.72339, 1);//, 0.0427789, -0.185814, 0.0496169, -0.0956887, -0.992963, 0.0697719);
+    p->setCameraFieldOfView(0.523599);
+    p->setSize(1366, 700);
+    p->setPosition(0, 300);
 
-  pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> cloud_ref_handler (cloud_ref, 0, 255, 0);
-  p->addPointCloud (cloud_ref, cloud_ref_handler, "ref_cloud", vp_1);
+    pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> cloud_ref_handler (cloud_ref, 0, 255, 0);
+    p->addPointCloud (cloud_ref, cloud_ref_handler, "ref_cloud", vp_1);
 
-  pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> cloud_final_handler (cloud_final, 255, 0, 0);
-  p->addPointCloud (cloud_final, cloud_final_handler, "final_cloud", vp_1);
+    pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> cloud_final_handler (cloud_final, 255, 0, 0);
+    p->addPointCloud (cloud_final, cloud_final_handler, "final_cloud", vp_1);
 
-  p->spin();
+    p->spin();
+  }
 
   return 0;
 }

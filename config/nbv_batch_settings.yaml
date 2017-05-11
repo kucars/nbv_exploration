@@ -83,6 +83,11 @@ profiling_complete_pose_y_3: 7
 profiling_complete_pose_z_3: 5
 profiling_complete_pose_yaw_3: -0.6
 
+profiling_complete_pose_x_4: -4
+profiling_complete_pose_y_4: 20
+profiling_complete_pose_z_4: 9
+profiling_complete_pose_yaw_4: -0.8
+
 
 ############
 ## Termination settings
