@@ -103,6 +103,7 @@ def ExtractRunData(folder):
   return stats
 
 def getMethodData():
+  global methods
   # Get method names
   os.chdir( dir )
   for name in os.listdir("."):
@@ -124,6 +125,7 @@ def getMethodData():
         os.chdir( folder_method ) # Return to method folder
 
 def main():
+  global methods
   getMethodData()
 
   # Get number of runs
@@ -190,7 +192,7 @@ def main():
   f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
 
   for r in range(total_runs):
-    for key, method in methods.items():
+    for key, method in sorted(methods.items()):
       if (r >= len(method)):
         continue
       ax_plot[r].plot(method[r].iterations, method[r].entropy_total, label=key)
@@ -202,7 +204,7 @@ def main():
   f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
 
   for r in range(total_runs):
-    for key, method in methods.items():
+    for key, method in sorted(methods.items()):
       if (r >= len(method)):
         continue
       ax_plot[r].plot(method[r].iterations, method[r].distance, label=key)
@@ -215,7 +217,7 @@ def main():
   f.suptitle("Utility")
 
   for r in range(total_runs):
-    for key, method in methods.items():
+    for key, method in sorted(methods.items()):
       if (r >= len(method)):
         continue
       ax_plot[r].plot(method[r].iterations, method[r].utility_max, label=key)
@@ -227,7 +229,7 @@ def main():
   f.suptitle("Time Per Iteration")
 
   for r in range(total_runs):
-    for key, method in methods.items():
+    for key, method in sorted(methods.items()):
       if (r >= len(method)):
         continue
       ax_plot[r].plot(method[r].iterations, method[r].time_iteration, label=key)
