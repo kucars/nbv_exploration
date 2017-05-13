@@ -92,6 +92,8 @@ void MappingModule::run()
 
 void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in)
 {
+
+
   for (int j=0; j<cloud_in.points.size(); j++)
   {
     // Convert from PCL point to Octomap point
@@ -104,8 +106,26 @@ void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXY
     octomap::OcTreeKey key;
     if ( octree_in->coordToKeyChecked(p, key) )
     {
-      // Mark this position as occupied
-      octree_in->updateNode(key, true);
+      octomap::OcTreeNode* node = octree_in->search(key);
+
+      if (node == NULL)
+      {
+        // Node doesn't exist, create it
+        node = octree_in->updateNode(key, false);
+      }
+      else
+      {
+        // Check if the current cell is occupied or free
+        double p = node->getLogOdds();
+
+        if (p >= predicted_occupancy_value_ || p <= -predicted_occupancy_value_)
+          continue; // Cell is occupied/free, skip it
+
+
+      }
+
+      // Cell is neither occupied nor free, update it with the predicted value
+      node->setValue(predicted_occupancy_value_);
     }
   }
 }
@@ -350,7 +370,11 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
 
     // == Update prediction, if necessary
     if (is_checking_symmetry_)
-      updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+    {
+      // If prediction is integrated into map, don't do anything
+      if (!is_integrating_prediction_)
+        updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+    }
 
     // == Done updating
     is_get_camera_data_ = false;
@@ -425,24 +449,6 @@ bool MappingModule::commandProfileLoad()
   // Initialize cloud_ptr_rgbd_ with profile data
   copyPointCloud(*cloud_ptr_profile_, *cloud_ptr_rgbd_);
 
-  // Symmetry
-  if (is_checking_symmetry_)
-  {
-    std::cout << "[Mapping] " << "Reading " << filename_pcl_symmetry_ << "\n";
-
-    if (pcl::io::loadPCDFile<PointXYZ> (filename_pcl_symmetry_, *cloud_ptr_profile_symmetry_) == -1) //* load the file
-    {
-      std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_symmetry_ << ".Exiting node.\n" << cc.reset;
-      return false;
-    }
-
-    // Populate octree with symmetry data
-    octree_prediction_ = new octomap::OcTree (octree_res_);
-    octree_prediction_->setBBXMin( bound_min_ );
-    octree_prediction_->setBBXMax( bound_max_ );
-    addPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
-  }
-
   // Octree
   if (is_filling_octomap_)
   {
@@ -464,6 +470,28 @@ bool MappingModule::commandProfileLoad()
       std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Could not read file " << filename_octree_ << ". Exiting node.\n" << cc.reset;
       return false;
     }
+  }
+
+  // Symmetry
+  if (is_checking_symmetry_)
+  {
+    std::cout << "[Mapping] " << "Reading " << filename_pcl_symmetry_ << "\n";
+
+    if (pcl::io::loadPCDFile<PointXYZ> (filename_pcl_symmetry_, *cloud_ptr_profile_symmetry_) == -1) //* load the file
+    {
+      std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_symmetry_ << ".Exiting node.\n" << cc.reset;
+      return false;
+    }
+
+    // Populate octree with symmetry data
+    octree_prediction_ = new octomap::OcTree (octree_res_);
+    octree_prediction_->setBBXMin( bound_min_ );
+    octree_prediction_->setBBXMax( bound_max_ );
+
+    if (is_integrating_prediction_)
+      addPointCloudToTree(octree_, *cloud_ptr_profile_symmetry_);
+    else
+      addPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
   }
 
   std::cout << "[Mapping] " << cc.green << "Successfully loaded maps\n" << cc.reset;
@@ -740,6 +768,11 @@ void MappingModule::initializeParameters()
   ros::param::param("~mapping_sensor_data_min_height_", sensor_data_min_height_, 0.5);
   ros::param::param("~mapping_voxel_grid_res_profile", profile_grid_res_, 0.1);
   ros::param::param("~mapping_voxel_grid_res_rgbd", depth_grid_res_, 0.1);
+  ros::param::param("~mapping_integrate_prediction", is_integrating_prediction_, false);
+  ros::param::param("~mapping_integrate_occupancy", predicted_occupancy_value_, 0.7);
+
+  // Convert to logodds
+  predicted_occupancy_value_ = octomap::logodds(predicted_occupancy_value_);
 
   double obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max;
   ros::param::param("~object_bounds_x_min", obj_x_min,-1.0);

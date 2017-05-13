@@ -93,6 +93,7 @@ private:
   double profile_grid_res_;
   double depth_grid_res_;
   double octree_res_;
+  double predicted_occupancy_value_;
 
   octomap::point3d bound_min_, bound_max_;
   int camera_height_px_;
@@ -108,6 +109,7 @@ private:
   bool is_get_camera_data_;
   bool is_scanning_;
   bool is_checking_symmetry_;
+  bool is_integrating_prediction_;
 
   // == Profiling
   std::vector<octomap::point3d> pose_vec_, dir_vec_;

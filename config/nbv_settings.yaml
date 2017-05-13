@@ -3,7 +3,7 @@
 ############
 debug_nbv_main_states: true
 debug_mapping: false
-debug_view_generator: true
+debug_view_generator: false
 debug_view_selecter: false
 
 ############
@@ -43,6 +43,8 @@ mapping_voxel_grid_res_profile: 0.1
 mapping_voxel_grid_res_rgbd: 0.02
 mapping_octree_resolution: 0.2
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
+mapping_integrate_prediction: true
+mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
 
 ############
 ## Profiling settings
@@ -53,13 +55,11 @@ profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
 profiling_use_symmetry: true
+profiling_scan_speed: 1.0
 
 # 0: adaptive circular
 # 1: bounded box
 profiling_method: 0
-profiling_scan_speed: 1.0
-
-## Adaptive Circular
 profiling_circular_waypoints: 8
 
 ############
