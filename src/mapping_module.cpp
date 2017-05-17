@@ -91,9 +91,11 @@ void MappingModule::run()
   }
 }
 
-void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in)
+void MappingModule::addPredictedPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in)
 {
-
+  /*
+   * Add prediction to final map
+   */
 
   for (int j=0; j<cloud_in.points.size(); j++)
   {
@@ -126,7 +128,10 @@ void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXY
       }
 
       // Cell is neither occupied nor free, update it with the predicted value
-      node->setValue(predicted_occupancy_value_);
+      if (is_integrating_prediction_)
+        node->setValue(predicted_occupancy_value_); //Whatever value the user set in the settings
+      else
+        node->setValue(5.0f); //Fully occupied
     }
   }
 }
@@ -505,9 +510,9 @@ bool MappingModule::commandProfileLoad()
     octree_prediction_->setBBXMax( bound_max_ );
 
     if (is_integrating_prediction_)
-      addPointCloudToTree(octree_, *cloud_ptr_profile_symmetry_);
+      addPredictedPointCloudToTree(octree_, *cloud_ptr_profile_symmetry_);
     else
-      addPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
+      addPredictedPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
   }
 
   std::cout << "[Mapping] " << cc.green << "Successfully loaded maps\n" << cc.reset;
@@ -599,7 +604,7 @@ bool MappingModule::commandProfilingStop()
     sym_det->getOutputCloud(cloud_ptr_profile_symmetry_);
 
     // Populate octree with symmetry data
-    addPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
+    addPredictedPointCloudToTree(octree_prediction_, *cloud_ptr_profile_symmetry_);
   }
 
   return true;

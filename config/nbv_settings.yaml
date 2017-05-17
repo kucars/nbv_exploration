@@ -66,7 +66,7 @@ mapping_voxel_grid_res_rgbd: 0.02
 mapping_octree_resolution: 0.2
 mapping_occupancy_threshold: 0.7
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
-mapping_integrate_prediction: true
+mapping_integrate_prediction: false #if true, put prediction in final map. If false, put prediction in separate map
 mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
 
 ############
