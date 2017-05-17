@@ -9,8 +9,6 @@ ModelProfilerCircularAdaptive::ModelProfilerCircularAdaptive():
   is_sensor_rising_(false)
 {
   ros::param::param("~uav_obstacle_distance_min_", uav_obstacle_distance_min_, 1.0);
-  ros::param::param("~nav_bounds_z_min", uav_height_min_, 0.1);
-  ros::param::param("~nav_bounds_z_max", uav_height_max_, 10.0);
   ros::param::param("~profiling_circular_waypoints", waypoint_count_, 5);
 
   angle_inc_ = 2*M_PI/waypoint_count_;
@@ -138,10 +136,10 @@ void ModelProfilerCircularAdaptive::scan()
   {
     std::cout << cc.magenta << "Profiling move up\n" << cc.reset;
 
-    while (ros::ok() && vehicle_->getPosition().z < uav_height_max_)
+    while (ros::ok() && vehicle_->getPosition().z < bounds.z_max)
     {
       vehicle_->setSpeed(scan_speed_);
-      vehicle_->setWaypointIncrement(0, 0, uav_height_max_ - vehicle_->getPosition().z, 0);
+      vehicle_->setWaypointIncrement(0, 0, bounds.z_max - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25);
       ros::spinOnce();
     }
@@ -150,10 +148,10 @@ void ModelProfilerCircularAdaptive::scan()
   {
     std::cout << cc.magenta << "Profiling move down\n" << cc.reset;
 
-    while (ros::ok() && vehicle_->getPosition().z > uav_height_min_)
+    while (ros::ok() && vehicle_->getPosition().z > bounds.z_min)
     {
       vehicle_->setSpeed(scan_speed_);
-      vehicle_->setWaypointIncrement(0, 0, uav_height_min_ - vehicle_->getPosition().z, 0);
+      vehicle_->setWaypointIncrement(0, 0, bounds.z_min - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25);
       ros::spinOnce();
     }

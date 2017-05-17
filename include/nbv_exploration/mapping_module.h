@@ -85,6 +85,7 @@ private:
   // =========
   // Variables
   // =========
+  int counter_;
   // == Config
   double max_rgbd_range_;
   double sensor_data_min_height_;
@@ -93,6 +94,7 @@ private:
   double profile_grid_res_;
   double depth_grid_res_;
   double octree_res_;
+  double octree_thresh_; //Threshold for occupancy
   double predicted_occupancy_value_;
 
   octomap::point3d bound_min_, bound_max_;
@@ -110,6 +112,7 @@ private:
   bool is_scanning_;
   bool is_checking_symmetry_;
   bool is_integrating_prediction_;
+  bool skip_load_map_;
 
   // == Profiling
   std::vector<octomap::point3d> pose_vec_, dir_vec_;

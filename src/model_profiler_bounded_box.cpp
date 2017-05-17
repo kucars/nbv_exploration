@@ -8,12 +8,6 @@ ModelProfilerBoundedBox::ModelProfilerBoundedBox():
   is_sensor_rising_(false),
   waypoints_exist_(false)
 {
-  ros::param::param("~nav_bounds_x_min", bounds.x_min, 0.1);
-  ros::param::param("~nav_bounds_x_max", bounds.x_max, 10.0);
-  ros::param::param("~nav_bounds_y_min", bounds.y_min, 0.1);
-  ros::param::param("~nav_bounds_y_max", bounds.y_max, 10.0);
-  ros::param::param("~nav_bounds_z_min", bounds.z_min, 0.1);
-  ros::param::param("~nav_bounds_z_max", bounds.z_max, 10.0);
 }
 
 ModelProfilerBoundedBox::UAVWaypoint ModelProfilerBoundedBox::createSingleWaypoint(double x, double y, double z, double x_center, double y_center)

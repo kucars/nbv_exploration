@@ -13,6 +13,11 @@ protected:
   MappingModule * mapping_module_;
 
 public:
+  struct Bounds{
+    double x_min, x_max, y_min, y_max, z_min, z_max;
+  };
+  Bounds bounds;
+
   ModelProfilerBase();
 
   virtual bool run(PointCloudXYZ::Ptr profile_cloud_ptr){};
@@ -21,7 +26,7 @@ public:
   void setScanSpeed(double speed);
   void setMappingModule(MappingModule* v);
   void setVehicle(VehicleControlBase* v);
-  bool skipProfiling(bool load_map);
+  bool skipProfiling(bool skip_map_loading);
   bool startProfiling();
 };
 

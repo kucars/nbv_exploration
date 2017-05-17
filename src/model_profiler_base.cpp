@@ -8,6 +8,12 @@ ModelProfilerBase::ModelProfilerBase():
   vehicle_(NULL),
   scan_speed_(0.1)
 {
+  ros::param::param("~nav_bounds_x_min", bounds.x_min, 0.1);
+  ros::param::param("~nav_bounds_x_max", bounds.x_max, 10.0);
+  ros::param::param("~nav_bounds_y_min", bounds.y_min, 0.1);
+  ros::param::param("~nav_bounds_y_max", bounds.y_max, 10.0);
+  ros::param::param("~nav_bounds_z_min", bounds.z_min, 0.1);
+  ros::param::param("~nav_bounds_z_max", bounds.z_max, 10.0);
 }
 
 void ModelProfilerBase::setMappingModule(MappingModule* m)
@@ -26,9 +32,37 @@ void ModelProfilerBase::setScanSpeed(double speed)
 }
 
 
-bool ModelProfilerBase::skipProfiling(bool load_map)
+bool ModelProfilerBase::skipProfiling(bool skip_map_loading)
 {
-  if (load_map)
+  if (skip_map_loading)
+  {
+    std::cout << "Skipping profiling (empty map)\n";
+
+    /* Take a single reading */
+    mapping_module_->commandProfilingStart();
+    mapping_module_->commandScanningStart();
+    ros::Duration(1).sleep();
+    mapping_module_->commandScanningStop();
+    mapping_module_->commandProfilingStop();
+    mapping_module_->commandGetCameraData();
+
+    /*
+    mapping_module_->commandProfilingStart();
+    mapping_module_->commandScanningStart();
+
+    double final_z = 1.0;
+    while (ros::ok() && vehicle_->getPosition().z < final_z)
+    {
+      vehicle_->setSpeed(scan_speed_);
+      vehicle_->setWaypointIncrement(0, 0, final_z - vehicle_->getPosition().z, 0);
+      vehicle_->moveVehicle(0.25);
+      ros::spinOnce();
+    }
+    mapping_module_->commandScanningStop();
+    mapping_module_->commandProfilingStop();
+    */
+  }
+  else
   {
     std::cout << "Skipping profiling (load map)\n";
 
@@ -40,19 +74,6 @@ bool ModelProfilerBase::skipProfiling(bool load_map)
     }
   }
 
-  else
-  {
-    std::cout << "Skipping profiling (empty map)\n";
-
-    /* Create an empty octomap */
-    mapping_module_->commandProfilingStart();
-    bool success = mapping_module_->commandProfilingStop();
-    if (!success)
-    {
-      std::cout << cc.red << "Failed to start profiler\n" << cc.reset;
-      return false;
-    }
-  }
 
   return true;
 }

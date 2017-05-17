@@ -10,7 +10,8 @@ MappingModule::MappingModule()
   : cloud_ptr_rgbd_ (new PointCloudXYZ),
     cloud_ptr_profile_ (new PointCloudXYZ),
     cloud_ptr_profile_symmetry_ (new PointCloudXYZ),
-    octree_(NULL)
+    octree_(NULL),
+    counter_(0)
 {
   // >>>>>>>>>>>>>>>>>
   // Initialization
@@ -383,6 +384,10 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
 bool MappingModule::commandGetCameraData()
 {
   is_get_camera_data_ = true;
+
+  // Subscribe to topic
+  sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
+
   std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
 
   for (int i=0; i<10 && ros::ok() && is_get_camera_data_; i++)
@@ -395,6 +400,16 @@ bool MappingModule::commandGetCameraData()
   {
     std::cout << "[Mapping] " << cc.magenta << "Could not get camera data\n" << cc.reset;
   }
+
+  // Unsubscribe frome topic
+  sub_rgbd_.shutdown();
+
+
+  // Save final map ever 10 iterations
+  counter_++;
+  counter_ %= 10;
+  if (counter_ == 0)
+    commandFinalMapSave();
 
   return true;
 }
@@ -432,7 +447,7 @@ bool MappingModule::commandFinalMapSave()
     }
   }
 
-  std::cout << "[Mapping] " << cc.green << "Successfully saved map\n" << cc.reset;
+  std::cout << "[Mapping] " << cc.blue << "Successfully saved map\n" << cc.reset;
   return true;
 }
 
@@ -458,6 +473,7 @@ bool MappingModule::commandProfileLoad()
     if(temp_tree)
     { // read error returns NULL
       octree_ = dynamic_cast<octomap::OcTree*>(temp_tree);
+      octree_->setOccupancyThres( octree_thresh_ );
 
       if (!octree_)
       {
@@ -551,6 +567,7 @@ bool MappingModule::commandProfilingStart()
     octree_ = new octomap::OcTree (octree_res_);
     octree_->setBBXMin( bound_min_ );
     octree_->setBBXMax( bound_max_ );
+    octree_->setOccupancyThres( octree_thresh_ );
   }
 
   if (!octree_prediction_)
@@ -570,6 +587,9 @@ bool MappingModule::commandProfilingStop()
 
   // Initialize cloud_ptr_rgbd_ with profile data
   copyPointCloud(*cloud_ptr_profile_, *cloud_ptr_rgbd_);
+
+  if (skip_load_map_)
+    return true;
 
   if (is_checking_symmetry_)
   {
@@ -760,11 +780,13 @@ void MappingModule::initializeParameters()
 
   ros::param::param("~debug_mapping", is_debugging_, false);
   ros::param::param("~profiling_check_symmetry", is_checking_symmetry_, true);
+  ros::param::param("~profiling_skip_load_map", skip_load_map_, false);
   ros::param::param("~profiling_fill_octomap", is_filling_octomap_, true);
   ros::param::param("~profiling_fill_octomap_continuously", is_filling_octomap_continuously_, true);
 
   ros::param::param("~depth_range_max", max_rgbd_range_, 5.0);
   ros::param::param("~mapping_octree_resolution", octree_res_, 0.2);
+  ros::param::param("~mapping_occupancy_threshold", octree_thresh_, 0.5);
   ros::param::param("~mapping_sensor_data_min_height_", sensor_data_min_height_, 0.5);
   ros::param::param("~mapping_voxel_grid_res_profile", profile_grid_res_, 0.1);
   ros::param::param("~mapping_voxel_grid_res_rgbd", depth_grid_res_, 0.1);
@@ -798,7 +820,7 @@ void MappingModule::initializeTopicHandlers()
   // >>>>>>>>>>>>>>>>>
 
   // Sensor data
-  sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
+  //sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
   sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
 
   //ros::ServiceServer service = ros_node_.advertiseService("/nbv_exploration/mapping_command", &MappingModule::callbackCommand, this);

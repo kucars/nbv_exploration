@@ -7,10 +7,6 @@
 class ModelProfilerBoundedBox : public ModelProfilerBase
 {
 public:
-  struct Bounds{
-    double x_min, x_max, y_min, y_max, z_min, z_max;
-  };
-
   struct UAVWaypoint{
     double x, y, z, yaw;
   };
@@ -25,7 +21,6 @@ protected:
   int waypoint_counter_;
 
   bool is_sensor_rising_;
-  Bounds bounds;
 
   void createWaypoints();
   UAVWaypoint createSingleWaypoint(double x, double y, double z, double x_center, double y_center);

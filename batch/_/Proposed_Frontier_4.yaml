@@ -1,8 +1,13 @@
 ############
 # Starting Position
 ############
-profiling_complete_pose_number: 3
+profiling_complete_pose_number: 4
 
+
+############
+## Mapping Settings
+############
+mapping_integrate_prediction: true
 
 ############
 ## View Generation settings
@@ -11,7 +16,7 @@ profiling_complete_pose_number: 3
 # 1: Adaptive NN
 # 2: Frontier
 # 3: NN with Frontier at local minima
-view_generator_type: 0
+view_generator_type: 3
 
 
 ############
@@ -22,6 +27,6 @@ view_generator_type: 0
 # 2: Point Density
 # 10: Proposed
 # 11: Proposed (ray length)
-view_selecter_type: 10
+view_selecter_type: 0
 view_selecter_weight_distance: 0.5
-view_selecter_proposed_predicted_weight: 1.0
+view_selecter_proposed_predicted_weight: 0.5

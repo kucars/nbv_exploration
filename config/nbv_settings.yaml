@@ -35,6 +35,28 @@ vehicle_type: 0
 uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
 
+## UAV Poses
+uav_start_pose: 1
+
+uav_pose_x_0: 0
+uav_pose_y_0: -20
+uav_pose_z_0: 5
+uav_pose_yaw_0: 1.571
+
+uav_pose_x_1: 0
+uav_pose_y_1: -20
+uav_pose_z_1: 5
+uav_pose_yaw_1: 1.571
+
+uav_pose_x_2: -3
+uav_pose_y_2: 0
+uav_pose_z_2: 5
+uav_pose_yaw_2: 0
+
+uav_pose_x_3: 10
+uav_pose_y_3: 10
+uav_pose_z_3: 5
+uav_pose_yaw_3: 0.3
 
 ############
 ## Mapping settings
@@ -42,6 +64,7 @@ uav_collision_radius: 0.8
 mapping_voxel_grid_res_profile: 0.1
 mapping_voxel_grid_res_rgbd: 0.02
 mapping_octree_resolution: 0.2
+mapping_occupancy_threshold: 0.7
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
 mapping_integrate_prediction: true
 mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
@@ -50,7 +73,7 @@ mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
 ## Profiling settings
 ############
 profiling_skip: true
-profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
+profiling_skip_load_map: false #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
@@ -65,25 +88,8 @@ profiling_circular_waypoints: 8
 ############
 # UAV starting pose after profiling
 ############
-# Select starting pose
-profiling_complete_pose_number: 3
-
-# List poses
-profiling_complete_pose_x_1: 0
-profiling_complete_pose_y_1: -20
-profiling_complete_pose_z_1: 5
-profiling_complete_pose_yaw_1: 1.571
-
-profiling_complete_pose_x_2: -3
-profiling_complete_pose_y_2: 0
-profiling_complete_pose_z_2: 5
-profiling_complete_pose_yaw_2: 0
-
-profiling_complete_pose_x_3: 10
-profiling_complete_pose_y_3: 10
-profiling_complete_pose_z_3: 5
-profiling_complete_pose_yaw_3: 0.3
-
+# Select pose after completing profile
+profiling_complete_pose_number: 1
 
 ############
 ## Termination settings

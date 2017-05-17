@@ -44,23 +44,20 @@ mapping_voxel_grid_res_profile: 0.1
 mapping_voxel_grid_res_rgbd: 0.04
 mapping_octree_resolution: 0.2
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
+mapping_integrate_occupancy: 0.6 # Occupancy value for predicted cells
 
 ############
 ## Profiling settings
 ############
-profiling_skip: true
-profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
 profiling_use_symmetry: true
+profiling_scan_speed: 1.0
 
 # 0: adaptive circular
 # 1: bounded box
 profiling_method: 0
-profiling_scan_speed: 1.0
-
-## Adaptive Circular
 profiling_circular_waypoints: 8
 
 
@@ -68,25 +65,31 @@ profiling_circular_waypoints: 8
 # UAV starting pose after profiling
 ############
 # List poses
-profiling_complete_pose_x_1: 0
-profiling_complete_pose_y_1: -20
-profiling_complete_pose_z_1: 5
-profiling_complete_pose_yaw_1: 1.571
 
-profiling_complete_pose_x_2: -3
-profiling_complete_pose_y_2: 0
-profiling_complete_pose_z_2: 5
-profiling_complete_pose_yaw_2: 0
+uav_pose_x_1: 0
+uav_pose_y_1: -20
+uav_pose_z_1: 5
+uav_pose_yaw_1: 1.571
 
-profiling_complete_pose_x_3: 10
-profiling_complete_pose_y_3: 7
-profiling_complete_pose_z_3: 5
-profiling_complete_pose_yaw_3: -0.6
+uav_pose_x_2: -3
+uav_pose_y_2: 0
+uav_pose_z_2: 5
+uav_pose_yaw_2: 0
 
-profiling_complete_pose_x_4: -4
-profiling_complete_pose_y_4: 20
-profiling_complete_pose_z_4: 9
-profiling_complete_pose_yaw_4: -0.8
+uav_pose_x_3: 10
+uav_pose_y_3: 7
+uav_pose_z_3: 5
+uav_pose_yaw_3: -0.5
+
+uav_pose_x_4: -6
+uav_pose_y_4: 15
+uav_pose_z_4: 5
+uav_pose_yaw_4: 0.9
+
+uav_pose_x_5: 3
+uav_pose_y_5: 5
+uav_pose_z_5: 3
+uav_pose_yaw_5: 3.14
 
 
 ############
