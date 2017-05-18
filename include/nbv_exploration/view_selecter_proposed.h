@@ -26,10 +26,12 @@ public:
   ViewSelecterProposed();
 
 protected:
-  octomap::OcTree* tree_predicted_;
   double calculateUtility(Pose p);
   std::string getMethodName();
+  void insertKeyIfUnique(std::vector<octomap::OcTreeKey>& list, octomap::OcTreeKey key);
   void update();
+
+  octomap::OcTree* tree_predicted_;
 
   double weight_density_;
   double weight_entropy_;

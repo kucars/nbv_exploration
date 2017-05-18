@@ -68,15 +68,17 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   int num_nodes_predicted = 0;
 
   int num_of_points = 0;
-  int num_of_endpoints = 0;
+
+  std::vector<octomap::OcTreeKey> key_list;
+  std::vector<octomap::OcTreeKey> key_predicted_list;
+
+
 
   clearRayMarkers();
   double ig_total = 0;
 
   for (int i=0; i<rays_far_plane_.size(); i++)
   {
-    double ig_ray = 0;
-
     octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint, endpoint_predicted;
     double ray_length, ray_predicted_length;
@@ -109,9 +111,16 @@ double ViewSelecterProposed::calculateUtility(Pose p)
       {
         ray_predicted_length = (origin-endpoint_predicted).norm();
 
+
         if (ray_length >= ray_predicted_length)
-          // Predicted voxel is not occluded, count it
-          num_nodes_predicted++;
+        {
+          octomap::OcTreeKey end_key;
+          if( tree_->coordToKeyChecked(endpoint_predicted, end_key) )
+          {
+            // Predicted voxel is not occluded, count it
+            insertKeyIfUnique(key_predicted_list, end_key);
+          }
+        }
       }
 
       time_predicted += ros::Time::now().toSec() - t1;
@@ -176,30 +185,8 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         }
       }
 
-      // =======
-      // Compute entropy of node
-      // =======
-      octomap::OcTreeNode* node = tree_->search(*it);
-      ig_ray += getNodeEntropy(node);
-
-      // =======
-      // Update cell counts
-      // =======
-      num_nodes_traversed++;
-
-      if (!node)
-        num_nodes_unknown++;
-      else if (isNodeOccupied(*node))
-        num_nodes_occ++;
-      else if (isNodeFree(*node))
-        num_nodes_free++;
-      else
-        num_nodes_unknown++;
-
+      insertKeyIfUnique(key_list, *it);
     }// end ray iterator
-
-
-
 
 
     // ======
@@ -214,27 +201,10 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         octomap::OcTreeKey end_key;
         if( tree_->coordToKeyChecked(endpoint, end_key) )
         {
-          num_nodes_traversed++;
-          num_nodes_occ++;
-
-          // =======
-          // Get number of points to compute density
-          // =======
-          double t1 = ros::Time::now().toSec();
-          num_of_points += getPointCountAtOcTreeKey(end_key);
-
-          num_of_endpoints++;
-          time_density += ros::Time::now().toSec() - t1;
+          insertKeyIfUnique(key_list, end_key);
         }
       }
     }
-
-
-
-    // ======
-    // Add ray to total
-    // ======
-    ig_total += ig_ray;
 
     /*
      * Project the discretized start and end point to the ray we started with
@@ -245,6 +215,43 @@ double ViewSelecterProposed::calculateUtility(Pose p)
 
     addToRayMarkers(start_pt, end_pt);
   }//end view checking
+
+
+  //========
+  // Process all unique nodes
+  //========
+  // Predicted octomap
+  num_nodes_predicted = key_predicted_list.size();
+
+  // Normal octomap
+  for (int i_key=0; i_key<key_list.size(); i_key++)
+  {
+    octomap::OcTreeKey key = key_list[i_key];
+    octomap::OcTreeNode* node = tree_->search(key);
+
+
+    num_nodes_traversed++;
+    if (!node)
+      num_nodes_unknown++;
+    else if (isNodeOccupied(*node))
+    {
+      num_nodes_occ++;
+
+      // Get number of points to compute density
+      num_of_points += getPointCountAtOcTreeKey(key);
+    }
+    else if (isNodeFree(*node))
+      num_nodes_free++;
+    else
+      num_nodes_unknown++;
+
+    // Entropy
+    ig_total += getNodeEntropy(node);
+  }
+
+  // ======
+  // Visualize
+  // ======
 
   publishRayMarkers();
   publishPose(p);
@@ -258,10 +265,10 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   //=======
   double density;
 
-  if (num_of_endpoints == 0)
+  if (num_nodes_occ == 0)
     density = 0;
   else
-    density = double(num_of_points)/num_of_endpoints;
+    density = double(num_of_points)/num_nodes_occ;
 
   //=======
   // Compute utility
@@ -315,17 +322,17 @@ double ViewSelecterProposed::calculateUtility(Pose p)
 
   // Value views that see more voxels more, as they're less likely to skim the edge of the surface
   double utility;
-  if (num_of_endpoints == 0)
+  if (num_nodes_occ == 0)
     utility = 0;
   else
-    utility = log(num_of_endpoints) * (weighted_density + weighted_entropy + weighted_prediction);
+    utility = log10(num_nodes_occ) * (weighted_density + weighted_entropy + weighted_prediction);
 
   if(is_debug_)
   {
     printf("\nDensity: %f\tMax: %f\n", density, max_density_);
     printf("Normalized -- IG: %f, Density: %f, Predicted: %f\n", normalized_entropy, normalized_density, normalized_prediction);
     printf("Utility ----- IG: %f, Density: %f, Predicted: %f, Total: %f\n", weighted_entropy, weighted_density, weighted_prediction, utility);
-    printf("Time -------- IG: %f, Density: %f, Predicted: %f, Total: %f\n", time_entropy, time_density, time_predicted, t_end-t_start);
+    //printf("Time -------- IG: %f, Density: %f, Predicted: %f, Total: %f\n", time_entropy, time_density, time_predicted, t_end-t_start);
     printf("Predicted: %d\tUnknown: %d\tOccupied: %d\tFree: %d\n", num_nodes_predicted, num_nodes_unknown, num_nodes_occ, num_nodes_free);
 
     /*
@@ -337,6 +344,16 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   return utility;
 }
 
+void ViewSelecterProposed::insertKeyIfUnique(std::vector<octomap::OcTreeKey>& list, octomap::OcTreeKey key)
+{
+  std::vector<octomap::OcTreeKey>::iterator it;
+  it = std::find(list.begin(), list.end(), key);
+  if (it == list.end())
+  {
+    // Key not found, insert
+    list.push_back(key);
+  }
+}
 
 std::string ViewSelecterProposed::getMethodName()
 {

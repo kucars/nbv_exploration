@@ -112,7 +112,7 @@ termination_ros_spin_afterwards: true
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 1
+view_generator_type: 0
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
