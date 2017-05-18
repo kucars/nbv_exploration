@@ -31,7 +31,11 @@ protected:
   std::string getMethodName();
   void update();
 
-  double weight_predicted_;
+  double weight_density_;
+  double weight_entropy_;
+  double weight_prediction_;
+  double max_density_;
+
 };
 
 #endif

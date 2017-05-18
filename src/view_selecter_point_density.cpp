@@ -53,7 +53,7 @@ double ViewSelecterPointDensity::calculateUtility(Pose p)
 
     // Get number of points inside endpoint
     checked_keys.push_back(end_key);
-    num_of_points += getPointCountInVoxel(end_key);
+    num_of_points += getPointCountAtOcTreeKey(end_key);
     num_of_voxels++;
   }
 
@@ -69,34 +69,6 @@ double ViewSelecterPointDensity::calculateUtility(Pose p)
   //return 1.0/density;
 
   return calculateIG(p)/density;
-}
-
-
-int ViewSelecterPointDensity::getPointCountInVoxel(octomap::OcTreeKey key)
-{
-  octomap::point3d coord = tree_->keyToCoord(key);
-  double res = tree_->getResolution()/2;
-
-  double x_min = coord.x() - res;
-  double x_max = coord.x() + res;
-  double y_min = coord.y() - res;
-  double y_max = coord.y() + res;
-  double z_min = coord.z() - res;
-  double z_max = coord.z() + res;
-
-  int count = 0;
-
-  for (int i=0; i<cloud_occupied_ptr_->points.size(); i++)
-  {
-    PointXYZ p = cloud_occupied_ptr_->points[i];
-
-    if (p.x >= x_min && p.x <= x_max &&
-        p.y >= y_min && p.y <= y_max &&
-        p.z >= z_min && p.z <= z_max)
-      count++;
-  }
-
-  return count;
 }
 
 

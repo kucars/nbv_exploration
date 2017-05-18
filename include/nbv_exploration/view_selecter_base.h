@@ -53,6 +53,7 @@ protected:
   
   PointCloudXYZ::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
+  std::map<octomap::OcTreeKey, int, OctomapKeyCompare> pointCountInKey;
   
   Pose current_pose_;
   Pose selected_pose_;
@@ -79,18 +80,20 @@ protected:
 
 protected:
   bool isEntropyLow();
-  
+  bool isNodeInBounds(octomap::OcTreeKey &key);
+  bool isNodeFree(octomap::OcTreeNode node);
+  bool isNodeOccupied(octomap::OcTreeNode node);
+  bool isNodeUnknown(octomap::OcTreeNode node);
+  bool isPointInBounds(octomap::point3d &p);
 
   double getNodeOccupancy(octomap::OcTreeNode* node);
   double getNodeEntropy(octomap::OcTreeNode* node);
-  
+  int    getPointCountAtOcTreeKey(octomap::OcTreeKey key);
 
   double computeRelativeRays();
   void computeOrientationMatrix(Pose p);
   octomap::point3d transformToGlobalRay(Eigen::Vector3d ray_dir);
-  bool isNodeInBounds(octomap::OcTreeKey &key);
-  bool isPointInBounds(octomap::point3d &p);
-  
+
 
   double calculateIG(Pose p);
   double calculateDistance(Pose p);

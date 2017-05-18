@@ -426,6 +426,27 @@ bool ViewSelecterBase::isNodeInBounds(octomap::OcTreeKey &key)
   return isPointInBounds(p);
 }
 
+bool ViewSelecterBase::isNodeFree(octomap::OcTreeNode node)
+{
+  if (node.getOccupancy() <= 1-tree_->getOccupancyThres())
+    return true;
+
+  return false;
+}
+
+bool ViewSelecterBase::isNodeOccupied(octomap::OcTreeNode node)
+{
+  if (node.getOccupancy() >= tree_->getOccupancyThres())
+    return true;
+
+  return false;
+}
+
+bool ViewSelecterBase::isNodeUnknown(octomap::OcTreeNode node)
+{
+  return !isNodeFree(node) && !isNodeOccupied(node);
+}
+
 bool ViewSelecterBase::isPointInBounds(octomap::point3d &p)
 {
   if (p.x() >= view_gen_->obj_bounds_x_min_ && p.x() <= view_gen_->obj_bounds_x_max_ &&
@@ -530,4 +551,47 @@ void ViewSelecterBase::update()
   {
     std::cout << "[ViewSelecterBase]: Total entropy remaining: " << info_entropy_total_ << "\n";
   }
+
+  //=======
+  // Fill a map with point count at each octreekey
+  //=======
+  pointCountInKey.clear(); // Clear old counts
+  std::map<octomap::OcTreeKey, int>::iterator it;
+
+  for (int i=0; i<cloud_occupied_ptr_->points.size(); i++)
+  {
+    PointXYZ p = cloud_occupied_ptr_->points[i];
+
+    octomap::OcTreeKey key;
+    if( !tree_->coordToKeyChecked(p.x, p.y, p.z, key) )
+      continue;
+
+    // Get iterator for desired key
+    it = pointCountInKey.find(key);
+    if (it != pointCountInKey.end())
+    {
+      // Key found, increment it it
+      it->second++;
+    }
+    else
+    {
+      // Key not found, initialize it
+      pointCountInKey.insert(std::make_pair(key, 1));
+    }
+  }
+}
+
+int ViewSelecterBase::getPointCountAtOcTreeKey(octomap::OcTreeKey key)
+{
+  std::map<octomap::OcTreeKey, int>::iterator it;
+  it = pointCountInKey.find(key);
+
+  if (it == pointCountInKey.end())
+  {
+    // Key not found, display error
+    //printf("[ViewSelecterBase]: Invalid key, no point count retrieved\n");
+    return 0;
+  }
+
+  return it->second;
 }

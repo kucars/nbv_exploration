@@ -29,7 +29,6 @@ protected:
   double w_dist_; //weight of distance in exp
 
   double calculateUtility(Pose p);
-  int getPointCountInVoxel(octomap::OcTreeKey key);
   std::string getMethodName();
 };
 
