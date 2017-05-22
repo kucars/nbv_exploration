@@ -17,7 +17,7 @@ ViewGeneratorNN::ViewGeneratorNN():
   ros::param::param("~view_generator_nn_pos_res_yaw", res_yaw_, M_PI_4);
 }
 
-void ViewGeneratorNN::generateViews()
+void ViewGeneratorNN::generateViews(bool generate_at_current_location)
 {
   std::vector<Pose> initial_poses;
   generated_poses.clear();
@@ -54,6 +54,10 @@ void ViewGeneratorNN::generateViews()
         {
           for (int i_yaw=-1; i_yaw<=1; i_yaw++)
           {
+            // Do not generate any viewpoints in current location
+            if (!generate_at_current_location && i_x==0 && i_y==0 && i_z==0)
+              continue;
+
             if (i_x==0 && i_y==0 && i_z==0 && i_yaw==0)
               continue;
             

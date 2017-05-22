@@ -17,5 +17,9 @@ bool TerminationCheckMaxIterations::isTerminated()
   if (current_iteration_ > max_iterations_)
     return true;
 
+  // See if the last few moves are repeating
+  if (nbv_history_->isRepeatingMotions(repeat_window_size_))
+    return true;
+
   return false;
 }

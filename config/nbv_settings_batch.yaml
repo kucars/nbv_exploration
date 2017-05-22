@@ -4,7 +4,7 @@
 debug_nbv_main_states: true
 debug_mapping: false
 debug_view_generator: false
-debug_view_selecter: false
+debug_view_selecter: true
 
 ############
 ## Scenario settings
@@ -89,12 +89,16 @@ profiling_circular_waypoints: 8
 # 0: Max iterations
 # 1: Global Entropy Change Percentage Difference
 # 2: Local Entropy Change Per Voxel
+# 3: Utility Threshold
 termination_type: 0
+termination_ros_spin_afterwards: false
+termination_window_size: 5
+termination_repeat_window_size: 10 #Number of permissible repetitions before the UAV is considered stuck in a local minima
+
 termination_iterations_max: 300
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
-termination_entropy_window_size: 5
-termination_ros_spin_afterwards: true
+termination_utility_min_threshold: 0.05
 
 
 ############
@@ -104,13 +108,14 @@ termination_ros_spin_afterwards: true
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 0
+view_generator_type: 1
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
 view_generator_nn_pos_res_yaw: rad(pi/4)
 view_generator_nn_adaptive_local_minima_threshold: 0.005
 view_generator_nn_adaptive_local_minima_iterations: 3
+view_generator_nn_adaptive_utility_threshold: 0.1
 view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
 view_generator_frontier_minimum_size: 10

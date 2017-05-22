@@ -41,12 +41,14 @@ class RunStats(object):
     self.path = path
     self.folder = folder
     self.final_iterations = 0
+    self.final_density = 0
     self.final_distance = 0
     self.final_IG = 0
     self.final_coverage = 0
     self.final_time = 0
 
     self.iterations = []
+    self.density = []
     self.distance = []
     self.entropy_total = []
     self.time_iteration = []
@@ -66,6 +68,7 @@ def ExtractRunData(folder):
   # Initialize columns
   iterations = []
   entropy_total = []
+  density = []
   distance = []
   utility_max = []
   time_iteration = []
@@ -92,6 +95,7 @@ def ExtractRunData(folder):
   # Create final stats
   stats = RunStats(file_no_ext, folder, file_path)
   stats.final_iterations = iterations[-1]
+  stats.final_density = density[-1]
   stats.final_distance = distance[-1]
   stats.final_IG = entropy_total[0] - entropy_total[-1]
 
@@ -101,6 +105,7 @@ def ExtractRunData(folder):
 
   stats.iterations = iterations
   stats.entropy_total = entropy_total
+  stats.density = density
   stats.distance = distance
   stats.utility_max = utility_max
   stats.time_iteration = time_iteration
@@ -129,6 +134,26 @@ def getMethodData():
 
         os.chdir( folder_method ) # Return to method folder
 
+def plotAttribute(total_runs, attr, label):
+  # Display entropy in each run
+  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
+
+  for r in range(total_runs):
+    for key, method in sorted(methods.items()):
+      if (r >= len(method)):
+        continue
+
+      data = eval("method[r]." + attr)
+
+      if (total_runs > 1):
+        ax_plot[r].plot(method[r].iterations, data, label=key)
+        ax_plot[r].set_ylabel(label)
+        ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
+      else:
+        ax_plot.plot(method[r].iterations, data, label=key)
+        ax_plot.set_ylabel(label)
+        ax_plot.legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
+
 def main():
   global methods
   getMethodData()
@@ -141,11 +166,12 @@ def main():
       total_runs = runs
 
   # Display final statistcs
-  print ("Method, Runs, Iterations, Distance (m), Entropy Reduction, Total Time (s), Avg Time Per Iteration (ms), Coverage (res = 0.05m), Coverage (res = 0.10m), Coverage (res = 0.50m)")
+  print ("Method, Runs, Iterations, Density, Distance (m), Entropy Reduction, Total Time (s), Avg Time Per Iteration (ms), Coverage (res = 0.05m), Coverage (res = 0.10m), Coverage (res = 0.50m)")
 
   for m in sorted(methods):
     avg_IG = 0
     avg_iteration = 0
+    avg_density = 0
     avg_distance = 0
     avg_time = 0
     avg_coverage_0_5 = 0
@@ -154,6 +180,7 @@ def main():
 
     for r in methods[m]:
       avg_IG += r.final_IG
+      avg_density += r.final_density
       avg_distance += r.final_distance
       avg_iteration += r.final_iterations
       avg_time += r.final_time/1000
@@ -173,6 +200,7 @@ def main():
         avg_coverage_0_05 += vec[2]
 
     avg_IG /= len(methods[m])
+    avg_density /= len(methods[m])
     avg_distance /= len(methods[m])
     avg_iteration /= len(methods[m])
     avg_time /= len(methods[m])
@@ -185,6 +213,7 @@ def main():
     print(m + ", "
           + str(len(methods[m])) + ", "
           + str( round(avg_iteration,2) ) + ", "
+          + str( round(avg_density,2) ) + ", "
           + str( round(avg_distance,2) ) + ", "
           + str( round(avg_IG,2) ) + ", "
           + str( round(avg_time,2) ) + ", "
@@ -194,55 +223,11 @@ def main():
           + str( round(avg_coverage_0_5,2) ) + "%"
           )
 
-  # Display entropy in each run
-  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
-
-  for r in range(total_runs):
-    for key, method in sorted(methods.items()):
-      if (r >= len(method)):
-        continue
-      ax_plot[r].plot(method[r].iterations, method[r].entropy_total, label=key)
-      ax_plot[r].set_ylabel('Total Entropy')
-      ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
-
-
-  # Display distance in each run
-  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
-
-  for r in range(total_runs):
-    for key, method in sorted(methods.items()):
-      if (r >= len(method)):
-        continue
-      ax_plot[r].plot(method[r].iterations, method[r].distance, label=key)
-      ax_plot[r].set_ylabel('Distance (m)')
-      ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
-
-
-  # Display utility in each run
-  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
-  f.suptitle("Utility")
-
-  for r in range(total_runs):
-    for key, method in sorted(methods.items()):
-      if (r >= len(method)):
-        continue
-      ax_plot[r].plot(method[r].iterations, method[r].utility_max, label=key)
-      ax_plot[r].set_ylabel('Utility Max')
-      ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
-
-  # Display time per iteration in each run
-  f, ax_plot = pyplot.subplots(total_runs,1,sharey=True, sharex=True)
-  f.suptitle("Time Per Iteration")
-
-  for r in range(total_runs):
-    for key, method in sorted(methods.items()):
-      if (r >= len(method)):
-        continue
-      ax_plot[r].plot(method[r].iterations, method[r].time_iteration, label=key)
-      ax_plot[r].set_ylabel('Time per Iteration (ms)')
-      ax_plot[r].legend(loc='lower left', bbox_to_anchor=(1.0, 0.0), shadow=True)
-
-
+  plotAttribute(total_runs, "entropy_total", "Total Entropy")
+  plotAttribute(total_runs, "distance", "Distance (m)")
+  plotAttribute(total_runs, "utility_max", "Utility Max")
+  plotAttribute(total_runs, "time_iteration", "Time per Iteration (ms)")
+  plotAttribute(total_runs, "density", "Density (pt/vox)")
 
   pyplot.show()
 

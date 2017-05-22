@@ -3,7 +3,7 @@
 TerminationCheckGlobalEntropyPercentageDifference::TerminationCheckGlobalEntropyPercentageDifference()
 {
   ros::param::param<double>("~termination_entropy_global_min_change_threshold", min_entropy_threshold_, 0.01);
-  ros::param::param<int>("~termination_entropy_window_size", window_size_, 1);
+  ros::param::param<int>("~termination_window_size", window_size_, 1);
 }
 
 bool TerminationCheckGlobalEntropyPercentageDifference::isTerminated()

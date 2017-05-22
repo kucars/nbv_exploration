@@ -240,6 +240,9 @@ void NBVLoop::initTerminationChecker()
   case 2:
     termination_check_module_ = new TerminationCheckLocalEntropyPerVoxel();
     break;
+  case 3:
+    termination_check_module_ = new TerminationCheckUtilityThreshold();
+    break;
   }
 
   termination_check_module_->setHistory(history_);

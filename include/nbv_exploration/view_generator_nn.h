@@ -11,7 +11,7 @@ class ViewGeneratorNN : public ViewGeneratorBase
 public:
   ViewGeneratorNN();
 
-  void generateViews();
+  void generateViews(bool generate_at_current_location=true);
   std::string getMethodName();
 };
 

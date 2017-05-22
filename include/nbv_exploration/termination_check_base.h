@@ -16,6 +16,7 @@ public:
 
 protected:
   NBVHistory* nbv_history_;
+  int repeat_window_size_;
 };
 
 #endif // TERMINATIONCHECKBASE_H

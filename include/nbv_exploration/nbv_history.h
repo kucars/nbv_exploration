@@ -9,6 +9,8 @@ class NBVHistory
 public:
   NBVHistory();
   double getMaxEntropyDiffPerVoxel (int N_iterations);
+  double getMaxUtility (int N_iterations);
+  bool isRepeatingMotions(int window_size);
   void update();
 
   int iteration;

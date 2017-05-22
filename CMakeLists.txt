@@ -121,6 +121,7 @@ add_executable(nbv_main
   src/termination_check_global_entropy_percent_diff.cpp
   src/termination_check_local_entropy_per_voxel.cpp
   src/termination_check_max_iterations.cpp
+  src/termination_check_utility_threshold.cpp
 
   src/view_generator_base.cpp
   src/view_generator_frontier.cpp

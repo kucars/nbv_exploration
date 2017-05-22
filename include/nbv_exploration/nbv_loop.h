@@ -23,6 +23,7 @@
 #include "nbv_exploration/termination_check_global_entropy_percent_diff.h"
 #include "nbv_exploration/termination_check_local_entropy_per_voxel.h"
 #include "nbv_exploration/termination_check_max_iterations.h"
+#include "nbv_exploration/termination_check_utility_threshold.h"
 #include "nbv_exploration/view_generator_base.h"
 #include "nbv_exploration/view_generator_frontier.h"
 #include "nbv_exploration/view_generator_nn.h"

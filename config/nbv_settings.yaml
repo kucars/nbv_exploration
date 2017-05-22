@@ -97,13 +97,15 @@ profiling_complete_pose_number: 2
 # 0: Max iterations
 # 1: Global Entropy Change Percentage Difference
 # 2: Local Entropy Change Per Voxel
+# 3: Utility Threshold
 termination_type: 0
+termination_ros_spin_afterwards: true
+termination_window_size: 5
+
 termination_iterations_max: 300
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
-termination_entropy_window_size: 5
-termination_ros_spin_afterwards: true
-
+termination_utility_min_threshold: 0.05
 
 ############
 ## View Generation settings
@@ -119,6 +121,7 @@ view_generator_nn_pos_res_z: 1.0
 view_generator_nn_pos_res_yaw: rad(pi/4)
 view_generator_nn_adaptive_local_minima_threshold: 0.005
 view_generator_nn_adaptive_local_minima_iterations: 3
+view_generator_nn_adaptive_utility_threshold: 0.1
 view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
 view_generator_frontier_minimum_size: 10
@@ -143,7 +146,7 @@ view_selecter_must_see_occupied: true #if true, views without a single occupied 
 view_selecter_ignore_entropies_at_clamping_points: true
 view_selecter_weight_distance: 0.5
 
+view_selecter_proposed_weight_entropy:    1
 view_selecter_proposed_weight_density:    1
+view_selecter_proposed_weight_prediction: 1
 view_selecter_proposed_weight_distance:   0.1
-view_selecter_proposed_weight_entropy:    10
-view_selecter_proposed_weight_prediction: 10

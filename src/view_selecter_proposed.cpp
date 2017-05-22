@@ -21,9 +21,8 @@ ViewSelecterProposed::ViewSelecterProposed():
   //@todo: chech all weights are positive
 
   // Normalize weights
-  double mag = weight_density_ + weight_entropy_ + weight_prediction_;
+  double mag = weight_density_ + weight_prediction_;
   weight_density_    /= mag;
-  weight_entropy_    /= mag;
   weight_prediction_ /= mag;
 
   // ========
@@ -322,7 +321,8 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   if (num_nodes_occ == 0)
     utility = 0;
   else
-    utility = log10(num_nodes_occ) * weighted_distance * (weighted_density + weighted_entropy + weighted_prediction);
+    //utility = log10(num_nodes_occ) * weighted_distance * (weighted_density + weighted_entropy + weighted_prediction);
+    utility = log10(num_nodes_occ) * weighted_distance * (1+weighted_entropy) * (weighted_density + weighted_prediction);
 
   if(is_debug_)
   {
@@ -379,7 +379,18 @@ void ViewSelecterProposed::insertKeyIfUnique(std::vector<octomap::OcTreeKey>& li
 
 std::string ViewSelecterProposed::getMethodName()
 {
-  return "Proposed Method";
+  std::ostringstream name_stream;
+  name_stream.precision(2); //Set number of decimal spaces to display for floats
+
+  name_stream << "(1+" << weight_entropy_ << "E)(" << weight_density_ << "D+"<<weight_prediction_ << "P)";
+
+  if (weight_distance_ > 0)
+    name_stream << "exp(-" << weight_distance_ << "d)";
+
+  name_stream << "log10(N)";
+
+  return name_stream.str();
+  //return "Proposed Method";
 }
 
 void ViewSelecterProposed::update()
