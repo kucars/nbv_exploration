@@ -38,8 +38,8 @@ NBVHistory::NBVHistory():
   // Compute volume of voxel
   double volume_voxel = octree_res*octree_res*octree_res;
 
-  // Compute number of voxels (approximately)
-  num_voxels_ = volume_frustum/volume_voxel;
+  // Compute number of voxels in viewpoint (approximately)
+  num_voxels_in_view_ = volume_frustum/volume_voxel;
 }
 
 void NBVHistory::computeEntropyDiff()
@@ -53,7 +53,7 @@ void NBVHistory::computeEntropyDiff()
   {
     double diff = total_entropy[iteration] - total_entropy[iteration-1];
     entropy_diff.push_back(diff);
-    avg_entropy_diff_per_voxel.push_back( fabs(diff/num_voxels_) );
+    avg_entropy_diff_per_voxel.push_back( fabs(diff/num_voxels_in_view_) );
   }
 }
 

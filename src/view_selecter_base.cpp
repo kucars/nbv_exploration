@@ -17,7 +17,11 @@
 ViewSelecterBase::ViewSelecterBase():
   info_iteration_(0),
   info_distance_total_(0),
-  info_utility_max_(-std::numeric_limits<float>::infinity()) //-inf
+  info_selected_utility_(-std::numeric_limits<float>::infinity()), //-inf
+  info_selected_utility_density_(std::numeric_limits<double>::quiet_NaN()),
+  info_selected_utility_entropy_(std::numeric_limits<double>::quiet_NaN()),
+  info_selected_utility_prediction_(std::numeric_limits<double>::quiet_NaN()),
+  info_selected_occupied_voxels_(0)
 {
 	ros::NodeHandle n;
 	marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
@@ -336,8 +340,7 @@ void ViewSelecterBase::evaluate()
   update();
 
   // Reset all variables of interest
-  info_utility_max_ = 0; //- std::numeric_limits<float>::infinity(); //-inf
-  info_utility_med_ = 0; //- std::numeric_limits<float>::infinity(); //-inf
+  info_selected_utility_ = 0; //- std::numeric_limits<float>::infinity(); //-inf
   info_utilities_.clear();
   selected_pose_.position.x = std::numeric_limits<double>::quiet_NaN();
 
@@ -353,9 +356,14 @@ void ViewSelecterBase::evaluate()
     if (utility>=0)
       info_utilities_.push_back(utility);
 
-    if (utility > info_utility_max_)
+    if (utility > info_selected_utility_)
     {
-      info_utility_max_ = utility;
+      info_selected_utility_            = utility;
+      info_selected_utility_density_    = temp_utility_density_;
+      info_selected_utility_entropy_    = temp_utility_entropy_;
+      info_selected_utility_prediction_ = temp_utility_prediction_;
+      info_selected_occupied_voxels_    = temp_occupied_voxels_;
+
       selected_pose_ = p;
     }
 
@@ -375,11 +383,6 @@ void ViewSelecterBase::evaluate()
   {
     return;
   }
-
-  // Compute median value
-  std::vector<float> sorted_utilities(info_utilities_);
-  std::sort(sorted_utilities.begin(), sorted_utilities.end());
-  info_utility_med_ = sorted_utilities[sorted_utilities.size()/2];
 
   // Increase total distance travelled
   info_distance_total_ += calculateDistance(selected_pose_);

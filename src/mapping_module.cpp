@@ -748,6 +748,41 @@ void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const oc
   }
 }
 
+double MappingModule::getAveragePointDensity()
+{
+  // Get total number of occupied voxels
+  int num_occ = 0;
+  int treeDepth = 16;
+  for (octomap::OcTree::iterator it = octree_->begin(treeDepth), end = octree_->end(); it != end; ++it)
+  {
+    if ( isNodeOccupied(*it) )
+      num_occ++;
+  }
+
+  return double(cloud_ptr_rgbd_->points.size())/num_occ;
+}
+
+bool MappingModule::isNodeFree(octomap::OcTreeNode node)
+{
+  if (node.getOccupancy() <= 1-octree_->getOccupancyThres())
+    return true;
+
+  return false;
+}
+
+bool MappingModule::isNodeOccupied(octomap::OcTreeNode node)
+{
+  if (node.getOccupancy() >= octree_->getOccupancyThres())
+    return true;
+
+  return false;
+}
+
+bool MappingModule::isNodeUnknown(octomap::OcTreeNode node)
+{
+  return !isNodeFree(node) && !isNodeOccupied(node);
+}
+
 octomap::OcTree* MappingModule::getOctomap()
 {
   return octree_;

@@ -341,6 +341,11 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     */
   }
 
+  temp_utility_density_    = normalized_density;
+  temp_utility_entropy_    = normalized_entropy;
+  temp_utility_prediction_ = normalized_prediction;
+  temp_occupied_voxels_    = num_nodes_occ;
+
   return utility;
 }
 

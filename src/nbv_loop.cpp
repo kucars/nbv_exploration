@@ -553,8 +553,14 @@ void NBVLoop::terminationCheck()
 void NBVLoop::updateHistory()
 {
   history_->selected_poses.push_back(view_selecter_->getTargetPose());
-  history_->selected_utility.push_back(view_selecter_->info_utility_max_);
+  history_->selected_utility.push_back(view_selecter_->info_selected_utility_);
+  history_->selected_utility_entropy.push_back(view_selecter_->info_selected_utility_);
+  history_->selected_utility_density.push_back(view_selecter_->info_selected_utility_density_);
+  history_->selected_utility_prediction.push_back(view_selecter_->info_selected_utility_prediction_);
+  history_->selected_utility_occupied_voxels.push_back(view_selecter_->info_selected_occupied_voxels_);
+
   history_->total_entropy.push_back(view_selecter_->info_entropy_total_);
+  history_->avg_point_density.push_back(mapping_module_->getAveragePointDensity());
   history_->update();
 
   printf("Time Total: %lf ms, Gen: %lf, Select: %lf, Mapping: %lf, Terminate: %lf\n", time_total_, time_view_generation_, time_view_selection_, time_mapping_, time_termination_);
@@ -564,17 +570,22 @@ void NBVLoop::updateHistory()
   iteration_msg.iteration        = view_selecter_->info_iteration_;
   iteration_msg.distance_total   = view_selecter_->info_distance_total_;
   iteration_msg.entropy_total    = view_selecter_->info_entropy_total_;
+  iteration_msg.point_density_avg= history_->avg_point_density.back();
   iteration_msg.method_generation= view_generator_->getMethodName();
   iteration_msg.method_selection = view_selecter_->getMethodName();
+  iteration_msg.selected_pose    = view_selecter_->getTargetPose();
+  iteration_msg.selected_utility                 = view_selecter_->info_selected_utility_;
+  iteration_msg.selected_utility_density         = view_selecter_->info_selected_utility_density_;
+  iteration_msg.selected_utility_entropy         = view_selecter_->info_selected_utility_entropy_;
+  iteration_msg.selected_utility_prediction      = view_selecter_->info_selected_utility_prediction_;
+  iteration_msg.selected_utility_occupied_voxels = view_selecter_->info_selected_occupied_voxels_;
   iteration_msg.time_iteration   = time_total_;
   iteration_msg.time_generation  = time_view_generation_;
   iteration_msg.time_selection   = time_view_selection_;
   iteration_msg.time_mapping     = time_mapping_;
   iteration_msg.time_termination = time_termination_;
-  iteration_msg.selected_pose    = view_selecter_->getTargetPose();
   iteration_msg.utilities        = view_selecter_->info_utilities_;
-  iteration_msg.utility_max      = view_selecter_->info_utility_max_;
-  iteration_msg.utility_med      = view_selecter_->info_utility_med_;
+
   pub_iteration_info.publish(iteration_msg);
 
   if (is_view_selecter_compare)
@@ -582,11 +593,15 @@ void NBVLoop::updateHistory()
     iteration_msg.iteration        = view_selecter_comparison_->info_iteration_;
     iteration_msg.distance_total   = view_selecter_comparison_->info_distance_total_;
     iteration_msg.entropy_total    = view_selecter_comparison_->info_entropy_total_;
+    iteration_msg.method_generation= view_selecter_comparison_->getMethodName();
     iteration_msg.method_selection = view_selecter_comparison_->getMethodName();
     iteration_msg.selected_pose    = view_selecter_comparison_->getTargetPose();
+    iteration_msg.selected_utility                 = view_selecter_comparison_->info_selected_utility_;
+    iteration_msg.selected_utility_density         = view_selecter_comparison_->info_selected_utility_density_;
+    iteration_msg.selected_utility_entropy         = view_selecter_comparison_->info_selected_utility_entropy_;
+    iteration_msg.selected_utility_prediction      = view_selecter_comparison_->info_selected_utility_prediction_;
+    iteration_msg.selected_utility_occupied_voxels = view_selecter_comparison_->info_selected_occupied_voxels_;
     iteration_msg.utilities        = view_selecter_comparison_->info_utilities_;
-    iteration_msg.utility_max      = view_selecter_comparison_->info_utility_max_;
-    iteration_msg.utility_med      = view_selecter_comparison_->info_utility_med_;
     pub_iteration_info.publish(iteration_msg);
   }
 

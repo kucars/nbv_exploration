@@ -30,6 +30,10 @@ Folder structure is assumed to be the following:
 
 dir = '/home/abdullah/NBV_Results'
 methods = {}
+skip_coverage = False
+
+if (len(sys.argv) > 1):
+  skip_coverage = True
 
 class RunStats(object):
   def __init__(self, name, folder, path):
@@ -154,17 +158,18 @@ def main():
       avg_time += r.final_time/1000
 
       # Get coverage for profile
-      profile_path = os.path.join(r.folder,"final_cloud.pcd")
-      cmd = 'rosrun nbv_exploration evaluate_coverage -b -i "' + profile_path + '" 0.5 0.1 0.05'
+      if(not skip_coverage):
+        profile_path = os.path.join(r.folder,"final_cloud.pcd")
+        cmd = 'rosrun nbv_exploration evaluate_coverage -b -i "' + profile_path + '" 0.5 0.1 0.05'
 
-      # Get coverage
-      process = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
-      coverage_results = process.communicate()[0]
-      vec = [float(s.strip()) for s in coverage_results.splitlines()]
+        # Get coverage
+        process = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        coverage_results = process.communicate()[0]
+        vec = [float(s.strip()) for s in coverage_results.splitlines()]
 
-      avg_coverage_0_5 += vec[0]
-      avg_coverage_0_1 += vec[1]
-      avg_coverage_0_05 += vec[2]
+        avg_coverage_0_5 += vec[0]
+        avg_coverage_0_1 += vec[1]
+        avg_coverage_0_05 += vec[2]
 
     avg_IG /= len(methods[m])
     avg_distance /= len(methods[m])

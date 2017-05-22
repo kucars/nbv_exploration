@@ -35,9 +35,18 @@ public:
   int   info_iteration_;
   float info_distance_total_;
   float info_entropy_total_;
+
   std::vector<float> info_utilities_;
-  float info_utility_max_;
-  float info_utility_med_;
+  float info_selected_utility_;
+  float info_selected_utility_density_;
+  float info_selected_utility_entropy_;
+  float info_selected_utility_prediction_;
+  int   info_selected_occupied_voxels_;
+
+  float temp_utility_density_;
+  float temp_utility_entropy_;
+  float temp_utility_prediction_;
+  int   temp_occupied_voxels_;
 
   ViewSelecterBase();
 

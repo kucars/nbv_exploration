@@ -11,7 +11,7 @@ import os
 
 from matplotlib import pyplot
 
-f, ax_plot = pyplot.subplots(4,1)
+f, ax_plot = pyplot.subplots(4,2)
 
 # Define as dict so we can support values from multiple methods
 file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
@@ -21,13 +21,17 @@ iterations = {}
 distance = {}
 distance_inc = {}
 entropy_total = {}
+density_avg = {}
 time_iteration = {}
 time_generation = {}
 time_selection = {}
 time_mapping = {}
 time_termination = {}
-utility_max = {}
-utility_med = {}
+selected_utility = {}
+selected_utility_density = {}
+selected_utility_entropy = {}
+selected_utility_prediction = {}
+selected_utility_occupied_voxels = {}
 
 def main():
   global file_prefix
@@ -39,26 +43,41 @@ def main():
 
   try:
     while (True):
-        ax_plot[0].clear()
-        ax_plot[1].clear()
-        ax_plot[2].clear()
-        ax_plot[3].clear()
+        ax_plot[0][0].clear()
+        ax_plot[1][0].clear()
+        ax_plot[2][0].clear()
+        ax_plot[3][0].clear()
+        ax_plot[0][1].clear()
+        ax_plot[1][1].clear()
+        ax_plot[2][1].clear()
+        ax_plot[3][1].clear()
 
         for key in iterations:
-          ax_plot[0].plot(iterations[key], entropy_total[key], label=key)
-          ax_plot[1].plot(iterations[key], utility_max[key], label=key)
-          ax_plot[2].plot(iterations[key], distance_inc[key], label=key)
-          ax_plot[3].plot(iterations[key], time_iteration[key], label=key)
+          ax_plot[0][0].plot(iterations[key], entropy_total[key], label=key)
+          ax_plot[1][0].plot(iterations[key], density_avg[key], label=key)
+          ax_plot[2][0].plot(iterations[key], distance_inc[key], label=key)
+          ax_plot[3][0].plot(iterations[key], time_iteration[key], label=key)
 
-        ax_plot[0].set_ylabel('Global Entropy')
-        ax_plot[1].set_ylabel('Max Utility')
-        ax_plot[2].set_ylabel('Distance Increment (m)')
-        ax_plot[3].set_ylabel('Iteration Time (ms)')
-        ax_plot[-1].set_xlabel('Iterations')
+          ax_plot[0][1].plot(iterations[key], selected_utility[key], label=key)
+          ax_plot[1][1].plot(iterations[key], selected_utility_density[key], label=key)
+          ax_plot[2][1].plot(iterations[key], selected_utility_entropy[key], label=key)
+          ax_plot[3][1].plot(iterations[key], selected_utility_prediction[key], label=key)
+
+        ax_plot[0][0].set_ylabel('Global Entropy')
+        ax_plot[1][0].set_ylabel('Avg Density (pt/vox)')
+        ax_plot[2][0].set_ylabel('Distance Increment (m)')
+        ax_plot[3][0].set_ylabel('Iteration Time (ms)')
+        ax_plot[-1][0].set_xlabel('Iterations')
+
+        ax_plot[0][1].set_ylabel('Utility (Total)')
+        ax_plot[1][1].set_ylabel('Utility (Density)')
+        ax_plot[2][1].set_ylabel('Utility (Entropy)')
+        ax_plot[3][1].set_ylabel('Utility (Predict)')
+        ax_plot[-1][1].set_xlabel('Iterations')
 
         # Add legends
         legends = []
-        legends.append( ax_plot[0].legend(loc='upper center', bbox_to_anchor=(0.5, 1.3), shadow=True) )
+        legends.append( ax_plot[0][0].legend(loc='upper center', bbox_to_anchor=(0.5, 1.3), shadow=True) )
         #legends.append( ax_plot[1].legend(loc='center left', bbox_to_anchor=(1, 0.5), shadow=True) )
         #legends.append( ax_plot[2].legend(loc='center left', bbox_to_anchor=(1, 0.5)) )
 
@@ -84,14 +103,18 @@ def callback(data):
     iterations[method] = []
     distance[method] = []
     distance_inc[method] = []
+    density_avg[method] = []
     entropy_total[method] = []
     time_iteration[method] = []
     time_generation[method] = []
     time_selection[method] = []
     time_mapping[method] = []
     time_termination[method] = []
-    utility_max[method] = []
-    utility_med[method] = []
+    selected_utility[method] = []
+    selected_utility_density[method] = []
+    selected_utility_entropy[method] = []
+    selected_utility_prediction[method] = []
+    selected_utility_occupied_voxels[method] = []
 
     # Open csv file in append mode
     files_csv[method] = open(file_prefix + method + ".csv", "a")
@@ -100,9 +123,13 @@ def callback(data):
       'Iteration',
       'Entropy Total',
       'Entropy Change %',
+      'Density Avg',
       'Distance Travelled',
-      'Utility Max',
-      'Utility Median',
+      'Utility (Total)',
+      'Utility (Density)',
+      'Utility (Entropy)',
+      'Utility (Prediction)',
+      'Occupied Voxels',
       'Time Iteration (ms)',
       'Time Generation (ms)',
       'Time Selection (ms)',
@@ -120,13 +147,17 @@ def callback(data):
   iterations[method].append(data.iteration)
   entropy_total[method].append(data.entropy_total)
   distance[method].append(data.distance_total)
+  density_avg[method].append(data.point_density_avg)
   time_iteration[method].append(data.time_iteration)
   time_generation[method].append(data.time_generation)
   time_selection[method].append(data.time_selection)
   time_mapping[method].append(data.time_mapping)
   time_termination[method].append(data.time_termination)
-  utility_max[method].append(data.utility_max)
-  utility_med[method].append(data.utility_med)
+  selected_utility[method].append(data.selected_utility)
+  selected_utility_density[method].append(data.selected_utility_density)
+  selected_utility_entropy[method].append(data.selected_utility_entropy)
+  selected_utility_prediction[method].append(data.selected_utility_prediction)
+  selected_utility_occupied_voxels[method].append(data.selected_utility_occupied_voxels)
 
   entropy_change = '';
   if (len(entropy_total[method]) > 1):
@@ -143,9 +174,13 @@ def callback(data):
     data.iteration,
     data.entropy_total,
     entropy_change,
+    data.point_density_avg,
     data.distance_total,
-    data.utility_max,
-    data.utility_med,
+    data.selected_utility,
+    data.selected_utility_density,
+    data.selected_utility_entropy,
+    data.selected_utility_prediction,
+    data.selected_utility_occupied_voxels,
     data.time_iteration,
     data.time_generation,
     data.time_selection,

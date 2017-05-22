@@ -57,6 +57,12 @@ public:
   octomap::OcTree*   getOctomap();
   octomap::OcTree*   getOctomapPredicted();
   PointCloudXYZ::Ptr getPointCloud();
+  double getAveragePointDensity();
+
+  bool isNodeFree(octomap::OcTreeNode node);
+  bool isNodeOccupied(octomap::OcTreeNode node);
+  bool isNodeUnknown(octomap::OcTreeNode node);
+
   void run();
 
 private:

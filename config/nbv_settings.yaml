@@ -89,7 +89,7 @@ profiling_circular_waypoints: 8
 # UAV starting pose after profiling
 ############
 # Select pose after completing profile
-profiling_complete_pose_number: 1
+profiling_complete_pose_number: 2
 
 ############
 ## Termination settings
