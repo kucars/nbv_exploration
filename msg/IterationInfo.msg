@@ -7,6 +7,7 @@ string method_selection
 geometry_msgs/Pose selected_pose
 float32 selected_utility
 float32 selected_utility_density
+float32 selected_utility_distance
 float32 selected_utility_entropy
 float32 selected_utility_prediction
 uint32  selected_utility_occupied_voxels

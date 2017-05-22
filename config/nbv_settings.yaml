@@ -144,5 +144,6 @@ view_selecter_ignore_entropies_at_clamping_points: true
 view_selecter_weight_distance: 0.5
 
 view_selecter_proposed_weight_density:    1
+view_selecter_proposed_weight_distance:   0.1
 view_selecter_proposed_weight_entropy:    10
 view_selecter_proposed_weight_prediction: 10

@@ -19,6 +19,7 @@ ViewSelecterBase::ViewSelecterBase():
   info_distance_total_(0),
   info_selected_utility_(-std::numeric_limits<float>::infinity()), //-inf
   info_selected_utility_density_(std::numeric_limits<double>::quiet_NaN()),
+  temp_utility_distance_(std::numeric_limits<double>::quiet_NaN()),
   info_selected_utility_entropy_(std::numeric_limits<double>::quiet_NaN()),
   info_selected_utility_prediction_(std::numeric_limits<double>::quiet_NaN()),
   info_selected_occupied_voxels_(0)
@@ -360,6 +361,7 @@ void ViewSelecterBase::evaluate()
     {
       info_selected_utility_            = utility;
       info_selected_utility_density_    = temp_utility_density_;
+      info_selected_utility_distance_   = temp_utility_distance_;
       info_selected_utility_entropy_    = temp_utility_entropy_;
       info_selected_utility_prediction_ = temp_utility_prediction_;
       info_selected_occupied_voxels_    = temp_occupied_voxels_;

@@ -14,6 +14,7 @@ ViewSelecterProposed::ViewSelecterProposed():
   ViewSelecterBase() //Call base class constructor
 {
   ros::param::param("~view_selecter_proposed_weight_density", weight_density_, 0.5);
+  ros::param::param("~view_selecter_proposed_weight_distance", weight_distance_, 0.5);
   ros::param::param("~view_selecter_proposed_weight_entropy", weight_entropy_, 0.5);
   ros::param::param("~view_selecter_proposed_weight_prediction", weight_prediction_, 0.5);
 
@@ -249,16 +250,10 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     ig_total += getNodeEntropy(node);
   }
 
-  // ======
-  // Visualize
-  // ======
-
-  publishRayMarkers();
-  publishPose(p);
-
-  // Compute final times
-  t_end = ros::Time::now().toSec();
-  time_entropy = t_end - t_start - time_density - time_predicted;
+  //=======
+  // Compute distance
+  //=======
+  double distance = calculateDistance(p);
 
   //=======
   // Compute density
@@ -319,13 +314,15 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   double weighted_entropy = weight_entropy_*normalized_entropy;
   double weighted_prediction = weight_prediction_*normalized_prediction;
 
+  double weighted_distance = exp(-weight_distance_*distance);
+
 
   // Value views that see more voxels more, as they're less likely to skim the edge of the surface
   double utility;
   if (num_nodes_occ == 0)
     utility = 0;
   else
-    utility = log10(num_nodes_occ) * (weighted_density + weighted_entropy + weighted_prediction);
+    utility = log10(num_nodes_occ) * weighted_distance * (weighted_density + weighted_entropy + weighted_prediction);
 
   if(is_debug_)
   {
@@ -341,10 +338,30 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     */
   }
 
+  /*
   temp_utility_density_    = normalized_density;
+  temp_utility_distance_   = distance;
   temp_utility_entropy_    = normalized_entropy;
   temp_utility_prediction_ = normalized_prediction;
   temp_occupied_voxels_    = num_nodes_occ;
+  */
+
+  temp_utility_density_    = weighted_density;
+  temp_utility_distance_   = weighted_distance;
+  temp_utility_entropy_    = weighted_entropy;
+  temp_utility_prediction_ = weighted_prediction;
+  temp_occupied_voxels_    = num_nodes_occ;
+
+  // ======
+  // Visualize
+  // ======
+
+  publishRayMarkers();
+  publishPose(p);
+
+  // Compute final times
+  t_end = ros::Time::now().toSec();
+  time_entropy = t_end - t_start - time_density - time_predicted;
 
   return utility;
 }

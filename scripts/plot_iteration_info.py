@@ -11,7 +11,7 @@ import os
 
 from matplotlib import pyplot
 
-f, ax_plot = pyplot.subplots(4,2)
+f, ax_plot = pyplot.subplots(5,2)
 
 # Define as dict so we can support values from multiple methods
 file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
@@ -29,6 +29,7 @@ time_mapping = {}
 time_termination = {}
 selected_utility = {}
 selected_utility_density = {}
+selected_utility_distance = {}
 selected_utility_entropy = {}
 selected_utility_prediction = {}
 selected_utility_occupied_voxels = {}
@@ -47,32 +48,39 @@ def main():
         ax_plot[1][0].clear()
         ax_plot[2][0].clear()
         ax_plot[3][0].clear()
+        ax_plot[4][0].clear()
         ax_plot[0][1].clear()
         ax_plot[1][1].clear()
         ax_plot[2][1].clear()
         ax_plot[3][1].clear()
+        ax_plot[4][1].clear()
 
         for key in iterations:
-          ax_plot[0][0].plot(iterations[key], entropy_total[key], label=key)
+          ax_plot[0][0].plot(iterations[key], selected_utility_occupied_voxels[key], label=key)
           ax_plot[1][0].plot(iterations[key], density_avg[key], label=key)
-          ax_plot[2][0].plot(iterations[key], distance_inc[key], label=key)
-          ax_plot[3][0].plot(iterations[key], time_iteration[key], label=key)
+          ax_plot[2][0].plot(iterations[key], entropy_total[key], label=key)
+          ax_plot[3][0].plot(iterations[key], distance_inc[key], label=key)
+          ax_plot[4][0].plot(iterations[key], time_iteration[key], label=key)
+
 
           ax_plot[0][1].plot(iterations[key], selected_utility[key], label=key)
           ax_plot[1][1].plot(iterations[key], selected_utility_density[key], label=key)
           ax_plot[2][1].plot(iterations[key], selected_utility_entropy[key], label=key)
-          ax_plot[3][1].plot(iterations[key], selected_utility_prediction[key], label=key)
+          ax_plot[3][1].plot(iterations[key], selected_utility_distance[key], label=key)
+          ax_plot[4][1].plot(iterations[key], selected_utility_prediction[key], label=key)
 
-        ax_plot[0][0].set_ylabel('Global Entropy')
+        ax_plot[0][0].set_ylabel('Num Occupied Vox')
         ax_plot[1][0].set_ylabel('Avg Density (pt/vox)')
-        ax_plot[2][0].set_ylabel('Distance Increment (m)')
-        ax_plot[3][0].set_ylabel('Iteration Time (ms)')
+        ax_plot[2][0].set_ylabel('Global Entropy')
+        ax_plot[3][0].set_ylabel('Distance Increment (m)')
+        ax_plot[4][0].set_ylabel('Iteration Time (ms)')
         ax_plot[-1][0].set_xlabel('Iterations')
 
         ax_plot[0][1].set_ylabel('Utility (Total)')
         ax_plot[1][1].set_ylabel('Utility (Density)')
         ax_plot[2][1].set_ylabel('Utility (Entropy)')
-        ax_plot[3][1].set_ylabel('Utility (Predict)')
+        ax_plot[3][1].set_ylabel('Utility (Distance)')
+        ax_plot[4][1].set_ylabel('Utility (Predict)')
         ax_plot[-1][1].set_xlabel('Iterations')
 
         # Add legends
@@ -112,6 +120,7 @@ def callback(data):
     time_termination[method] = []
     selected_utility[method] = []
     selected_utility_density[method] = []
+    selected_utility_distance[method] = []
     selected_utility_entropy[method] = []
     selected_utility_prediction[method] = []
     selected_utility_occupied_voxels[method] = []
@@ -129,6 +138,7 @@ def callback(data):
       'Utility (Density)',
       'Utility (Entropy)',
       'Utility (Prediction)',
+      'Utility (Distance)',
       'Occupied Voxels',
       'Time Iteration (ms)',
       'Time Generation (ms)',
@@ -155,6 +165,7 @@ def callback(data):
   time_termination[method].append(data.time_termination)
   selected_utility[method].append(data.selected_utility)
   selected_utility_density[method].append(data.selected_utility_density)
+  selected_utility_distance[method].append(data.selected_utility_distance)
   selected_utility_entropy[method].append(data.selected_utility_entropy)
   selected_utility_prediction[method].append(data.selected_utility_prediction)
   selected_utility_occupied_voxels[method].append(data.selected_utility_occupied_voxels)
@@ -180,6 +191,7 @@ def callback(data):
     data.selected_utility_density,
     data.selected_utility_entropy,
     data.selected_utility_prediction,
+    data.selected_utility_distance,
     data.selected_utility_occupied_voxels,
     data.time_iteration,
     data.time_generation,

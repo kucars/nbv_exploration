@@ -576,6 +576,7 @@ void NBVLoop::updateHistory()
   iteration_msg.selected_pose    = view_selecter_->getTargetPose();
   iteration_msg.selected_utility                 = view_selecter_->info_selected_utility_;
   iteration_msg.selected_utility_density         = view_selecter_->info_selected_utility_density_;
+  iteration_msg.selected_utility_distance        = view_selecter_->info_selected_utility_distance_;
   iteration_msg.selected_utility_entropy         = view_selecter_->info_selected_utility_entropy_;
   iteration_msg.selected_utility_prediction      = view_selecter_->info_selected_utility_prediction_;
   iteration_msg.selected_utility_occupied_voxels = view_selecter_->info_selected_occupied_voxels_;
@@ -598,6 +599,7 @@ void NBVLoop::updateHistory()
     iteration_msg.selected_pose    = view_selecter_comparison_->getTargetPose();
     iteration_msg.selected_utility                 = view_selecter_comparison_->info_selected_utility_;
     iteration_msg.selected_utility_density         = view_selecter_comparison_->info_selected_utility_density_;
+    iteration_msg.selected_utility_distance        = view_selecter_comparison_->info_selected_utility_distance_;
     iteration_msg.selected_utility_entropy         = view_selecter_comparison_->info_selected_utility_entropy_;
     iteration_msg.selected_utility_prediction      = view_selecter_comparison_->info_selected_utility_prediction_;
     iteration_msg.selected_utility_occupied_voxels = view_selecter_comparison_->info_selected_occupied_voxels_;

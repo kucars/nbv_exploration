@@ -74,12 +74,13 @@ def ExtractRunData(folder):
   for row in c_reader:
     iterations.append( int(row[0]) )
     entropy_total.append( float(row[1]) )
-    distance.append( float(row[3]) )
-    utility_max.append( float(row[4]) )
+    density.append( float(row[3]) )
+    distance.append( float(row[4]) )
+    utility_max.append( float(row[5]) )
 
     t = 0
     try:
-      t = float(row[6])
+      t = float(row[11])
       if not isfinite(t):
         t = 0
     except:

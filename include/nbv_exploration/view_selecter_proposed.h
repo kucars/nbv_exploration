@@ -34,6 +34,7 @@ protected:
   octomap::OcTree* tree_predicted_;
 
   double weight_density_;
+  double weight_distance_;
   double weight_entropy_;
   double weight_prediction_;
   double max_density_;
