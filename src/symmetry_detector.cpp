@@ -90,7 +90,7 @@ float SymmetryDetector::getFeatureDistance(pcl::FPFHSignature33 p1, pcl::FPFHSig
 
 std::vector<KeypointFeature> SymmetryDetector::getKeypointFeatures(PointCloudN::Ptr cloud_normals, pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhFeatures)
 {
-  pcl::StopWatch timer; //start timer
+  pcl::StopWatch timer_sym; //start timer_sym
 
   // ==========
   // Determine keypoints
@@ -112,8 +112,8 @@ std::vector<KeypointFeature> SymmetryDetector::getKeypointFeatures(PointCloudN::
   sift.setInputCloud(cloud_normals);
   sift.compute(result);
 
-  printf("[TIME] SIFT keypoints: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] SIFT keypoints: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
   // Copying the pointnormal to pointxyz so as to visualize the cloud
   PointCloudXYZ::Ptr cloud_keypoint (new PointCloudXYZ);
@@ -193,7 +193,7 @@ void SymmetryDetector::run()
    * 6- Perform clustering on transform space to find planes of symmetry
    */
 
-  pcl::StopWatch timer; //start timer
+  pcl::StopWatch timer_sym; //start timer_sym
 
   // ==========
   // Filter input
@@ -209,9 +209,9 @@ void SymmetryDetector::run()
 
     cloud_in_ = cloud_temp;
 
-    printf("[TIME] Voxel Grid Filter: %5.0lf ms\n", timer.getTime());
+    printf("[TIME] Voxel Grid Filter: %5.0lf ms\n", timer_sym.getTime());
     printf("Points: %lu\n", cloud_in_->points.size() );
-    timer.reset();
+    timer_sym.reset();
   }
 
   // ==========
@@ -234,8 +234,8 @@ void SymmetryDetector::run()
     cloud_normals->points[i].z = cloud_in_->points[i].z;
   }
 
-  printf("[TIME] Normal estimation: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Normal estimation: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
   // ==========
   // Compute FPFH features
@@ -252,8 +252,8 @@ void SymmetryDetector::run()
   // Compute features
   fpfhEstimation.compute (*fpfhFeatures);
 
-  printf("[TIME] Feature calculation: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Feature calculation: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
   // ==========
   // Get features of keypoints (if applicable)
@@ -334,8 +334,8 @@ void SymmetryDetector::run()
 
   printf("\nFound %lu pairs\n", cloud_pairs_->points.size()/2);
 
-  printf("[TIME] Pairing: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Pairing: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
   // ==========
   // Fit plane for every pair of points
@@ -387,13 +387,13 @@ void SymmetryDetector::run()
     pt.distance = dist;
 
     // Only append in the plane is not NaN
-    if (!isnan(pt.a))
+    if (!std::isnan(pt.a))
       plane_transforms.push_back(pt);
 
   }
 
-  printf("[TIME] Plane fitting: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Plane fitting: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
   // ==========
   // Mean Shift Clustering
@@ -409,8 +409,8 @@ void SymmetryDetector::run()
   //std::vector<Cluster> clusters = msp->cluster(features, kernel_bandwidth, num_of_cluster_samples_);
   std::vector<Cluster> clusters = msp->run(features, mean_shift_kernel_bandwidth, mean_shift_num_points);
 
-  printf("[TIME] Clustering: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Clustering: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
   printf("Found %lu clusters\n", clusters.size());
 
@@ -421,8 +421,8 @@ void SymmetryDetector::run()
   // ==========
   // @todo
 
-  //printf("[TIME] Verification: %5.0lf ms\n", timer.getTime());
-  //timer.reset();
+  //printf("[TIME] Verification: %5.0lf ms\n", timer_sym.getTime());
+  //timer_sym.reset();
 
 
   // ==========
@@ -494,8 +494,8 @@ void SymmetryDetector::run()
 
 
 
-  printf("[TIME] Model Mirroring: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Model Mirroring: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
 
   // ==========
@@ -529,8 +529,8 @@ void SymmetryDetector::run()
   icp->getFitnessScore() << std::endl;
   std::cout << icp->getFinalTransformation() << std::endl;
 
-  printf("[TIME] Realignment: %5.0lf ms, Points: %lu\n", timer.getTime(), cloud_mirrored_corrected_->points.size());
-  timer.reset();
+  printf("[TIME] Realignment: %5.0lf ms, Points: %lu\n", timer_sym.getTime(), cloud_mirrored_corrected_->points.size());
+  timer_sym.reset();
 
 
   // ===========
@@ -612,8 +612,8 @@ void SymmetryDetector::run()
     }
   }
 
-  printf("[TIME] Plane visualization: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Plane visualization: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 }
 
 void SymmetryDetector::setInputCloud(PointCloudXYZ::Ptr cloud_in)
@@ -651,7 +651,7 @@ int SymmetryDetector::setInputCloudFromFile(std::string filename)
 
 void SymmetryDetector::visualize()
 {
-  pcl::StopWatch timer; //start timer
+  pcl::StopWatch timer_sym; //start timer_sym
 
   // ==========
   // Get Final Clouds for visualization
@@ -691,8 +691,8 @@ void SymmetryDetector::visualize()
       cloud_fill->points.push_back( p );
   }
 
-  printf("[TIME] Subtract clouds: %5.0lf ms\n", timer.getTime());
-  timer.reset();
+  printf("[TIME] Subtract clouds: %5.0lf ms\n", timer_sym.getTime());
+  timer_sym.reset();
 
   // ==========
   // Visualize

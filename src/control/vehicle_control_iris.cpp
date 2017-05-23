@@ -30,7 +30,7 @@ void VehicleControlIris::callbackOdometry(const nav_msgs::Odometry& odom_msg)
   vehicle_current_pose_ = odom_msg.pose.pose;
   vehicle_current_twist_= odom_msg.twist.twist;
 
-  if (isnan(vehicle_current_pose_.position.x) || isnan(vehicle_current_pose_.orientation.x))
+  if (std::isnan(vehicle_current_pose_.position.x) || std::isnan(vehicle_current_pose_.orientation.x))
   {
     std::cout << cc.red << "Current vehicle position not found..." << cc.reset;
     is_ready_ = false;

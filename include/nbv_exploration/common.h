@@ -6,7 +6,10 @@
 
 #include "utilities/console_utility.h"
 #include "utilities/pose_conversion.h"
+#include "utilities/time_profiler.h"
 
+
+extern TimeProfiler timer;
 static ConsoleUtility cc;
 
 typedef pcl::PointXYZ PointXYZ;

@@ -92,6 +92,7 @@ NBVLoop::NBVLoop()
   // Start the FSM
   // >>>>>>>>>>>>>>>>>
   NBVLoop::runStateMachine();
+  timer.dump();
 
   // >>>>>>>>>>>>>>>>>
   // Clean up
@@ -112,10 +113,12 @@ void NBVLoop::generateViewpoints()
     std::cout << "[NBVLoop] " << cc.green << "Generating viewpoints\n" << cc.reset;
   }
 
+  timer.start("Loop-Generator-Setters");
   view_generator_->setCloud(mapping_module_->getPointCloud());
   view_generator_->setMap(mapping_module_->getOctomap());
   view_generator_->setMapPrediction(mapping_module_->getOctomapPredicted());
   view_generator_->setCurrentPose(vehicle_->getPose());
+  timer.stop("Loop-Generator-Setters");
   view_generator_->generateViews();
 
   if (view_generator_->generated_poses.size() == 0)
@@ -142,14 +145,21 @@ void NBVLoop::evaluateViewpoints()
   }
 
   // Evaluate viewpoints
+  timer.start("Loop-Evaluate");
   view_selecter_->evaluate();
+  timer.stop("Loop-Evaluate");
 
   if (is_view_selecter_compare)
+  {
+    timer.start("Loop-Evaluate-Comparison");
     view_selecter_comparison_->evaluate();
+    timer.stop("Loop-Evaluate-Comparison");
+  }
 
   // Move to next best view
+  timer.start("Loop-Evaluate-Movement");
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
-  if ( isnan(p.position.x) )
+  if ( std::isnan(p.position.x) )
   {
     std::cout << "[NBVLoop] " << cc.red << "View selecter determined all poses are invalid. Terminating.\n" << cc.reset;
     state = NBVState::TERMINATION_MET;
@@ -157,6 +167,7 @@ void NBVLoop::evaluateViewpoints()
   }
 
   vehicle_->setWaypoint(p);
+  timer.stop("Loop-Evaluate-Movement");
 
   std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
 

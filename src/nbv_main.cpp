@@ -8,6 +8,7 @@
 #include "nbv_exploration/nbv_loop.h"
 #include "nbv_exploration/common.h"
 NBVLoop* n;
+TimeProfiler timer;
 
 void sigIntHandler(int sig)
 {

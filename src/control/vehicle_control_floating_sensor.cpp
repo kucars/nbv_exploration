@@ -25,7 +25,7 @@ void VehicleControlFloatingSensor::callbackPose(const geometry_msgs::Pose& msg)
   // Save pose and velocities
   vehicle_current_pose_ = msg;
 
-  if (isnan(vehicle_current_pose_.position.x) || isnan(vehicle_current_pose_.orientation.x))
+  if (std::isnan(vehicle_current_pose_.position.x) || std::isnan(vehicle_current_pose_.orientation.x))
   {
     std::cout << cc.red << "Current vehicle position not found..." << cc.reset;
     is_ready_ = false;

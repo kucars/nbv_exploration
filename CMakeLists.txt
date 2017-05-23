@@ -144,6 +144,8 @@ add_executable(nbv_main
   src/culling/occlusion_culling.cpp
   src/culling/voxel_grid_occlusion_estimation.cpp
 
+  src/utilities/time_profiler.cpp
+
   src/lib/MeanShift/MeanShift.cpp
   )
 add_dependencies(nbv_main ${catkin_EXPORTED_TARGETS})
@@ -180,7 +182,8 @@ target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
 add_executable(test_symmetry_detection
   src/component_test/test_symmetry_detection.cpp
   src/symmetry_detector.cpp
-  src/lib/MeanShift/MeanShift.cpp)
+  src/lib/MeanShift/MeanShift.cpp
+  src/utilities/time_profiler.cpp)
 add_dependencies(test_symmetry_detection ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_symmetry_detection ${catkin_LIBRARIES}  ${PCL_LIBRARIES})
 
