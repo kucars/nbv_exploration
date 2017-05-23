@@ -136,6 +136,7 @@ void TimeProfiler::dump() {
       headerWidths[0] = it->first.size();
   }
 
+  stdout << std::setprecision(2) << std::fixed;
   stdout << std::left  << std::setw(headerWidths[0]) << "Name";
   stdout << std::right << std::setw(headerWidths[1]) << "  Calls";
   stdout << std::right << std::setw(headerWidths[2]) << "  Min Time (ms)";

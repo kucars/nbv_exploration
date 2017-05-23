@@ -353,7 +353,13 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     tf::StampedTransform transform;
     try{
       // Listen for transform
-      tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, cloud_msg->header.stamp, transform);
+      //tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, cloud_msg->header.stamp, transform);
+
+      // Wait for the absolute latest position, to ensure we have the correct position
+      // (Latest time needed for teleporting sensor)
+      ros::Time now = ros::Time::now();
+      tf_listener_->waitForTransform("world", cloud_msg->header.frame_id, now, ros::Duration(1.0), ros::Duration(0.01));
+      tf_listener_->lookupTransform ("world", cloud_msg->header.frame_id, now, transform);
     }
     catch (tf::TransformException ex){
       ROS_ERROR("%s",ex.what());
@@ -403,9 +409,7 @@ bool MappingModule::commandGetCameraData()
   is_get_camera_data_ = true;
 
   // Subscribe to topic
-  timer.start("[MappingModule]commandGetCameraData-subscribe");
-  sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
-  timer.stop("[MappingModule]commandGetCameraData-subscribe");
+  sub_rgbd_ = ros_node_.subscribe(topic_depth_, 0, &MappingModule::callbackDepth, this);
 
   timer.start("[MappingModule]commandGetCameraData-waiting");
   std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
@@ -421,10 +425,8 @@ bool MappingModule::commandGetCameraData()
     std::cout << "[Mapping] " << cc.magenta << "Could not get camera data\n" << cc.reset;
   }
 
-  // Unsubscribe frome topic
-  timer.start("[MappingModule]commandGetCameraData-unsubscribe");
-  sub_rgbd_.shutdown();
-  timer.stop("[MappingModule]commandGetCameraData-unsubscribe");
+  // Unsubscribe from topic
+  //sub_rgbd_.shutdown();
 
 
   // Save final map ever 10 iterations

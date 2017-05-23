@@ -158,8 +158,7 @@ void NBVLoop::evaluateViewpoints()
     timer.stop("[NBVLoop]EvaluateComparison");
   }
 
-  // Move to next best view
-  timer.start("[NBVLoop]EvaluateMove");
+  // Set the next best view
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
   if ( std::isnan(p.position.x) )
   {
@@ -167,12 +166,10 @@ void NBVLoop::evaluateViewpoints()
     state = NBVState::TERMINATION_MET;
     return;
   }
-
   vehicle_->setWaypoint(p);
-  timer.stop("[NBVLoop]EvaluateMove");
+
 
   std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
-
   state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
 }
 
@@ -457,18 +454,11 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::MOVING_COMPLETE:
-        std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
-
-        timer.start("[NBVLoop]commandGetCameraData");
-        ros::Duration(0.2).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
-        mapping_module_->commandGetCameraData();
-        timer.stop("[NBVLoop]commandGetCameraData");
-
-
         timer.start("[NBVLoop]TerminationCheck");
         state = NBVState::TERMINATION_CHECK;
         terminationCheck();
         timer.stop("[NBVLoop]TerminationCheck");
+        timer.stop("[NBVLoop]Iteration");
 
         break;
 
@@ -485,6 +475,7 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::TERMINATION_NOT_MET:
+        timer.start("[NBVLoop]Iteration");
         state = NBVState::VIEWPOINT_GENERATION;
         generateViewpoints();
 
@@ -498,7 +489,18 @@ void NBVLoop::runStateMachine()
 
       case NBVState::VIEWPOINT_EVALUATION_COMPLETE:
         state = NBVState::MOVING;
+
+        timer.start("[NBVLoop]Moving");
         vehicle_->moveVehicle(0.25); //Make sure we go to the exact position
+        timer.start("[NBVLoop]Moving");
+
+
+        timer.start("[NBVLoop]commandGetCameraData");
+        std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
+        ros::Duration(0.1).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+        mapping_module_->commandGetCameraData();
+        timer.stop("[NBVLoop]commandGetCameraData");
+
         state = NBVState::MOVING_COMPLETE;
         break;
     }

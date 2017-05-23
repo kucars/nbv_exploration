@@ -58,9 +58,10 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
     pub_pose.publish(setpoint_);
 
     // Wait for sensor to reach destination
-    distance_threshold_ = 0.1;
+    distance_threshold_ = 0.01;
     while (ros::ok() && !isNear(setpoint_, vehicle_current_pose_, 1) )
     {
+      ros::Rate(100).sleep();
       ros::spinOnce();
     }
 
