@@ -28,7 +28,7 @@ public:
 protected:
   double calculateUtility(Pose p);
   std::string getMethodName();
-  void insertKeyIfUnique(std::vector<octomap::OcTreeKey>& list, octomap::OcTreeKey key);
+  void insertKeyIfUnique(std::set<octomap::OcTreeKey, OctomapKeyCompare>& list, octomap::OcTreeKey key);
   void update();
 
   octomap::OcTree* tree_predicted_;

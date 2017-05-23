@@ -1,4 +1,6 @@
 #include "utilities/time_profiler.h"
+#include <iomanip>
+
 
 TimeProfiler::TimeProfiler() {
     verbose = true;
@@ -54,11 +56,13 @@ void TimeProfiler::stop(std::string s) {
       it->second = e;
     }
 
+    /*
     if(verbose)
     {
       std::cout << entries.size() << "\n";
       std::cout << s << " Time elapsed = " << entries[s].count << "," << entries[s].avg << std::endl;
     }
+    */
 
 }
 
@@ -76,16 +80,63 @@ void TimeProfiler::toc(std::string s) {
 }
 
 void TimeProfiler::dump() {
+  // Write to CSV
+  std::stringstream logfile;
+  std::map<std::string,ProfilerEntry>::iterator it;
+
   logfile << "Name, Calls, Min Time (ms), Avg Time (ms), Max Time (ms), Total Time (ms)\n";
 
-  std::map<std::string,ProfilerEntry>::iterator it;
   for (it=entries.begin(); it!=entries.end(); ++it)
     logfile << it->first << "," << it->second.count << "," << it->second.min << "," << it->second.avg << ","  << it->second.max << ","  << it->second.total << '\n';
-
-  std::cout << entries.size() << "\n";
 
   std::ofstream myfile;
   myfile.open("/tmp/TimeProfiler.csv");
   myfile << logfile.rdbuf();
   myfile.close();
+
+
+
+  if(!verbose)
+    return;
+
+  // Human readable console version
+  std::stringstream stdout;
+
+  size_t headerWidths[6] = {
+      std::string("Name").size(),
+      std::string("Calls").size(),
+      std::string("Min Time (ms)").size(),
+      std::string("Avg Time (ms)").size(),
+      std::string("Max Time (ms)").size(),
+      std::string("Total Time (ms)").size()
+  };
+
+  // Get max size of name
+  for (it=entries.begin(); it!=entries.end(); ++it)
+  {
+    if (it->first.size() > headerWidths[0])
+      headerWidths[0] = it->first.size();
+  }
+
+  stdout << std::left  << std::setw(headerWidths[0]) << "Name";
+  stdout << std::right << std::setw(headerWidths[1]) << "  Calls";
+  stdout << std::right << std::setw(headerWidths[2]) << "  Min Time (ms)";
+  stdout << std::right << std::setw(headerWidths[3]) << "  Avg Time (ms)";
+  stdout << std::right << std::setw(headerWidths[4]) << "  Max Time (ms)";
+  stdout << std::right << std::setw(headerWidths[5]) << "  Total Time (ms)";
+  stdout << "\n";
+
+  for (it=entries.begin(); it!=entries.end(); ++it)
+  {
+    stdout << std::left  << std::setw(headerWidths[0]) << it->first;
+    stdout << "  " << std::right << std::setw(headerWidths[1]) << it->second.count;
+    stdout << "  " << std::right << std::setw(headerWidths[2]) << it->second.min;
+    stdout << "  " << std::right << std::setw(headerWidths[3]) << it->second.avg;
+    stdout << "  " << std::right << std::setw(headerWidths[4]) << it->second.max;
+    stdout << "  " << std::right << std::setw(headerWidths[5]) << it->second.total;
+    stdout << "\n";
+  }
+
+  // Output
+  std::cout << stdout.rdbuf();
 }

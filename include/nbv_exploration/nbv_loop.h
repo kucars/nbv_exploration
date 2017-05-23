@@ -2,7 +2,6 @@
 #define NBV_EXPLORATION_MAIN_LOOP_H
 
 #include <ros/ros.h>
-#include <chrono>
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -80,10 +79,6 @@ public:
   double time_mapping_;
   double time_termination_;
   double time_total_;
-
-  std::chrono::high_resolution_clock::time_point chrono_start;
-  std::chrono::high_resolution_clock::time_point chrono_tick;
-  std::chrono::high_resolution_clock::time_point chrono_toc;
 
   // DEBUG
   bool is_debug_states;

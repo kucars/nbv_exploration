@@ -27,7 +27,6 @@ class TimeProfiler {
 
   private:
     bool verbose;
-    std::stringstream logfile;
     std::map<std::string,std::chrono::steady_clock::time_point> timers;
     std::map<std::string,ProfilerEntry> entries;
 };

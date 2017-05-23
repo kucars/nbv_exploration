@@ -113,13 +113,15 @@ void NBVLoop::generateViewpoints()
     std::cout << "[NBVLoop] " << cc.green << "Generating viewpoints\n" << cc.reset;
   }
 
-  timer.start("Loop-Generator-Setters");
+  timer.start("[NBVLoop]Generator-Setters");
   view_generator_->setCloud(mapping_module_->getPointCloud());
   view_generator_->setMap(mapping_module_->getOctomap());
   view_generator_->setMapPrediction(mapping_module_->getOctomapPredicted());
   view_generator_->setCurrentPose(vehicle_->getPose());
-  timer.stop("Loop-Generator-Setters");
+  timer.stop("[NBVLoop]Generator-Setters");
+  timer.start("[NBVLoop]Generator");
   view_generator_->generateViews();
+  timer.stop("[NBVLoop]Generator");
 
   if (view_generator_->generated_poses.size() == 0)
   {
@@ -145,19 +147,19 @@ void NBVLoop::evaluateViewpoints()
   }
 
   // Evaluate viewpoints
-  timer.start("Loop-Evaluate");
+  timer.start("[NBVLoop]Evaluate");
   view_selecter_->evaluate();
-  timer.stop("Loop-Evaluate");
+  timer.stop("[NBVLoop]Evaluate");
 
   if (is_view_selecter_compare)
   {
-    timer.start("Loop-Evaluate-Comparison");
+    timer.start("[NBVLoop]EvaluateComparison");
     view_selecter_comparison_->evaluate();
-    timer.stop("Loop-Evaluate-Comparison");
+    timer.stop("[NBVLoop]EvaluateComparison");
   }
 
   // Move to next best view
-  timer.start("Loop-Evaluate-Movement");
+  timer.start("[NBVLoop]EvaluateMove");
   geometry_msgs::Pose p = view_selecter_->getTargetPose();
   if ( std::isnan(p.position.x) )
   {
@@ -167,7 +169,7 @@ void NBVLoop::evaluateViewpoints()
   }
 
   vehicle_->setWaypoint(p);
-  timer.stop("Loop-Evaluate-Movement");
+  timer.stop("[NBVLoop]EvaluateMove");
 
   std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
 
@@ -370,8 +372,6 @@ void NBVLoop::positionVehicleAfterProfiling()
   {
     std::cout << "[NBVLoop] " << cc.green << "Moving vehicle after profiling\n" << cc.reset;
   }
-  // @todo
-  chrono_start = std::chrono::high_resolution_clock::now();
   std::cout << "[NBVLoop] " << cc.yellow << "Note: Moving vehicle after profiling uses a fixed waypoint defined in config settings. Create adaptive method.\n" << cc.reset;
 
   int pose_number;
@@ -459,26 +459,16 @@ void NBVLoop::runStateMachine()
       case NBVState::MOVING_COMPLETE:
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
 
-        chrono_tick = std::chrono::high_resolution_clock::now();
-        {
-          ros::Duration(0.2).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
-          mapping_module_->commandGetCameraData();
-        }
-        chrono_toc = std::chrono::high_resolution_clock::now();
-        time_mapping_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
+        timer.start("[NBVLoop]commandGetCameraData");
+        ros::Duration(0.2).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+        mapping_module_->commandGetCameraData();
+        timer.stop("[NBVLoop]commandGetCameraData");
 
 
-        chrono_tick = std::chrono::high_resolution_clock::now();
-        {
-          state = NBVState::TERMINATION_CHECK;
-          terminationCheck();
-        }
-        chrono_toc = std::chrono::high_resolution_clock::now();
-        time_termination_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
-        time_total_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_start).count();
-
-        chrono_start = std::chrono::high_resolution_clock::now();
-
+        timer.start("[NBVLoop]TerminationCheck");
+        state = NBVState::TERMINATION_CHECK;
+        terminationCheck();
+        timer.stop("[NBVLoop]TerminationCheck");
 
         break;
 
@@ -495,24 +485,14 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::TERMINATION_NOT_MET:
-        chrono_tick = std::chrono::high_resolution_clock::now();
-        {
-          state = NBVState::VIEWPOINT_GENERATION;
-          generateViewpoints();
-        }
-        chrono_toc = std::chrono::high_resolution_clock::now();
-        time_view_generation_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
+        state = NBVState::VIEWPOINT_GENERATION;
+        generateViewpoints();
 
         break;
 
       case NBVState::VIEWPOINT_GENERATION_COMPLETE:
-        chrono_tick = std::chrono::high_resolution_clock::now();
-        {
-          state = NBVState::VIEWPOINT_EVALUATION;
-          evaluateViewpoints();
-        }
-        chrono_toc = std::chrono::high_resolution_clock::now();
-        time_view_selection_ = std::chrono::duration<double, std::milli>(chrono_toc-chrono_tick).count();
+        state = NBVState::VIEWPOINT_EVALUATION;
+        evaluateViewpoints();
 
         break;
 
@@ -577,7 +557,7 @@ void NBVLoop::updateHistory()
   history_->avg_point_density.push_back(mapping_module_->getAveragePointDensity());
   history_->update();
 
-  printf("Time Total: %lf ms, Gen: %lf, Select: %lf, Mapping: %lf, Terminate: %lf\n", time_total_, time_view_generation_, time_view_selection_, time_mapping_, time_termination_);
+  //printf("Time Total: %lf ms, Gen: %lf, Select: %lf, Mapping: %lf, Terminate: %lf\n", time_total_, time_view_generation_, time_view_selection_, time_mapping_, time_termination_);
 
   // Publish information about this iteration
   nbv_exploration::IterationInfo iteration_msg;
@@ -594,11 +574,13 @@ void NBVLoop::updateHistory()
   iteration_msg.selected_utility_entropy         = view_selecter_->info_selected_utility_entropy_;
   iteration_msg.selected_utility_prediction      = view_selecter_->info_selected_utility_prediction_;
   iteration_msg.selected_utility_occupied_voxels = view_selecter_->info_selected_occupied_voxels_;
+  /*
   iteration_msg.time_iteration   = time_total_;
   iteration_msg.time_generation  = time_view_generation_;
   iteration_msg.time_selection   = time_view_selection_;
   iteration_msg.time_mapping     = time_mapping_;
   iteration_msg.time_termination = time_termination_;
+  */
   iteration_msg.utilities        = view_selecter_->info_utilities_;
 
   pub_iteration_info.publish(iteration_msg);

@@ -55,9 +55,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   //
   // Source: Borrowed partially from
   // https://github.com/uzh-rpg/rpg_ig_active_reconstruction/blob/master/ig_active_reconstruction_octomap/src/code_base/octomap_basic_ray_ig_calculator.inl
-  double t_start, t_end;
-  double time_entropy=0, time_predicted=0, time_density=0;
-  t_start = ros::Time::now().toSec();
+  timer.start("[ViewSelecterProposed]calculateUtility");
 
   octomap::point3d origin (p.position.x, p.position.y, p.position.z);
 
@@ -69,8 +67,8 @@ double ViewSelecterProposed::calculateUtility(Pose p)
 
   int num_of_points = 0;
 
-  std::vector<octomap::OcTreeKey> key_list;
-  std::vector<octomap::OcTreeKey> key_predicted_list;
+  std::set<octomap::OcTreeKey, OctomapKeyCompare> key_list;
+  std::set<octomap::OcTreeKey, OctomapKeyCompare> key_predicted_list;
 
 
 
@@ -79,6 +77,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
 
   for (int i=0; i<rays_far_plane_.size(); i++)
   {
+    //timer.start("[ViewSelecterProposed]calculateUtility-rayCast");
     octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint, endpoint_predicted;
     double ray_length, ray_predicted_length;
@@ -105,7 +104,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     // ========
     if(weight_prediction_ > 0)
     {
-      double t1 = ros::Time::now().toSec();
       found_endpoint = tree_predicted_->castRay(origin, dir, endpoint_predicted, true, range);
       if (found_endpoint)
       {
@@ -122,9 +120,8 @@ double ViewSelecterProposed::calculateUtility(Pose p)
           }
         }
       }
-
-      time_predicted += ros::Time::now().toSec() - t1;
     }
+    //timer.stop("[ViewSelecterProposed]calculateUtility-rayCast");
 
     /* Check ray
      *
@@ -136,18 +133,19 @@ double ViewSelecterProposed::calculateUtility(Pose p)
      * The ray continues until the end point.
      * If the ray exits the bounds, we stop adding nodes to IG and discard the endpoint.
      */
-
+    //timer.start("[ViewSelecterProposed]calculateUtility-computeRayKeys");
     octomap::point3d start_pt, end_pt;
     bool entered_valid_range = false;
     bool exited_valid_range = false;
 
     octomap::KeyRay ray;
     tree_->computeRayKeys( origin, endpoint, ray );
-
+    //timer.stop("[ViewSelecterProposed]calculateUtility-computeRayKeys");
 
     // ======
     // Iterate through each node in ray
     // ======
+    //timer.start("[ViewSelecterProposed]calculateUtility-rayCheck");
     for( octomap::KeyRay::iterator it = ray.begin() ; it!=ray.end(); ++it )
     {
       octomap::point3d p = tree_->keyToCoord(*it);
@@ -205,6 +203,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         }
       }
     }
+    //timer.stop("[ViewSelecterProposed]calculateUtility-rayCheck");
 
     /*
      * Project the discretized start and end point to the ray we started with
@@ -216,7 +215,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     addToRayMarkers(start_pt, end_pt);
   }//end view checking
 
-
   //========
   // Process all unique nodes
   //========
@@ -224,9 +222,11 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   num_nodes_predicted = key_predicted_list.size();
 
   // Normal octomap
-  for (int i_key=0; i_key<key_list.size(); i_key++)
+  timer.start("[ViewSelecterProposed]calculateUtility-nodeProcess");
+  std::set<octomap::OcTreeKey>::iterator it;
+  for (it = key_list.begin(); it != key_list.end(); ++it)
   {
-    octomap::OcTreeKey key = key_list[i_key];
+    octomap::OcTreeKey key = *it;
     octomap::OcTreeNode* node = tree_->search(key);
 
 
@@ -248,6 +248,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     // Entropy
     ig_total += getNodeEntropy(node);
   }
+  timer.stop("[ViewSelecterProposed]calculateUtility-nodeProcess");
 
   //=======
   // Compute distance
@@ -329,22 +330,10 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     printf("\nDensity: %f\tMax: %f\n", density, max_density_);
     printf("Normalized -- IG: %f, Density: %f, Predicted: %f\n", normalized_entropy, normalized_density, normalized_prediction);
     printf("Utility ----- IG: %f, Density: %f, Predicted: %f, Total: %f\n", weighted_entropy, weighted_density, weighted_prediction, utility);
-    //printf("Time -------- IG: %f, Density: %f, Predicted: %f, Total: %f\n", time_entropy, time_density, time_predicted, t_end-t_start);
     printf("Predicted: %d\tUnknown: %d\tOccupied: %d\tFree: %d\n", num_nodes_predicted, num_nodes_unknown, num_nodes_occ, num_nodes_free);
 
-    /*
-    std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << num_nodes_traversed << " (" << 1000*(t_end-t_start)/num_nodes_traversed << " ms/node)\n";
-    std::cout << "\tAverage nodes per ray: " << num_nodes_traversed/rays_far_plane_.size() << "\n";
-    */
+    //std::cout << "\tAverage nodes per ray: " << num_nodes_traversed/rays_far_plane_.size() << "\n";
   }
-
-  /*
-  temp_utility_density_    = normalized_density;
-  temp_utility_distance_   = distance;
-  temp_utility_entropy_    = normalized_entropy;
-  temp_utility_prediction_ = normalized_prediction;
-  temp_occupied_voxels_    = num_nodes_occ;
-  */
 
   temp_utility_density_    = weighted_density;
   temp_utility_distance_   = weighted_distance;
@@ -355,25 +344,22 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   // ======
   // Visualize
   // ======
-
+  timer.start("[ViewSelecterProposed]calculateUtility-visualize");
   publishRayMarkers();
   publishPose(p);
+  timer.stop("[ViewSelecterProposed]calculateUtility-visualize");
 
-  // Compute final times
-  t_end = ros::Time::now().toSec();
-  time_entropy = t_end - t_start - time_density - time_predicted;
+  timer.stop("[ViewSelecterProposed]calculateUtility");
 
   return utility;
 }
 
-void ViewSelecterProposed::insertKeyIfUnique(std::vector<octomap::OcTreeKey>& list, octomap::OcTreeKey key)
+void ViewSelecterProposed::insertKeyIfUnique(std::set<octomap::OcTreeKey, OctomapKeyCompare>& list, octomap::OcTreeKey key)
 {
-  std::vector<octomap::OcTreeKey>::iterator it;
-  it = std::find(list.begin(), list.end(), key);
-  if (it == list.end())
+  if (list.count(key) == 0)
   {
     // Key not found, insert
-    list.push_back(key);
+    list.insert(key);
   }
 }
 

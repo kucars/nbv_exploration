@@ -29,6 +29,7 @@ struct OctomapKeyCompare {
   }
 };
 
+
 class ViewSelecterBase
 {
 public:

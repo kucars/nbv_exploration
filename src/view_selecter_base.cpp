@@ -340,6 +340,7 @@ void ViewSelecterBase::evaluate()
 {
   update();
 
+  timer.start("[ViewSelecterBase]evaluate");
   // Reset all variables of interest
   info_selected_utility_ = 0; //- std::numeric_limits<float>::infinity(); //-inf
   info_utilities_.clear();
@@ -388,6 +389,8 @@ void ViewSelecterBase::evaluate()
 
   // Increase total distance travelled
   info_distance_total_ += calculateDistance(selected_pose_);
+
+  timer.stop("[ViewSelecterBase]evaluate");
 }
 
 std::string ViewSelecterBase::getMethodName()
@@ -454,14 +457,11 @@ bool ViewSelecterBase::isNodeUnknown(octomap::OcTreeNode node)
 
 bool ViewSelecterBase::isPointInBounds(octomap::point3d &p)
 {
-  if (p.x() >= view_gen_->obj_bounds_x_min_ && p.x() <= view_gen_->obj_bounds_x_max_ &&
+  bool result = (p.x() >= view_gen_->obj_bounds_x_min_ && p.x() <= view_gen_->obj_bounds_x_max_ &&
       p.y() >= view_gen_->obj_bounds_y_min_ && p.y() <= view_gen_->obj_bounds_y_max_ &&
-      p.z() >= view_gen_->obj_bounds_z_min_ && p.z() <= view_gen_->obj_bounds_z_max_ )
-  {
-    return true;
-  }
+      p.z() >= view_gen_->obj_bounds_z_min_ && p.z() <= view_gen_->obj_bounds_z_max_ );
 
-  return false;
+  return result;
 }
 
 void ViewSelecterBase::publishRayMarkers()
@@ -506,6 +506,7 @@ octomap::point3d ViewSelecterBase::transformToGlobalRay(Eigen::Vector3d ray_dir)
 
 void ViewSelecterBase::update()
 {
+  timer.start("[ViewSelecterBase]update");
   info_iteration_++;
 
   cloud_occupied_ptr_ = view_gen_->cloud_occupied_ptr_;
@@ -584,6 +585,8 @@ void ViewSelecterBase::update()
       pointCountInKey.insert(std::make_pair(key, 1));
     }
   }
+
+  timer.stop("[ViewSelecterBase]update");
 }
 
 int ViewSelecterBase::getPointCountAtOcTreeKey(octomap::OcTreeKey key)
