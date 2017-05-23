@@ -55,7 +55,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   //
   // Source: Borrowed partially from
   // https://github.com/uzh-rpg/rpg_ig_active_reconstruction/blob/master/ig_active_reconstruction_octomap/src/code_base/octomap_basic_ray_ig_calculator.inl
-  timer.start("[ViewSelecterProposed]calculateUtility");
 
   octomap::point3d origin (p.position.x, p.position.y, p.position.z);
 
@@ -86,6 +85,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
 
     // ========
     // Get endpoint of ray when cast through main octomap
+    //  using castRay() is expensive when done repeatedly
     // ========
     bool found_endpoint = tree_->castRay(origin, dir, endpoint, true, range);
     if (found_endpoint)
@@ -94,12 +94,12 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     }
     else
     {
-      endpoint = origin + dir * range;
       ray_length = range;
     }
 
     // ========
     // Get endpoint of ray when cast through predicted octomap
+    //  using castRay() is expensive when done repeatedly
     // ========
     if(weight_prediction_ > 0)
     {
@@ -108,7 +108,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
       {
         ray_predicted_length = (origin-endpoint_predicted).norm();
 
-
+        // Check if predicted ray is not occluded
         if (ray_length >= ray_predicted_length)
         {
           octomap::OcTreeKey end_key;
@@ -155,7 +155,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         {
           entered_valid_range = true;
           start_pt = p;
-          end_pt = p;
         }
 
         else
@@ -187,15 +186,10 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     // ======
     if (found_endpoint && !exited_valid_range)
     {
-      if ( isPointInBounds(endpoint) )
+      octomap::OcTreeKey end_key;
+      if( tree_->coordToKeyChecked(endpoint, end_key) )
       {
-        end_pt = endpoint;
-
-        octomap::OcTreeKey end_key;
-        if( tree_->coordToKeyChecked(endpoint, end_key) )
-        {
-          insertKeyIfUnique(key_list, end_key);
-        }
+        insertKeyIfUnique(key_list, end_key);
       }
     }
 
@@ -216,7 +210,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   num_nodes_predicted = key_predicted_list.size();
 
   // Normal octomap
-  timer.start("[ViewSelecterProposed]calculateUtility-processUniqueNodes");
   std::set<octomap::OcTreeKey>::iterator it;
   for (it = key_list.begin(); it != key_list.end(); ++it)
   {
@@ -242,7 +235,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     // Entropy
     ig_total += getNodeEntropy(node);
   }
-  timer.stop("[ViewSelecterProposed]calculateUtility-processUniqueNodes");
 
   //=======
   // Compute distance
@@ -338,18 +330,15 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   // ======
   // Visualize
   // ======
-  timer.start("[ViewSelecterProposed]calculateUtility-visualize");
   publishRayMarkers();
   publishPose(p);
-  timer.stop("[ViewSelecterProposed]calculateUtility-visualize");
-
-  timer.stop("[ViewSelecterProposed]calculateUtility");
 
   return utility;
 }
 
 void ViewSelecterProposed::insertKeyIfUnique(std::set<octomap::OcTreeKey, OctomapKeyCompare>& list, octomap::OcTreeKey key)
 {
+  //TODO: This function takes most of the time in the evaluator
   if (list.count(key) == 0)
   {
     // Key not found, insert
