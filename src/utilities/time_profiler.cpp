@@ -1,5 +1,6 @@
 #include "utilities/time_profiler.h"
 #include <iomanip>
+#include <math.h>
 
 
 TimeProfiler::TimeProfiler() {
@@ -129,20 +130,24 @@ void TimeProfiler::dump() {
       std::string("Total Time (ms)").size()
   };
 
-  // Get max size of name
+  // Get max size of name and calls
   for (it=entries.begin(); it!=entries.end(); ++it)
   {
     if (it->first.size() > headerWidths[0])
       headerWidths[0] = it->first.size();
+
+    int count_size = log10( it->second.count ) + 1;
+    if (count_size > headerWidths[1])
+      headerWidths[1] = count_size;
   }
 
   stdout << std::setprecision(2) << std::fixed;
   stdout << std::left  << std::setw(headerWidths[0]) << "Name";
-  stdout << std::right << std::setw(headerWidths[1]) << "  Calls";
-  stdout << std::right << std::setw(headerWidths[2]) << "  Min Time (ms)";
-  stdout << std::right << std::setw(headerWidths[3]) << "  Avg Time (ms)";
-  stdout << std::right << std::setw(headerWidths[4]) << "  Max Time (ms)";
-  stdout << std::right << std::setw(headerWidths[5]) << "  Total Time (ms)";
+  stdout << "  " << std::right << std::setw(headerWidths[1]) << "Calls";
+  stdout << "  " << std::right << std::setw(headerWidths[2]) << "Min Time (ms)";
+  stdout << "  " << std::right << std::setw(headerWidths[3]) << "Avg Time (ms)";
+  stdout << "  " << std::right << std::setw(headerWidths[4]) << "Max Time (ms)";
+  stdout << "  " << std::right << std::setw(headerWidths[5]) << "Total Time (ms)";
   stdout << "\n";
 
   std::string last_title = "";
