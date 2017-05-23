@@ -113,15 +113,11 @@ void NBVLoop::generateViewpoints()
     std::cout << "[NBVLoop] " << cc.green << "Generating viewpoints\n" << cc.reset;
   }
 
-  timer.start("[NBVLoop]Generator-Setters");
   view_generator_->setCloud(mapping_module_->getPointCloud());
   view_generator_->setMap(mapping_module_->getOctomap());
   view_generator_->setMapPrediction(mapping_module_->getOctomapPredicted());
   view_generator_->setCurrentPose(vehicle_->getPose());
-  timer.stop("[NBVLoop]Generator-Setters");
-  timer.start("[NBVLoop]Generator");
   view_generator_->generateViews();
-  timer.stop("[NBVLoop]Generator");
 
   if (view_generator_->generated_poses.size() == 0)
   {
@@ -458,7 +454,7 @@ void NBVLoop::runStateMachine()
         state = NBVState::TERMINATION_CHECK;
         terminationCheck();
         timer.stop("[NBVLoop]TerminationCheck");
-        timer.stop("[NBVLoop]Iteration");
+        timer.stop("[NBVLoop]-Iteration");
 
         break;
 
@@ -475,9 +471,11 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::TERMINATION_NOT_MET:
-        timer.start("[NBVLoop]Iteration");
+        timer.start("[NBVLoop]-Iteration");
         state = NBVState::VIEWPOINT_GENERATION;
+        timer.start("[NBVLoop]Generator");
         generateViewpoints();
+        timer.stop("[NBVLoop]Generator");
 
         break;
 
@@ -497,7 +495,7 @@ void NBVLoop::runStateMachine()
 
         timer.start("[NBVLoop]commandGetCameraData");
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
-        ros::Duration(0.1).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+        ros::Duration(0.15).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
         mapping_module_->commandGetCameraData();
         timer.stop("[NBVLoop]commandGetCameraData");
 

@@ -38,8 +38,8 @@ uav_collision_radius: 0.8
 ## UAV Poses
 uav_start_pose: 1
 
-uav_pose_x_0: 0
-uav_pose_y_0: -20
+uav_pose_x_0: -21
+uav_pose_y_0: -18
 uav_pose_z_0: 5
 uav_pose_yaw_0: 1.571
 
@@ -64,7 +64,7 @@ uav_pose_yaw_3: 0.3
 mapping_voxel_grid_res_profile: 0.1
 mapping_voxel_grid_res_rgbd: 0.02
 mapping_octree_resolution: 0.2
-mapping_occupancy_threshold: 0.7
+mapping_occupancy_threshold: 0.6
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
 mapping_integrate_prediction: false #if true, put prediction in final map. If false, put prediction in separate map
 mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
@@ -89,7 +89,7 @@ profiling_circular_waypoints: 8
 # UAV starting pose after profiling
 ############
 # Select pose after completing profile
-profiling_complete_pose_number: 2
+profiling_complete_pose_number: 1
 
 ############
 ## Termination settings

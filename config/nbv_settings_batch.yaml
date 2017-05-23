@@ -4,7 +4,7 @@
 debug_nbv_main_states: true
 debug_mapping: false
 debug_view_generator: false
-debug_view_selecter: true
+debug_view_selecter: false
 
 ############
 ## Scenario settings

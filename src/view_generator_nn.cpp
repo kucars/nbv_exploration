@@ -93,9 +93,7 @@ void ViewGeneratorNN::generateViews(bool generate_at_current_location)
     }
 
     std::cout << "[ViewGeneratorNN] Generated " << generated_poses.size() << " poses (" << rejected_poses.size() << " rejected)" << std::endl;
-    timer.start("[ViewGeneratorNN]Visualization");
     visualize(generated_poses, rejected_poses);
-    timer.stop("[ViewGeneratorNN]Visualization");
   }
 
   timer.stop("[ViewGeneratorNN]generateViews");

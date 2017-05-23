@@ -24,8 +24,8 @@ ViewSelecterBase::ViewSelecterBase():
   info_selected_utility_prediction_(std::numeric_limits<double>::quiet_NaN()),
   info_selected_occupied_voxels_(0)
 {
-	ros::NodeHandle n;
-	marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+  ros::NodeHandle n;
+  marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
   pose_pub   = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
 
   // >>>>>>>>>>>>>>>>>
@@ -48,19 +48,19 @@ ViewSelecterBase::ViewSelecterBase():
 
 void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint)
 {
-	geometry_msgs::Point p;
-	
-	// Start
-	p.x = origin.x();
-	p.y = origin.y();
-	p.z = origin.z();
-	line_list.points.push_back(p);
+  geometry_msgs::Point p;
 
-	// End
-	p.x = endpoint.x();
-	p.y = endpoint.y();
-	p.z = endpoint.z();
-	line_list.points.push_back(p);
+  // Start
+  p.x = origin.x();
+  p.y = origin.y();
+  p.z = origin.z();
+  line_list.points.push_back(p);
+
+  // End
+  p.x = endpoint.x();
+  p.y = endpoint.y();
+  p.z = endpoint.z();
+  line_list.points.push_back(p);
 }
 
 double ViewSelecterBase::calculateIG(Pose p)
@@ -92,7 +92,6 @@ double ViewSelecterBase::calculateIG(Pose p)
 
     // Get length of beam to the far plane of sensor
     double range = rays_far_plane_[i].norm();
-    double min_dist = rays_near_plane_[i].norm();
 
     // Cast through unknown cells as well as free cells
     bool found_endpoint = tree_->castRay(origin, dir, endpoint, true, range);
@@ -279,17 +278,17 @@ double ViewSelecterBase::calculateUtility(Pose p)
 
 void ViewSelecterBase::clearRayMarkers()
 {
-	line_list.id = 0;
-	line_list.type = visualization_msgs::Marker::LINE_LIST;
-	line_list.scale.x = 0.05;
-	
-	// Blue lines
-	line_list.color.r = 1.0;
-	line_list.color.g = 0;
-	line_list.color.b = 1.0;
+  line_list.id = 0;
+  line_list.type = visualization_msgs::Marker::LINE_LIST;
+  line_list.scale.x = 0.05;
+
+  // Blue lines
+  line_list.color.r = 1.0;
+  line_list.color.g = 0;
+  line_list.color.b = 1.0;
   line_list.color.a = 0.1;
-	
-	line_list.points.clear();
+
+  line_list.points.clear();
 
 }
 
@@ -400,27 +399,27 @@ std::string ViewSelecterBase::getMethodName()
 
 double ViewSelecterBase::getNodeOccupancy(octomap::OcTreeNode* node)
 {
-	double p;
-	
-	if( node==NULL )
-	{
-		p = 0.5;
-	}
-	else
-	{
-		p = node->getOccupancy();
-	}
-	return p;
+  double p;
+
+  if( node==NULL )
+  {
+    p = 0.5;
+  }
+  else
+  {
+    p = node->getOccupancy();
+  }
+  return p;
 }
 
 double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
 {
-	double p = getNodeOccupancy(node);
-	
+  double p = getNodeOccupancy(node);
+
   if (is_ignoring_clamping_entropies_ && (p <= tree_->getClampingThresMin() || p >= tree_->getClampingThresMax()) )
-		return 0;
-		
-	return - p*log(p) - (1-p)*log(1-p);
+    return 0;
+
+  return - p*log(p) - (1-p)*log(1-p);
 }
 
 Pose ViewSelecterBase::getTargetPose()
@@ -498,10 +497,10 @@ void ViewSelecterBase::setViewGenerator(ViewGeneratorBase* v)
 
 octomap::point3d ViewSelecterBase::transformToGlobalRay(Eigen::Vector3d ray_dir)
 {
-	Eigen::Vector3d temp = rotation_mtx_*ray_dir;
-	octomap::point3d p (temp[0], temp[1], temp[2]);
-	
-	return p;
+  Eigen::Vector3d temp = rotation_mtx_*ray_dir;
+  octomap::point3d p (temp[0], temp[1], temp[2]);
+
+  return p;
 }
 
 void ViewSelecterBase::update()
