@@ -151,6 +151,7 @@ void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXY
   // == Insert point cloud based on planar (camera) or spherical (laser) scan data
   octomap::KeySet free_cells, occupied_cells;
 
+
   if (isPlanar)
     computeTreeUpdatePlanar(octree_in, ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
   else
@@ -317,6 +318,8 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
 
 void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
+    timer.start("[MappingModule]callbackDepth");
+
     if (is_debugging_)
     {
       std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
@@ -329,6 +332,8 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
 
       return;
     }
+
+    timer.start("[MappingModule]callbackDepth-conversion");
 
     // == Convert to pcl pointcloud
     PointCloudXYZ cloud;
@@ -363,27 +368,34 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     pcl::transformPointCloud(*cloud_raw_ptr, *cloud_raw_ptr, tf_eigen);
     pcl::transformPointCloud(*cloud_distance_ptr, *cloud_distance_ptr, tf_eigen);
 
+    timer.stop("[MappingModule]callbackDepth-conversion");
+
     // == Add filtered to final cloud
     addPointCloudToPointCloud(cloud_distance_ptr, cloud_ptr_rgbd_, depth_grid_res_);
 
     // == Update octomap
+    timer.start("[MappingModule]callbackDepth-updateOcto");
     octomap::point3d origin (transform.getOrigin().x(),
                              transform.getOrigin().y(),
                              transform.getOrigin().z());
     octomap::point3d sensor_dir = pose_conversion::getOctomapDirectionVectorFromTransform(transform);
 
     addPointCloudToTree(octree_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+    timer.stop("[MappingModule]callbackDepth-updateOcto");
 
     // == Update prediction, if necessary
-    if (is_checking_symmetry_)
+    // If prediction is integrated into map, don't do anything
+    if (is_checking_symmetry_ && !is_integrating_prediction_)
     {
-      // If prediction is integrated into map, don't do anything
-      if (!is_integrating_prediction_)
-        updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+      timer.start("[MappingModule]callbackDepth-updatePrediction");
+      updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+      timer.stop("[MappingModule]callbackDepth-updatePrediction");
     }
 
     // == Done updating
     is_get_camera_data_ = false;
+
+    timer.stop("[MappingModule]callbackDepth");
 }
 
 bool MappingModule::commandGetCameraData()
@@ -391,15 +403,18 @@ bool MappingModule::commandGetCameraData()
   is_get_camera_data_ = true;
 
   // Subscribe to topic
+  timer.start("[MappingModule]commandGetCameraData-subscribe");
   sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
+  timer.stop("[MappingModule]commandGetCameraData-subscribe");
 
+  timer.start("[MappingModule]commandGetCameraData-waiting");
   std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
-
-  for (int i=0; i<10 && ros::ok() && is_get_camera_data_; i++)
+  for (int i=0; i<100 && ros::ok() && is_get_camera_data_; i++)
   {
     ros::spinOnce();
-    ros::Rate(10).sleep();
+    ros::Rate(100).sleep();
   }
+  timer.stop("[MappingModule]commandGetCameraData-waiting");
 
   if (is_get_camera_data_)
   {
@@ -407,7 +422,9 @@ bool MappingModule::commandGetCameraData()
   }
 
   // Unsubscribe frome topic
+  timer.start("[MappingModule]commandGetCameraData-unsubscribe");
   sub_rgbd_.shutdown();
+  timer.stop("[MappingModule]commandGetCameraData-unsubscribe");
 
 
   // Save final map ever 10 iterations
@@ -427,6 +444,8 @@ bool MappingModule::commandFinalMapLoad()
 
 bool MappingModule::commandFinalMapSave()
 {
+  timer.start("[MappingModule]commandFinalMapSave");
+
   std::cout << "[Mapping] " << cc.green << "Saving final maps\n" << cc.reset;
 
   // Point cloud
@@ -453,6 +472,7 @@ bool MappingModule::commandFinalMapSave()
   }
 
   std::cout << "[Mapping] " << cc.blue << "Successfully saved map\n" << cc.reset;
+  timer.stop("[MappingModule]commandFinalMapSave");
   return true;
 }
 

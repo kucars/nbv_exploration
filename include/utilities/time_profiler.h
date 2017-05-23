@@ -29,6 +29,8 @@ class TimeProfiler {
     bool verbose;
     std::map<std::string,std::chrono::steady_clock::time_point> timers;
     std::map<std::string,ProfilerEntry> entries;
+
+    std::string getEntryTitle(std::string s);
 };
 
 #endif // TimeProfiler_H

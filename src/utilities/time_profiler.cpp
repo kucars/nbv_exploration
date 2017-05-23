@@ -35,6 +35,7 @@ void TimeProfiler::stop(std::string s) {
       e.avg = t;
       e.max = t;
       e.min = t;
+      e.total = t;
       e.count = 1;
       entries[s] = e;
     }
@@ -77,6 +78,23 @@ void TimeProfiler::toc() {
 void TimeProfiler::toc(std::string s) {
     this->stop(s);
     this->start();
+}
+
+std::string TimeProfiler::getEntryTitle(std::string s) {
+  // Get the title of the entry to create proper division lines later on
+  if (s[0] != '[')
+    return "";
+
+  std::string final;
+
+  for(std::string::iterator it = s.begin()+1; it != s.end(); ++it) {
+    if (*it == ']')
+      break;
+
+    final += *it;
+  }
+
+  return final;
 }
 
 void TimeProfiler::dump() {
@@ -126,8 +144,16 @@ void TimeProfiler::dump() {
   stdout << std::right << std::setw(headerWidths[5]) << "  Total Time (ms)";
   stdout << "\n";
 
+  std::string last_title = "";
   for (it=entries.begin(); it!=entries.end(); ++it)
   {
+    // Print divider if class title changed
+    if (getEntryTitle(it->first) != last_title)
+    {
+      last_title = getEntryTitle(it->first);
+      stdout << "---------------------\n";
+    }
+
     stdout << std::left  << std::setw(headerWidths[0]) << it->first;
     stdout << "  " << std::right << std::setw(headerWidths[1]) << it->second.count;
     stdout << "  " << std::right << std::setw(headerWidths[2]) << it->second.min;
@@ -136,6 +162,7 @@ void TimeProfiler::dump() {
     stdout << "  " << std::right << std::setw(headerWidths[5]) << it->second.total;
     stdout << "\n";
   }
+  stdout << "\n";
 
   // Output
   std::cout << stdout.rdbuf();
