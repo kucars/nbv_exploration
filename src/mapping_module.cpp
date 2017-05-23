@@ -690,11 +690,14 @@ void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const oc
     keyrays.resize(1);
   #endif
 
+  int num_threads = keyrays.size();
+  std::vector<octomap::KeySet> free_cells_threaded(num_threads);
+  std::vector<octomap::KeySet> occupied_cells_threaded(num_threads);
 
-#ifdef _OPENMP
-  omp_set_num_threads(keyrays.size());
+  #ifdef _OPENMP
+  omp_set_num_threads(num_threads);
   #pragma omp parallel for schedule(guided)
-#endif
+  #endif
   for (int i = 0; i < (int)scan.size(); ++i)
   {
     if (use_ray_skipping)
@@ -722,22 +725,12 @@ void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const oc
       // free cells
       if (octree_in->computeRayKeys(origin, p, *keyray))
       {
-        #ifdef _OPENMP
-        #pragma omp critical (free_insert)
-        #endif
-        {
-          free_cells.insert(keyray->begin(), keyray->end());
-        }
+        free_cells_threaded[threadIdx].insert(keyray->begin(), keyray->end());
       }
       // occupied endpoint
       octomap::OcTreeKey key;
       if (octree_in->coordToKeyChecked(p, key)){
-        #ifdef _OPENMP
-        #pragma omp critical (occupied_insert)
-        #endif
-        {
-          occupied_cells.insert(key);
-        }
+        occupied_cells_threaded[threadIdx].insert(key);
       }
     }
     else
@@ -747,15 +740,19 @@ void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const oc
 
       octomap::point3d new_end = origin + direction * (float) max_rgbd_range__to_point;
       if (octree_in->computeRayKeys(origin, new_end, *keyray)){
-        #ifdef _OPENMP
-        #pragma omp critical (free_insert)
-        #endif
-        {
-          free_cells.insert(keyray->begin(), keyray->end());
-        }
+        free_cells_threaded[threadIdx].insert(keyray->begin(), keyray->end());
       }
     } // end if maxrange
   } // end for all points, end of parallel OMP loop
+
+
+  // Merge threaded vectors
+  for (int i=0; i<num_threads; i++)
+  {
+    free_cells.insert(free_cells_threaded[i].begin(), free_cells_threaded[i].end());
+    occupied_cells.insert(occupied_cells_threaded[i].begin(), occupied_cells_threaded[i].end());
+  }
+
 
   // prefer occupied cells over free ones (and make sets disjunct)
   for(octomap::KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; )
