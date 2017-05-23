@@ -536,21 +536,61 @@ void ViewSelecterBase::update()
     std::cout << "[ViewSelecterBase]: Bounds max: " << view_gen_->obj_bounds_x_max_ << ", " << view_gen_->obj_bounds_y_max_ << ", " << view_gen_->obj_bounds_z_max_ << "\n";
   }
 
+  //=======
   // Find total entropy remaining in system
+  // * This is the slowest part of the update, optimize this for additional performance
+  //=======
   info_entropy_total_=0;
 
+  std::vector<double> total_entropy_threaded;
+  #ifdef _OPENMP
+    #pragma omp parallel
+    #pragma omp critical
+    {
+      if (omp_get_thread_num() == 0){
+        total_entropy_threaded.resize(omp_get_num_threads());
+      }
+
+    } // end critical
+  #else
+    total_entropy_threaded.resize(1);
+  #endif
+
+  int num_threads = total_entropy_threaded.size();
   double res = tree_->getResolution();
-  for (double x=view_gen_->obj_bounds_x_min_; x < view_gen_->obj_bounds_x_max_; x+=res)
+
+  // OpenMP loops require integer counters, so we determine the number of iterations here
+  int max_iteration = (view_gen_->obj_bounds_x_max_ - view_gen_->obj_bounds_x_min_)/res;
+
+  #ifdef _OPENMP
+  omp_set_num_threads(num_threads);
+  #pragma omp parallel for schedule(guided)
+  #endif
+  for (int i=0; i < max_iteration; i++)
   {
+    // Compute the corresponding "x" coordinate
+    double x = view_gen_->obj_bounds_x_min_ + res*i;
+
+    unsigned threadIdx = 0;
+    #ifdef _OPENMP
+    threadIdx = omp_get_thread_num();
+    #endif
+
     for (double y=view_gen_->obj_bounds_y_min_; y < view_gen_->obj_bounds_y_max_; y+=res)
     {
       for (double z=view_gen_->obj_bounds_z_min_; z < view_gen_->obj_bounds_z_max_; z+=res)
       {
         octomap::OcTreeKey key = tree_->coordToKey(x,y,z);
         octomap::OcTreeNode* node = tree_->search(key);
-        info_entropy_total_ += getNodeEntropy(node);
+        total_entropy_threaded[threadIdx] += getNodeEntropy(node);
       }
     }
+  }
+
+  // Merge threaded values
+  for (int i=0; i<num_threads; i++)
+  {
+    info_entropy_total_ += total_entropy_threaded[i];
   }
 
   if (is_debug_)
