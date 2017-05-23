@@ -26,7 +26,7 @@ ViewSelecterProposed::ViewSelecterProposed():
   weight_prediction_ /= mag;
 
   // ========
-  // Compute max point desnity
+  // Compute max point density
   // ========
   /*
    * Max density based on filter size and occupancy size
@@ -77,7 +77,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
 
   for (int i=0; i<rays_far_plane_.size(); i++)
   {
-    //timer.start("[ViewSelecterProposed]calculateUtility-rayCast");
     octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint, endpoint_predicted;
     double ray_length, ray_predicted_length;
@@ -121,7 +120,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         }
       }
     }
-    //timer.stop("[ViewSelecterProposed]calculateUtility-rayCast");
 
     /* Check ray
      *
@@ -133,19 +131,16 @@ double ViewSelecterProposed::calculateUtility(Pose p)
      * The ray continues until the end point.
      * If the ray exits the bounds, we stop adding nodes to IG and discard the endpoint.
      */
-    //timer.start("[ViewSelecterProposed]calculateUtility-computeRayKeys");
     octomap::point3d start_pt, end_pt;
     bool entered_valid_range = false;
     bool exited_valid_range = false;
 
     octomap::KeyRay ray;
     tree_->computeRayKeys( origin, endpoint, ray );
-    //timer.stop("[ViewSelecterProposed]calculateUtility-computeRayKeys");
 
     // ======
     // Iterate through each node in ray
     // ======
-    //timer.start("[ViewSelecterProposed]calculateUtility-rayCheck");
     for( octomap::KeyRay::iterator it = ray.begin() ; it!=ray.end(); ++it )
     {
       octomap::point3d p = tree_->keyToCoord(*it);
@@ -203,7 +198,6 @@ double ViewSelecterProposed::calculateUtility(Pose p)
         }
       }
     }
-    //timer.stop("[ViewSelecterProposed]calculateUtility-rayCheck");
 
     /*
      * Project the discretized start and end point to the ray we started with
@@ -213,7 +207,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     end_pt = origin + dir * (dir.dot(end_pt-origin)/dir.dot(dir));
 
     addToRayMarkers(start_pt, end_pt);
-  }//end view checking
+  }//end ray casting
 
   //========
   // Process all unique nodes
@@ -222,7 +216,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   num_nodes_predicted = key_predicted_list.size();
 
   // Normal octomap
-  timer.start("[ViewSelecterProposed]calculateUtility-nodeProcess");
+  timer.start("[ViewSelecterProposed]calculateUtility-processUniqueNodes");
   std::set<octomap::OcTreeKey>::iterator it;
   for (it = key_list.begin(); it != key_list.end(); ++it)
   {
@@ -248,7 +242,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     // Entropy
     ig_total += getNodeEntropy(node);
   }
-  timer.stop("[ViewSelecterProposed]calculateUtility-nodeProcess");
+  timer.stop("[ViewSelecterProposed]calculateUtility-processUniqueNodes");
 
   //=======
   // Compute distance
