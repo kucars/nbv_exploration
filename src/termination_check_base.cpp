@@ -2,7 +2,7 @@
 
 TerminationCheckBase::TerminationCheckBase()
 {
-  ros::param::param<int>("~termination_repeat_window_size", repeat_window_size_, 1);
+  ros::param::param<int>("~termination_repeat_window_size", repeat_window_size_, 8);
 }
 
 bool TerminationCheckBase::isTerminated()

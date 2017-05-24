@@ -100,7 +100,6 @@ termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05
 
-
 ############
 ## View Generation settings
 ############

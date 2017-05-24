@@ -36,8 +36,6 @@ uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
 
 ## UAV Poses
-uav_start_pose: 1
-
 uav_pose_x_0: -21
 uav_pose_y_0: -18
 uav_pose_z_0: 5
@@ -101,6 +99,7 @@ profiling_complete_pose_number: 1
 termination_type: 0
 termination_ros_spin_afterwards: true
 termination_window_size: 5
+termination_repeat_window_size: 10
 
 termination_iterations_max: 300
 termination_entropy_global_min_change_threshold: 0.0001
@@ -114,7 +113,7 @@ termination_utility_min_threshold: 0.05
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 0
+view_generator_type: 1
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0

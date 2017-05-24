@@ -28,6 +28,13 @@ Folder structure is assumed to be the following:
 
 """
 
+def cumsum(it):
+    total = 0
+    for x in it:
+        total += x
+        yield total
+
+
 dir = '/home/abdullah/NBV_Results'
 methods = {}
 skip_coverage = False
@@ -53,11 +60,18 @@ class RunStats(object):
     self.entropy_total = []
     self.time_iteration = []
     self.utility_max = []
+    self.utility_integrated = []
 
 def ExtractRunData(folder):
   # Read first csv file
   os.chdir( folder )
-  file = glob.glob("*.csv")[0]
+  try:
+    file = glob.glob("*.csv")[0]
+  except:
+    print("-----------")
+    print("ERROR: No csv file in " + folder)
+    print("-----------")
+    raise
 
   file_no_ext = os.path.splitext(file)[0]
   file_path = os.path.join(folder,file)
@@ -109,6 +123,7 @@ def ExtractRunData(folder):
   stats.distance = distance
   stats.utility_max = utility_max
   stats.time_iteration = time_iteration
+  stats.utility_integrated = list(cumsum(utility_max))
 
   return stats
 
@@ -226,6 +241,7 @@ def main():
   plotAttribute(total_runs, "entropy_total", "Total Entropy")
   plotAttribute(total_runs, "distance", "Distance (m)")
   plotAttribute(total_runs, "utility_max", "Utility Max")
+  plotAttribute(total_runs, "utility_integrated", "Utility Integrated")
   plotAttribute(total_runs, "time_iteration", "Time per Iteration (ms)")
   plotAttribute(total_runs, "density", "Density (pt/vox)")
 
