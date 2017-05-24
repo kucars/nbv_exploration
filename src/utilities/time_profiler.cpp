@@ -13,6 +13,11 @@ TimeProfiler::TimeProfiler(bool b) {
     this->start();
 }
 
+double TimeProfiler::getLatestTime(std::string s)
+{
+  return entries[s].last;
+}
+
 void TimeProfiler::start() {
     start("");
 }
@@ -34,6 +39,7 @@ void TimeProfiler::stop(std::string s) {
       // Entry not found, create new entry
       ProfilerEntry e;
       e.avg = t;
+      e.last = t;
       e.max = t;
       e.min = t;
       e.total = t;
@@ -44,6 +50,7 @@ void TimeProfiler::stop(std::string s) {
     {
       // Update existing entry
       ProfilerEntry e = it->second;
+      e.last = t;
       e.total += t;
       e.count ++;
       e.avg = e.total/e.count;

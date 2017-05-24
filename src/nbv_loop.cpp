@@ -456,6 +456,9 @@ void NBVLoop::runStateMachine()
         timer.stop("[NBVLoop]TerminationCheck");
         timer.stop("[NBVLoop]-Iteration");
 
+        // Update history
+        updateHistory();
+
         break;
 
       case NBVState::TERMINATION_MET:
@@ -531,17 +534,13 @@ void NBVLoop::terminationCheck()
   {
     std::cout << "[NBVLoop] " << cc.green << "Checking termination condition\n" << cc.reset;
   }
-  // Update history
-  updateHistory();
 
   termination_check_module_->update();
 
   if (termination_check_module_->isTerminated())
     state = NBVState::TERMINATION_MET;
   else
-  {
     state = NBVState::TERMINATION_NOT_MET;
-  }
 }
 
 void NBVLoop::updateHistory()
@@ -574,13 +573,13 @@ void NBVLoop::updateHistory()
   iteration_msg.selected_utility_entropy         = view_selecter_->info_selected_utility_entropy_;
   iteration_msg.selected_utility_prediction      = view_selecter_->info_selected_utility_prediction_;
   iteration_msg.selected_utility_occupied_voxels = view_selecter_->info_selected_occupied_voxels_;
-  /*
-  iteration_msg.time_iteration   = time_total_;
-  iteration_msg.time_generation  = time_view_generation_;
-  iteration_msg.time_selection   = time_view_selection_;
-  iteration_msg.time_mapping     = time_mapping_;
-  iteration_msg.time_termination = time_termination_;
-  */
+
+  iteration_msg.time_iteration   = timer.getLatestTime("[NBVLoop]-Iteration");
+  iteration_msg.time_generation  = timer.getLatestTime("[NBVLoop]Generator");
+  iteration_msg.time_selection   = timer.getLatestTime("[NBVLoop]Evaluate");
+  iteration_msg.time_mapping     = timer.getLatestTime("[NBVLoop]commandGetCameraData");
+  iteration_msg.time_termination = timer.getLatestTime("[NBVLoop]commandGetCameraData");
+
   iteration_msg.utilities        = view_selecter_->info_utilities_;
 
   pub_iteration_info.publish(iteration_msg);

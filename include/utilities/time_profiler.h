@@ -11,12 +11,13 @@ class TimeProfiler {
 
   public:
     struct ProfilerEntry{
-      double min, max, total, avg;
+      double min, max, total, avg, last;
       int count;
     };
 
     TimeProfiler();
     TimeProfiler(bool b);
+    double getLatestTime(std::string s);
     void start();
     void start(std::string s);
     void toc();
