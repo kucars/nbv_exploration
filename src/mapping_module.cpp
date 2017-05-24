@@ -429,9 +429,9 @@ bool MappingModule::commandGetCameraData()
   //sub_rgbd_.shutdown();
 
 
-  // Save final map ever 10 iterations
+  // Save final map ever 'x' iterations
   counter_++;
-  counter_ %= 10;
+  counter_ %= save_iterations_;
   if (counter_ == 0)
     commandFinalMapSave();
 
@@ -851,6 +851,8 @@ void MappingModule::initializeParameters()
   ros::param::param("~mapping_voxel_grid_res_rgbd", depth_grid_res_, 0.1);
   ros::param::param("~mapping_integrate_prediction", is_integrating_prediction_, false);
   ros::param::param("~mapping_integrate_occupancy", predicted_occupancy_value_, 0.7);
+
+  ros::param::param("~mapping_save_map_iterations", save_iterations_, 10);
 
   // Convert to logodds
   predicted_occupancy_value_ = octomap::logodds(predicted_occupancy_value_);

@@ -95,6 +95,7 @@ private:
   // == Config
   double max_rgbd_range_;
   double sensor_data_min_height_;
+  int save_iterations_;
 
   //Voxel grid resolutions
   double profile_grid_res_;
