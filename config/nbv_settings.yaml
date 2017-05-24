@@ -59,13 +59,14 @@ uav_pose_yaw_3: 0.3
 ############
 ## Mapping settings
 ############
-mapping_voxel_grid_res_profile: 0.1
-mapping_voxel_grid_res_rgbd: 0.02
-mapping_octree_resolution: 0.2
-mapping_occupancy_threshold: 0.6
-mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
 mapping_integrate_prediction: false #if true, put prediction in final map. If false, put prediction in separate map
 mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
+mapping_octree_resolution: 0.2
+mapping_occupancy_threshold: 0.6
+mapping_save_map_iterations: 20 #save map every "x"iterations in case of crash
+mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
+mapping_voxel_grid_res_profile: 0.1
+mapping_voxel_grid_res_rgbd: 0.02
 
 ############
 ## Profiling settings
