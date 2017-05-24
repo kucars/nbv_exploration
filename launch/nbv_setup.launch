@@ -47,7 +47,7 @@
     <include if="$(arg start_gazebo)" file="$(find gazebo_ros)/launch/empty_world.launch">
       <arg name="debug" value="false" />
       <arg name="headless" value="false"/>
-      <arg name="gui" value="true"/>
+      <arg name="gui" value="false"/>
 
       <!-- debug box -->
       <arg name="world_name"
@@ -84,7 +84,7 @@
     </include>
     
     <!-- Start RVIZ -->
-    <node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/config/nbv_rtabmap.rviz" required="true" />
+    <node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/config/nbv_rtabmap.rviz" required="false" />
     
     
     <!-- Set up RTAB -->

@@ -244,8 +244,11 @@ void FloatingSensorPosition::UpdatePosition()
   tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "floating_sensor/base_link"));
 
   // Publish current pose
-  GetCurrentPose();
-  pub_pose_.publish(current_pose_);
+  if (pub_pose_.getNumSubscribers() > 0)
+  {
+    GetCurrentPose();
+    pub_pose_.publish(current_pose_);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

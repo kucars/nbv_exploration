@@ -84,8 +84,8 @@ int main(int argc, char **argv)
     // >>>>>>>>>>>>>>>>>
     // Topic Handlers
     // >>>>>>>>>>>>>>>>>
-    sub_scan  = ros_node.subscribe(topic_scan_in, 40, callbackScan);
-    sub_depth = ros_node.subscribe(topic_depth_in, 30, callbackDepth);
+    sub_scan  = ros_node.subscribe(topic_scan_in, 5, callbackScan);
+    sub_depth = ros_node.subscribe(topic_depth_in, 5, callbackDepth);
     
     pub_scan  = ros_node.advertise<sensor_msgs::LaserScan>(topic_scan_out, 40);
     pub_depth = ros_node.advertise<sensor_msgs::PointCloud2>(topic_depth_out, 10);
@@ -97,6 +97,9 @@ int main(int argc, char **argv)
 }
 
 void callbackScan(const sensor_msgs::LaserScan& input_msg){
+  if (pub_scan.getNumSubscribers() == 0)
+    return;
+
   sensor_msgs::LaserScan output_msg;
   
   output_msg.header = input_msg.header;
@@ -134,6 +137,9 @@ void callbackScan(const sensor_msgs::LaserScan& input_msg){
 
 void callbackDepth(const sensor_msgs::PointCloud2& input_msg)
 {
+  if (pub_depth.getNumSubscribers() == 0)
+    return;
+
   /*
    * Points near the max and min range are pushed outside the range
    * This way, they can be ignored

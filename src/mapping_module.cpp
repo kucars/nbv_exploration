@@ -589,6 +589,8 @@ bool MappingModule::commandProfilingStart()
 {
   std::cout << "[Mapping] " << cc.green << "Started profiling\n" << cc.reset;
 
+  sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
+
   if (!octree_)
   {
     octree_ = new octomap::OcTree (octree_res_);
@@ -609,6 +611,8 @@ bool MappingModule::commandProfilingStart()
 
 bool MappingModule::commandProfilingStop()
 {
+  sub_scan_.shutdown();
+
   std::cout << "[Mapping] " << cc.green << "Done profiling\n" << cc.reset;
   is_scanning_ = false;
 
@@ -882,7 +886,7 @@ void MappingModule::initializeTopicHandlers()
 
   // Sensor data
   //sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
-  sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
+  //sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
 
   //ros::ServiceServer service = ros_node_.advertiseService("/nbv_exploration/mapping_command", &MappingModule::callbackCommand, this);
 

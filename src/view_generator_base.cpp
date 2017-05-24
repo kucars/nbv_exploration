@@ -234,6 +234,9 @@ void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
 
 void ViewGeneratorBase::visualize(std::vector<Pose> valid_poses, std::vector<Pose> invalid_poses)
 {
+  if (pub_view_marker_array_.getNumSubscribers() == 0)
+    return;
+
   visualization_msgs::MarkerArray pose_array;
   
   double max_z = -1/.0;
@@ -333,6 +336,9 @@ visualization_msgs::Marker ViewGeneratorBase::visualizeCreateArrowMarker(int id,
 
 void ViewGeneratorBase::visualizeDrawSphere(Pose p, double r)
 {
+  if (pub_collision_marker_.getNumSubscribers() == 0)
+    return;
+
   visualization_msgs::Marker marker;
   marker.header.frame_id = "world";
   marker.header.stamp = ros::Time();

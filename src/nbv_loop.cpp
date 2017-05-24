@@ -559,47 +559,50 @@ void NBVLoop::updateHistory()
   //printf("Time Total: %lf ms, Gen: %lf, Select: %lf, Mapping: %lf, Terminate: %lf\n", time_total_, time_view_generation_, time_view_selection_, time_mapping_, time_termination_);
 
   // Publish information about this iteration
-  nbv_exploration::IterationInfo iteration_msg;
-  iteration_msg.iteration        = view_selecter_->info_iteration_;
-  iteration_msg.distance_total   = view_selecter_->info_distance_total_;
-  iteration_msg.entropy_total    = view_selecter_->info_entropy_total_;
-  iteration_msg.point_density_avg= history_->avg_point_density.back();
-  iteration_msg.method_generation= view_generator_->getMethodName();
-  iteration_msg.method_selection = view_selecter_->getMethodName();
-  iteration_msg.selected_pose    = view_selecter_->getTargetPose();
-  iteration_msg.selected_utility                 = view_selecter_->info_selected_utility_;
-  iteration_msg.selected_utility_density         = view_selecter_->info_selected_utility_density_;
-  iteration_msg.selected_utility_distance        = view_selecter_->info_selected_utility_distance_;
-  iteration_msg.selected_utility_entropy         = view_selecter_->info_selected_utility_entropy_;
-  iteration_msg.selected_utility_prediction      = view_selecter_->info_selected_utility_prediction_;
-  iteration_msg.selected_utility_occupied_voxels = view_selecter_->info_selected_occupied_voxels_;
-
-  iteration_msg.time_iteration   = timer.getLatestTime("[NBVLoop]-Iteration");
-  iteration_msg.time_generation  = timer.getLatestTime("[NBVLoop]Generator");
-  iteration_msg.time_selection   = timer.getLatestTime("[NBVLoop]Evaluate");
-  iteration_msg.time_mapping     = timer.getLatestTime("[NBVLoop]commandGetCameraData");
-  iteration_msg.time_termination = timer.getLatestTime("[NBVLoop]commandGetCameraData");
-
-  iteration_msg.utilities        = view_selecter_->info_utilities_;
-
-  pub_iteration_info.publish(iteration_msg);
-
-  if (is_view_selecter_compare)
+  if (pub_iteration_info.getNumSubscribers() > 0)
   {
-    iteration_msg.iteration        = view_selecter_comparison_->info_iteration_;
-    iteration_msg.distance_total   = view_selecter_comparison_->info_distance_total_;
-    iteration_msg.entropy_total    = view_selecter_comparison_->info_entropy_total_;
-    iteration_msg.method_generation= view_selecter_comparison_->getMethodName();
-    iteration_msg.method_selection = view_selecter_comparison_->getMethodName();
-    iteration_msg.selected_pose    = view_selecter_comparison_->getTargetPose();
-    iteration_msg.selected_utility                 = view_selecter_comparison_->info_selected_utility_;
-    iteration_msg.selected_utility_density         = view_selecter_comparison_->info_selected_utility_density_;
-    iteration_msg.selected_utility_distance        = view_selecter_comparison_->info_selected_utility_distance_;
-    iteration_msg.selected_utility_entropy         = view_selecter_comparison_->info_selected_utility_entropy_;
-    iteration_msg.selected_utility_prediction      = view_selecter_comparison_->info_selected_utility_prediction_;
-    iteration_msg.selected_utility_occupied_voxels = view_selecter_comparison_->info_selected_occupied_voxels_;
-    iteration_msg.utilities        = view_selecter_comparison_->info_utilities_;
+    nbv_exploration::IterationInfo iteration_msg;
+    iteration_msg.iteration        = view_selecter_->info_iteration_;
+    iteration_msg.distance_total   = view_selecter_->info_distance_total_;
+    iteration_msg.entropy_total    = view_selecter_->info_entropy_total_;
+    iteration_msg.point_density_avg= history_->avg_point_density.back();
+    iteration_msg.method_generation= view_generator_->getMethodName();
+    iteration_msg.method_selection = view_selecter_->getMethodName();
+    iteration_msg.selected_pose    = view_selecter_->getTargetPose();
+    iteration_msg.selected_utility                 = view_selecter_->info_selected_utility_;
+    iteration_msg.selected_utility_density         = view_selecter_->info_selected_utility_density_;
+    iteration_msg.selected_utility_distance        = view_selecter_->info_selected_utility_distance_;
+    iteration_msg.selected_utility_entropy         = view_selecter_->info_selected_utility_entropy_;
+    iteration_msg.selected_utility_prediction      = view_selecter_->info_selected_utility_prediction_;
+    iteration_msg.selected_utility_occupied_voxels = view_selecter_->info_selected_occupied_voxels_;
+
+    iteration_msg.time_iteration   = timer.getLatestTime("[NBVLoop]-Iteration");
+    iteration_msg.time_generation  = timer.getLatestTime("[NBVLoop]Generator");
+    iteration_msg.time_selection   = timer.getLatestTime("[NBVLoop]Evaluate");
+    iteration_msg.time_mapping     = timer.getLatestTime("[NBVLoop]commandGetCameraData");
+    iteration_msg.time_termination = timer.getLatestTime("[NBVLoop]commandGetCameraData");
+
+    iteration_msg.utilities        = view_selecter_->info_utilities_;
+
     pub_iteration_info.publish(iteration_msg);
+
+    if (is_view_selecter_compare)
+    {
+      iteration_msg.iteration        = view_selecter_comparison_->info_iteration_;
+      iteration_msg.distance_total   = view_selecter_comparison_->info_distance_total_;
+      iteration_msg.entropy_total    = view_selecter_comparison_->info_entropy_total_;
+      iteration_msg.method_generation= view_selecter_comparison_->getMethodName();
+      iteration_msg.method_selection = view_selecter_comparison_->getMethodName();
+      iteration_msg.selected_pose    = view_selecter_comparison_->getTargetPose();
+      iteration_msg.selected_utility                 = view_selecter_comparison_->info_selected_utility_;
+      iteration_msg.selected_utility_density         = view_selecter_comparison_->info_selected_utility_density_;
+      iteration_msg.selected_utility_distance        = view_selecter_comparison_->info_selected_utility_distance_;
+      iteration_msg.selected_utility_entropy         = view_selecter_comparison_->info_selected_utility_entropy_;
+      iteration_msg.selected_utility_prediction      = view_selecter_comparison_->info_selected_utility_prediction_;
+      iteration_msg.selected_utility_occupied_voxels = view_selecter_comparison_->info_selected_occupied_voxels_;
+      iteration_msg.utilities        = view_selecter_comparison_->info_utilities_;
+      pub_iteration_info.publish(iteration_msg);
+    }
   }
 
   std::cout << "[NBVLoop] " << cc.yellow << "Iteration " << history_->iteration << " - Complete\n" << cc.reset;
