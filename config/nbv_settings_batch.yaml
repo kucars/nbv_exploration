@@ -108,7 +108,7 @@ termination_utility_min_threshold: 0.05
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 1
+view_generator_type: 2
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
@@ -120,6 +120,7 @@ view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
 view_generator_frontier_minimum_size: 10
 view_generator_frontier_nearest_count: 50
+view_generator_frontier_density_threshold: 15
 view_generator_frontier_cylinder_radius: 2.5
 view_generator_frontier_cylinder_height: 1
 

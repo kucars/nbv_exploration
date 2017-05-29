@@ -20,13 +20,69 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
   ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 10);
   ros::param::param<double>("~view_generator_frontier_cylinder_radius", cylinder_radius_, 3.0);
   ros::param::param<double>("~view_generator_frontier_cylinder_height", cylinder_height_, 1.0);
+  ros::param::param<double>("~view_generator_frontier_density_threshold", density_threshold_, 10);
 }
+
+std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findFrontierCells()
+{
+  int treeDepth = 16;
+  std::vector<octomap::OcTreeKey> frontier_keys;
+
+
+  for (octomap::OcTree::iterator it = tree_->begin(treeDepth), end = tree_->end(); it != end; ++it)
+  {
+    if (!isNodeUnknown(*it))
+      continue;
+
+    // check if cell is frontier (has 1 free and 1 occupied near it)
+    bool found_free = false;
+    bool found_occ = false;
+
+    octomap::OcTreeKey key;
+    octomap::OcTreeKey nKey = it.getKey();
+
+    for (int k=-1; k <= 1; ++k)
+    {
+      key[2] = nKey[2] + k;
+
+      for (int j=-1; j <= 1; ++j)
+      {
+        key[1] = nKey[1] + j;
+
+        for (int i=-1; i <= 1; ++i)
+        {
+          key[0] = nKey[0] + i;
+
+          if (key == nKey)
+            continue;
+
+          octomap::OcTreeNode* node = tree_->search(key);
+
+          if (!node)
+            continue;
+          else if ( isNodeFree(*node) )
+            found_free = true;
+          else if ( isNodeOccupied(*node) )
+            found_occ = true;
+        } //end i: key[0]
+      } //end j: key[1]
+    } //end k: key[2]
+    // end proximity check
+
+    if (found_free && found_occ)
+      frontier_keys.push_back(nKey);
+  } //end for
+
+  return frontier_keys;
+}
+
 
 std::vector<std::vector<octomap::OcTreeKey> > ViewGeneratorFrontier::findFrontiers()
 {
   std::vector<std::vector<octomap::OcTreeKey> > frontier_list;
 
   std::vector<octomap::OcTreeKey> frontier_cells = findFrontierCells();
+  std::vector<octomap::OcTreeKey> low_density_cells = findLowDensityCells();
   int cell_count = frontier_cells.size();
 
   std::vector<bool> was_cell_checked;
@@ -90,8 +146,7 @@ std::vector<std::vector<octomap::OcTreeKey> > ViewGeneratorFrontier::findFrontie
   return frontier_list;
 }
 
-
-std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findFrontierCells()
+std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findLowDensityCells()
 {
   int treeDepth = 16;
   std::vector<octomap::OcTreeKey> frontier_keys;
@@ -144,6 +199,7 @@ std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findFrontierCells()
   return frontier_keys;
 }
 
+
 void ViewGeneratorFrontier::generateViews()
 {
   generated_poses.clear();
@@ -152,11 +208,14 @@ void ViewGeneratorFrontier::generateViews()
   // ==========
   // Find frontiers
   // ==========
+  timer.start("[ViewGeneratorFrontier]findFrontiers");
   std::vector<std::vector<octomap::OcTreeKey> > frontiers = findFrontiers();
+  timer.stop("[ViewGeneratorFrontier]findFrontiers");
 
   // ===========
   // Get centroids of frontiers
   // ===========
+  timer.start("[ViewGeneratorFrontier]getCentroids");
   PointCloudXYZ::Ptr centroid_cloud (new PointCloudXYZ);
 
   for (int i_f=0; i_f<frontiers.size(); i_f++)
@@ -177,10 +236,12 @@ void ViewGeneratorFrontier::generateViews()
 
     centroid_cloud->points.push_back(centroid);
   }
+  timer.stop("[ViewGeneratorFrontier]getCentroids");
 
   // ============
   // Get nearest frontiers
   // ============
+  timer.start("[ViewGeneratorFrontier]getNearestFrontier");
   pcl::KdTreeFLANN<PointXYZ> kdtree;
   kdtree.setInputCloud (centroid_cloud);
   std::vector<int> pointIdxNKNSearch(nearest_frontiers_count_);
@@ -211,14 +272,16 @@ void ViewGeneratorFrontier::generateViews()
         pose.position.z = centroid.z + z_inc*cylinder_height_;
         pose.orientation = pose_conversion::getQuaternionFromYaw(M_PI+theta); // Point to center of cylinder
 
+        timer.start("[ViewGeneratorFrontier]validity");
         if ( isValidViewpoint(pose) )
           generated_poses.push_back(pose);
         else
           rejected_poses.push_back(pose);
-
+        timer.stop("[ViewGeneratorFrontier]validity");
       }
     }
   }
+  timer.stop("[ViewGeneratorFrontier]getNearestFrontier");
 
   // Visualize
   std::cout << "[ViewGeneratorNN] Generated " << generated_poses.size() << " poses (" << rejected_poses.size() << " rejected)" << std::endl;

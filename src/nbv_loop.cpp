@@ -351,11 +351,11 @@ void NBVLoop::initViewSelecter()
 
   view_selecter_ = createViewSelecter(view_selecter_method);
   view_selecter_->setViewGenerator(view_generator_);
+  view_selecter_->setMappingModule(mapping_module_);
 
   // Another selecter to compare with
   view_selecter_comparison_ = createViewSelecter(view_selecter_compare_method);
   view_selecter_comparison_->setViewGenerator(view_generator_);
-
 }
 
 void NBVLoop::positionVehicleAfterProfiling()
@@ -555,6 +555,36 @@ void NBVLoop::updateHistory()
   history_->total_entropy.push_back(view_selecter_->info_entropy_total_);
   history_->avg_point_density.push_back(mapping_module_->getAveragePointDensity());
   history_->update();
+
+  if (history_->iteration > 0)
+  {
+    printf("1\n");
+
+    // save data to archive
+    {
+        std::ofstream ofs("serialization_test.bin");
+        boost::archive::text_oarchive oa(ofs);
+        // write class instance to archive
+        oa << history_;
+        // archive and stream closed when destructors are called
+    }
+    printf("2\n");
+    // ... some time later restore the class instance to its orginal state
+    NBVHistory* n_hist;
+    {
+        // create and open an archive for input
+        std::ifstream ifs("serialization_test.bin");
+        boost::archive::text_iarchive ia(ifs);
+        // read class state from archive
+        ia >> n_hist;
+        // archive and stream closed when destructors are called
+    }
+
+    printf("Old history: %d\n", history_->iteration);
+    printf("New history: %d\n\n\n", n_hist->iteration);
+  }
+
+
 
   //printf("Time Total: %lf ms, Gen: %lf, Select: %lf, Mapping: %lf, Terminate: %lf\n", time_total_, time_view_generation_, time_view_selection_, time_mapping_, time_termination_);
 

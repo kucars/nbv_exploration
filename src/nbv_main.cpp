@@ -24,6 +24,14 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "nbv_loop", ros::init_options::NoSigintHandler);
   signal(SIGINT, sigIntHandler);
 
+  bool is_save_state, is_load_state;
+  ros::param::param("~debug_save_state", is_save_state, false);
+  ros::param::param("~debug_load_state", is_load_state, false);
+
+
   n = new NBVLoop();
+
+
+
   return 0;
 }

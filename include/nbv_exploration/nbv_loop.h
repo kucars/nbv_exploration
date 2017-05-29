@@ -113,16 +113,19 @@ public:
    * METHODS
    * ========= */
   NBVLoop();
-  void initParameters();
+  void runStateMachine();
+  void sigIntHandler(int sig);
 
+private:
+  ViewSelecterBase* createViewSelecter(int type);
+
+  void initParameters();
   void initMappingModule();
   void initModelProfiler();
   void initTerminationChecker();
   void initVehicle();
   void initViewGenerator();
   void initViewSelecter();
-  void runStateMachine();
-  void sigIntHandler(int sig);
 
   // FSM functions
   void terminationCheck();
@@ -134,9 +137,6 @@ public:
 
   double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
   double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
-
-private:
-  ViewSelecterBase* createViewSelecter(int type);
 };
 
 #endif // end include

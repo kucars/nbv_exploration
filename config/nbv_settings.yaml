@@ -5,6 +5,8 @@ debug_nbv_main_states: true
 debug_mapping: false
 debug_view_generator: false
 debug_view_selecter: false
+debug_save_state: true
+debug_load_state: false
 
 ############
 ## Scenario settings
@@ -102,7 +104,7 @@ termination_ros_spin_afterwards: true
 termination_window_size: 5
 termination_repeat_window_size: 10
 
-termination_iterations_max: 300
+termination_iterations_max: 1
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05
