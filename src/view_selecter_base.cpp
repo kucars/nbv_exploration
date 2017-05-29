@@ -495,6 +495,11 @@ void ViewSelecterBase::setViewGenerator(ViewGeneratorBase* v)
   view_gen_ = v;
 }
 
+void ViewSelecterBase::setMappingModule(MappingModule* m)
+{
+  mapping_module_ = m;
+}
+
 octomap::point3d ViewSelecterBase::transformToGlobalRay(Eigen::Vector3d ray_dir)
 {
   Eigen::Vector3d temp = rotation_mtx_*ray_dir;
@@ -600,45 +605,12 @@ void ViewSelecterBase::update()
   //=======
   // Fill a map with point count at each octreekey
   //=======
-  pointCountInKey.clear(); // Clear old counts
-  std::map<octomap::OcTreeKey, int>::iterator it;
-
-  for (int i=0; i<cloud_occupied_ptr_->points.size(); i++)
-  {
-    PointXYZ p = cloud_occupied_ptr_->points[i];
-
-    octomap::OcTreeKey key;
-    if( !tree_->coordToKeyChecked(p.x, p.y, p.z, key) )
-      continue;
-
-    // Get iterator for desired key
-    it = pointCountInKey.find(key);
-    if (it != pointCountInKey.end())
-    {
-      // Key found, increment it it
-      it->second++;
-    }
-    else
-    {
-      // Key not found, initialize it
-      pointCountInKey.insert(std::make_pair(key, 1));
-    }
-  }
+  mapping_module_->updateVoxelDensities();
 
   timer.stop("[ViewSelecterBase]update");
 }
 
 int ViewSelecterBase::getPointCountAtOcTreeKey(octomap::OcTreeKey key)
 {
-  std::map<octomap::OcTreeKey, int>::iterator it;
-  it = pointCountInKey.find(key);
-
-  if (it == pointCountInKey.end())
-  {
-    // Key not found, display error
-    //printf("[ViewSelecterBase]: Invalid key, no point count retrieved\n");
-    return 0;
-  }
-
-  return it->second;
+  return mapping_module_->getDensityAtOcTreeKey(key);
 }

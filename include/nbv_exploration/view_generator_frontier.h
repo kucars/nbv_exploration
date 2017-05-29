@@ -23,13 +23,16 @@ public:
   std::string getMethodName();
 
 protected:
+  double density_threshold_;
   int minimum_frontier_size_;
   int nearest_frontiers_count_; // number of frontiers to extract when finding the nearest frontiers
   double cylinder_radius_; //radius of sampling cylinder
   double cylinder_height_;
 
-  std::vector<std::vector<octomap::OcTreeKey> > findFrontiers();
   std::vector<octomap::OcTreeKey> findFrontierCells();
+  std::vector<std::vector<octomap::OcTreeKey> > findFrontiers();
+  std::vector<octomap::OcTreeKey> findLowDensityCells();
+
 
   bool isNear(octomap::OcTreeKey k1, octomap::OcTreeKey k2);
   bool isNodeFree(octomap::OcTreeNode node);

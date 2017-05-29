@@ -36,6 +36,15 @@
 #include "nbv_exploration/common.h"
 #include "nbv_exploration/symmetry_detector.h"
 
+struct OctomapKeyCompare {
+  bool operator() (const octomap::OcTreeKey& lhs, const octomap::OcTreeKey& rhs) const
+  {
+    size_t h1 = size_t(lhs.k[0]) + 1447*size_t(lhs.k[1]) + 345637*size_t(lhs.k[2]);
+    size_t h2 = size_t(rhs.k[0]) + 1447*size_t(rhs.k[1]) + 345637*size_t(rhs.k[2]);
+    return h1< h2;
+  }
+};
+
 class MappingModule
 {
 public:
@@ -54,16 +63,19 @@ public:
   bool commandScanningStart();
   bool commandScanningStop();
 
+  double getAveragePointDensity();
+  int getDensityAtOcTreeKey(octomap::OcTreeKey key);
   octomap::OcTree*   getOctomap();
   octomap::OcTree*   getOctomapPredicted();
   PointCloudXYZ::Ptr getPointCloud();
-  double getAveragePointDensity();
 
   bool isNodeFree(octomap::OcTreeNode node);
   bool isNodeOccupied(octomap::OcTreeNode node);
   bool isNodeUnknown(octomap::OcTreeNode node);
 
   void run();
+
+  void updateVoxelDensities();
 
 private:
   // =========
@@ -133,6 +145,7 @@ private:
   PointCloudXYZ::Ptr cloud_ptr_profile_symmetry_;
   octomap::OcTree* octree_;
   octomap::OcTree* octree_prediction_;
+  std::map<octomap::OcTreeKey, int, OctomapKeyCompare> voxel_densities_;
 
   // == Strings
   std::string filename_octree_;

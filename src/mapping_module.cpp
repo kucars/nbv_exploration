@@ -785,6 +785,8 @@ double MappingModule::getAveragePointDensity()
   return double(cloud_ptr_rgbd_->points.size())/num_occ;
 }
 
+
+
 bool MappingModule::isNodeFree(octomap::OcTreeNode node)
 {
   if (node.getOccupancy() <= 1-octree_->getOccupancyThres())
@@ -959,4 +961,50 @@ void MappingModule::updatePrediction(octomap::OcTree* octree_in, PointCloudXYZ c
 
   for (octomap::KeySet::iterator it = occupied_cells.begin(); it != occupied_cells.end(); ++it)
     octree_in->updateNode(*it, -5.0f);
+}
+
+int MappingModule::getDensityAtOcTreeKey(octomap::OcTreeKey key)
+{
+  std::map<octomap::OcTreeKey, int>::iterator it;
+  it = voxel_densities_.find(key);
+
+  if (it == voxel_densities_.end())
+  {
+    // Key not found, display error
+    //printf("[ViewSelecterBase]: Invalid key, no point count retrieved\n");
+    return 0;
+  }
+
+  return it->second;
+}
+
+void MappingModule::updateVoxelDensities()
+{
+  //=======
+  // Fill a map with point count at each octreekey
+  //=======
+  voxel_densities_.clear(); // Clear old counts
+  std::map<octomap::OcTreeKey, int>::iterator it;
+
+  for (int i=0; i<cloud_ptr_rgbd_->points.size(); i++)
+  {
+    PointXYZ p = cloud_ptr_rgbd_->points[i];
+
+    octomap::OcTreeKey key;
+    if( !octree_->coordToKeyChecked(p.x, p.y, p.z, key) )
+      continue;
+
+    // Get iterator for desired key
+    it = voxel_densities_.find(key);
+    if (it != voxel_densities_.end())
+    {
+      // Key found, increment it it
+      it->second++;
+    }
+    else
+    {
+      // Key not found, initialize it
+      voxel_densities_.insert(std::make_pair(key, 1));
+    }
+  }
 }

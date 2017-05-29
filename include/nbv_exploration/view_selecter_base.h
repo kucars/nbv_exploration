@@ -17,17 +17,9 @@
 #include <octomap/OcTreeNode.h>
 
 #include "nbv_exploration/view_generator_base.h"
+#include "nbv_exploration/mapping_module.h"
 
 typedef geometry_msgs::Pose Pose;
-
-struct OctomapKeyCompare {
-  bool operator() (const octomap::OcTreeKey& lhs, const octomap::OcTreeKey& rhs) const
-  {
-    size_t h1 = size_t(lhs.k[0]) + 1447*size_t(lhs.k[1]) + 345637*size_t(lhs.k[2]);
-    size_t h2 = size_t(rhs.k[0]) + 1447*size_t(rhs.k[1]) + 345637*size_t(rhs.k[2]);
-    return h1< h2;
-  }
-};
 
 
 class ViewSelecterBase
@@ -58,15 +50,16 @@ public:
   Pose  getTargetPose();
   void setCameraSettings(double fov_h, double fov_v, double r_max, double r_min);
   void setViewGenerator(ViewGeneratorBase* v);
+  void setMappingModule(MappingModule* m);
   virtual void update();
 
 protected:
   ViewGeneratorBase* view_gen_;
+  MappingModule* mapping_module_;
   
   PointCloudXYZ::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
-  std::map<octomap::OcTreeKey, int, OctomapKeyCompare> pointCountInKey;
-  
+
   Pose current_pose_;
   Pose selected_pose_;
   Eigen::Matrix3d rotation_mtx_;
