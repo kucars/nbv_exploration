@@ -135,9 +135,7 @@ void NBVLoop::generateViewpoints()
     std::cout << "[NBVLoop] " << cc.green << "Generating viewpoints\n" << cc.reset;
   }
 
-  view_generator_->setCloud(mapping_module_->getPointCloud());
-  view_generator_->setMap(mapping_module_->getOctomap());
-  view_generator_->setMapPrediction(mapping_module_->getOctomapPredicted());
+  view_generator_->setMappingModule(mapping_module_);
   view_generator_->setCurrentPose(vehicle_->getPose());
   view_generator_->generateViews();
 

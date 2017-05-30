@@ -159,11 +159,6 @@ void ViewGeneratorBase::setCollisionRadius(double r)
   collision_radius_ = r;
 }
 
-void ViewGeneratorBase::setCloud(PointCloudXYZ::Ptr in_occ_cloud)
-{
-  cloud_occupied_ptr_ = in_occ_cloud;
-}
-
 void ViewGeneratorBase::setCurrentPose(Pose p)
 {
   current_pose_ = p;
@@ -189,14 +184,19 @@ void ViewGeneratorBase::setNavigationBounds(double x_min, double x_max, double y
   nav_bounds_z_max_ = z_max;
 }
 
-void ViewGeneratorBase::setMap(octomap::OcTree* oct){
-  tree_ = oct;
-  updateCollisionBoxesFromOctomap();
-}
-
-void ViewGeneratorBase::setMapPrediction(octomap::OcTree* oct)
+void ViewGeneratorBase::setMappingModule(MappingModule* m)
 {
-  tree_prediction_ = oct;
+  mapping_module_ = m;
+
+  // Set cloud
+  cloud_occupied_ptr_ = mapping_module_->getPointCloud();
+
+  // Set octree
+  tree_ = m->getOctomap();
+  updateCollisionBoxesFromOctomap();
+
+  // Set prediction
+  tree_prediction_ = m->getOctomapPredicted();
 }
 
 void ViewGeneratorBase::setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)

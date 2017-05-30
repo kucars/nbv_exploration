@@ -38,6 +38,7 @@ protected:
   double weight_entropy_;
   double weight_prediction_;
   double max_density_;
+  bool use_node_count;
 
 };
 

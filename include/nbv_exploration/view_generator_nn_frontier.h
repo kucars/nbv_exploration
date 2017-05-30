@@ -22,7 +22,7 @@ protected:
   ViewGeneratorFrontier generator_frontier_;
 
   void setCollisionRadius(double r);
-  void setCloud(PointCloudXYZ::Ptr in_occ_cloud);
+  void setMappingModule(MappingModule* m);
   void setCurrentPose(Pose p);
   void setDebug(bool b);
   void setHistory(NBVHistory* h);

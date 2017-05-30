@@ -49,12 +49,6 @@ void ViewGeneratorNNFrontier::setCollisionRadius(double r)
   generator_frontier_.setCollisionRadius(r);
 }
 
-void ViewGeneratorNNFrontier::setCloud(PointCloudXYZ::Ptr in_occ_cloud)
-{
-  ViewGeneratorNNAdaptive::setCloud(in_occ_cloud);
-  generator_frontier_.setCloud(in_occ_cloud);
-}
-
 void ViewGeneratorNNFrontier::setCurrentPose(Pose p)
 {
   ViewGeneratorNNAdaptive::setCurrentPose(p);
@@ -79,15 +73,10 @@ void ViewGeneratorNNFrontier::setNavigationBounds(double x_min, double x_max, do
   generator_frontier_.setNavigationBounds(x_min, x_max, y_min, y_max, z_min, z_max);
 }
 
-void ViewGeneratorNNFrontier::setMap(octomap::OcTree* oct){
-  ViewGeneratorNNAdaptive::setMap(oct);
-  generator_frontier_.setMap(oct);
-}
-
-void ViewGeneratorNNFrontier::setMapPrediction(octomap::OcTree* oct)
+void ViewGeneratorNNFrontier::setMappingModule(MappingModule* m)
 {
-  ViewGeneratorNNAdaptive::setMapPrediction(oct);
-  generator_frontier_.setMapPrediction(oct);
+  ViewGeneratorNNAdaptive::setMappingModule(m);
+  generator_frontier_.setMappingModule(m);
 }
 
 void ViewGeneratorNNFrontier::setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max)

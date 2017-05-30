@@ -29,6 +29,9 @@ protected:
   double cylinder_radius_; //radius of sampling cylinder
   double cylinder_height_;
 
+  ros::Publisher pub_vis_frontier_points_;
+
+  std::vector<std::vector<octomap::OcTreeKey> > findFrontierAdjacencies(std::vector<octomap::OcTreeKey>& cells);
   std::vector<octomap::OcTreeKey> findFrontierCells();
   std::vector<std::vector<octomap::OcTreeKey> > findFrontiers();
   std::vector<octomap::OcTreeKey> findLowDensityCells();

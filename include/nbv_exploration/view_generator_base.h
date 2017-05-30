@@ -15,6 +15,7 @@
 
 #include "nbv_exploration/common.h"
 #include "nbv_exploration/nbv_history.h"
+#include "nbv_exploration/mapping_module.h"
 
 typedef geometry_msgs::Pose Pose;
 
@@ -22,6 +23,9 @@ typedef geometry_msgs::Pose Pose;
 class ViewGeneratorBase
 {
 protected:
+  NBVHistory*    nbv_history_;
+  MappingModule* mapping_module_;
+
   double res_x_, res_y_, res_z_, res_yaw_;
   
   double collision_radius_;
@@ -29,7 +33,6 @@ protected:
   double nav_bounds_x_min_, nav_bounds_y_min_, nav_bounds_z_min_;
   bool is_debug_;
   std::vector<fcl::CollisionObject*> collision_boxes_;
-  NBVHistory* nbv_history_;
   
 public:
   // ==========
@@ -68,13 +71,11 @@ public:
   bool isInFreeSpace(Pose p);
 
   virtual void setCollisionRadius(double r);
-  virtual void setCloud(PointCloudXYZ::Ptr in_occ_cloud);
   virtual void setCurrentPose(Pose p);
   virtual void setDebug(bool b);
   virtual void setHistory(NBVHistory* h);
   virtual void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
-  virtual void setMap(octomap::OcTree* oct);
-  virtual void setMapPrediction(octomap::OcTree* oct);
+  virtual void setMappingModule(MappingModule* m);
   virtual void setObjectBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
   
   virtual void updateCollisionBoxesFromOctomap();

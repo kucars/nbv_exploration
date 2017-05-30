@@ -17,6 +17,7 @@ ViewSelecterProposed::ViewSelecterProposed():
   ros::param::param("~view_selecter_proposed_weight_distance", weight_distance_, 0.5);
   ros::param::param("~view_selecter_proposed_weight_entropy", weight_entropy_, 0.5);
   ros::param::param("~view_selecter_proposed_weight_prediction", weight_prediction_, 0.5);
+  ros::param::param("~view_selecter_proposed_use_node_count", use_node_count, true);
 
   //@todo: chech all weights are positive
 
@@ -288,8 +289,11 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     normalized_prediction = 0;
   }
 
+  // Node count
+
+
   // Multiply each component by its weight
-  double weighted_density;
+  double weighted_density, weighted_entropy, weighted_prediction, weighted_distance, weighted_node_count;
 
   if (normalized_density > 0)
     weighted_density = weight_density_*(1-normalized_density);
@@ -297,11 +301,15 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     // No points seen
     weighted_density = 0;
 
-  double weighted_entropy = weight_entropy_*normalized_entropy;
-  double weighted_prediction = weight_prediction_*normalized_prediction;
+  weighted_entropy = weight_entropy_*normalized_entropy;
+  weighted_prediction = weight_prediction_*normalized_prediction;
+  weighted_distance = exp(-weight_distance_*distance);
 
-  double weighted_distance = exp(-weight_distance_*distance);
-
+  if (use_node_count)
+    weighted_node_count = log10(num_nodes_occ);
+  else
+    // No points seen
+    weighted_node_count = 1;
 
   // Value views that see more voxels more, as they're less likely to skim the edge of the surface
   double utility;
@@ -309,7 +317,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     utility = 0;
   else
     //utility = log10(num_nodes_occ) * weighted_distance * (weighted_density + weighted_entropy + weighted_prediction);
-    utility = log10(num_nodes_occ) * weighted_distance * (1+weighted_entropy) * (weighted_density + weighted_prediction);
+    utility = weighted_node_count * weighted_distance * (1+weighted_entropy) * (weighted_density + weighted_prediction);
 
   if(is_debug_)
   {
@@ -356,7 +364,8 @@ std::string ViewSelecterProposed::getMethodName()
   if (weight_distance_ > 0)
     name_stream << "exp(-" << weight_distance_ << "d)";
 
-  name_stream << "log10(N)";
+  if (use_node_count)
+    name_stream << "log10(N)";
 
   return name_stream.str();
   //return "Proposed Method";
