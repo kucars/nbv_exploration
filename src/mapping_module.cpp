@@ -440,7 +440,14 @@ bool MappingModule::commandGetCameraData()
 
 bool MappingModule::commandFinalMapLoad()
 {
-  std::cout << "[Mapping] " << cc.yellow << "commandFinalMapLoad() not implimented\n" << cc.reset;
+  // Point cloud
+  std::cout << "[Mapping] " << "Reading " << filename_pcl_save_state_ << "\n";
+  if (pcl::io::loadPCDFile<PointXYZ> (filename_pcl_save_state_, *cloud_ptr_rgbd_) == -1) //* load the file
+  {
+    std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load point cloud: Could not read file " << filename_pcl_ << ".Exiting node.\n" << cc.reset;
+    return false;
+  }
+
   return true;
 }
 
@@ -457,6 +464,9 @@ bool MappingModule::commandFinalMapSave()
     return false;
   }
   pcl::io::savePCDFileASCII (filename_pcl_final_, *cloud_ptr_rgbd_);
+
+  if (is_debug_save_state_)
+    pcl::io::savePCDFileASCII (filename_pcl_save_state_, *cloud_ptr_rgbd_);
 
   // Octree
   if (is_filling_octomap_)
@@ -489,7 +499,10 @@ bool MappingModule::commandProfileLoad()
   }
 
   // Initialize cloud_ptr_rgbd_ with profile data
-  copyPointCloud(*cloud_ptr_profile_, *cloud_ptr_rgbd_);
+  if (is_debug_load_state_)
+    commandFinalMapLoad();
+  else
+    copyPointCloud(*cloud_ptr_profile_, *cloud_ptr_rgbd_);
 
   // Octree
   if (is_filling_octomap_)
@@ -830,6 +843,7 @@ void MappingModule::initializeParameters()
   is_scanning_ = false;
 
   filename_pcl_          = "profile_cloud.pcd";
+  filename_pcl_save_state_= "rgbd_cloud_save_state.pcd";
   filename_pcl_final_    = "final_cloud.pcd";
   filename_pcl_symmetry_ = "profile_cloud_symmetry.pcd";
   filename_octree_       = "profile_octree.ot";
@@ -848,6 +862,8 @@ void MappingModule::initializeParameters()
   ros::param::param("~profiling_skip_load_map", skip_load_map_, false);
   ros::param::param("~profiling_fill_octomap", is_filling_octomap_, true);
   ros::param::param("~profiling_fill_octomap_continuously", is_filling_octomap_continuously_, true);
+  ros::param::param("~debug_load_state", is_debug_load_state_, false);
+  ros::param::param("~debug_save_state", is_debug_save_state_, false);
 
   ros::param::param("~depth_range_max", max_rgbd_range_, 5.0);
   ros::param::param("~mapping_octree_resolution", octree_res_, 0.2);

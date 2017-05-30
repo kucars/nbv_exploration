@@ -20,12 +20,3 @@ bool TerminationCheckLocalEntropyPerVoxel::isTerminated()
 
   return false;
 }
-
-void TerminationCheckLocalEntropyPerVoxel::update()
-{
-  /*
-  std::cout << "[TerminationCheckLocalEntropyPerVoxel]: " << cc.green
-            << "Entropy: " << nbv_history_->total_entropy.back()
-            << "\tEntropy change: " << nbv_history_->avg_entropy_diff_per_voxel.back() << "\n" << cc.reset;
-  */
-}

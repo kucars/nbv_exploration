@@ -55,79 +55,33 @@ NBVLoop::NBVLoop()
   // >>>>>>>>>>>>>>>>>
   initParameters();
   pub_iteration_info = ros_node.advertise<nbv_exploration::IterationInfo>("nbv_exploration/iteration_info", 10);
-  
-  // >>>>>>>>>>>>>>>>
-  // Initialize modules
-  // >>>>>>>>>>>>>>>>
-  history_ = new NBVHistory();
-  initMappingModule();
-  initViewGenerator();
-  initViewSelecter();
-  initVehicle();
-  initModelProfiler();
-  initTerminationChecker();
-
-
-  // >>>>>>>>>>>>>>>>>
-  // Parse Inputs
-  // >>>>>>>>>>>>>>>>>
-  bool success = true;
-  if (skip_profiling)
-  {
-    is_done_profiling = true;
-    success = model_profiler_->skipProfiling(skip_profiling_load_map);
-  }
-  else
-  {
-    success = model_profiler_->startProfiling();
-  }
-
-  if (!success)
-  {
-    ros::shutdown();
-    return;
-  }
-
-  // >>>>>>>>>>>>>>>>>
-  // Start the FSM
-  // >>>>>>>>>>>>>>>>>
-  NBVLoop::runStateMachine();
-  timer.dump();
-
-  // >>>>>>>>>>>>>>>>>
-  // Clean up
-  // >>>>>>>>>>>>>>>>>
-  std::cout << "[NBVLoop] " << cc.yellow << "Shutting down\n" << cc.reset;
-  ros::shutdown();
 }
 
-void NBVLoop::generateViewpoints()
+ViewSelecterBase* NBVLoop::createViewSelecter(int type)
 {
-  if (state != NBVState::VIEWPOINT_GENERATION)
+  ViewSelecterBase* v;
+  switch(type)
   {
-    std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to generate viewpoints out of order\n" << cc.reset;
-    return;
-  }
-  if (is_debug_states)
-  {
-    std::cout << "[NBVLoop] " << cc.green << "Generating viewpoints\n" << cc.reset;
+  default:
+  case 0:
+    v = new ViewSelecterIg();
+    break;
+  case 1:
+    v = new ViewSelecterIgExpDistance();
+    break;
+  case 2:
+    v = new ViewSelecterPointDensity();
+    break;
+
+  case 10:
+    v = new ViewSelecterProposed();
+    break;
+  case 11:
+    v = new ViewSelecterProposedRayLength();
+    break;
   }
 
-  view_generator_->setCloud(mapping_module_->getPointCloud());
-  view_generator_->setMap(mapping_module_->getOctomap());
-  view_generator_->setMapPrediction(mapping_module_->getOctomapPredicted());
-  view_generator_->setCurrentPose(vehicle_->getPose());
-  view_generator_->generateViews();
-
-  if (view_generator_->generated_poses.size() == 0)
-  {
-    std::cout << "[NBVLoop] " << cc.red << "View generator created no poses. Terminating.\n" << cc.reset;
-    state = NBVState::TERMINATION_MET;
-  }
-  else
-  {
-    state = NBVState::VIEWPOINT_GENERATION_COMPLETE;
-  }
+  return v;
 }
 
 void NBVLoop::evaluateViewpoints()
@@ -169,12 +123,87 @@ void NBVLoop::evaluateViewpoints()
   state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
 }
 
+void NBVLoop::generateViewpoints()
+{
+  if (state != NBVState::VIEWPOINT_GENERATION)
+  {
+    std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to generate viewpoints out of order\n" << cc.reset;
+    return;
+  }
+  if (is_debug_states)
+  {
+    std::cout << "[NBVLoop] " << cc.green << "Generating viewpoints\n" << cc.reset;
+  }
+
+  view_generator_->setCloud(mapping_module_->getPointCloud());
+  view_generator_->setMap(mapping_module_->getOctomap());
+  view_generator_->setMapPrediction(mapping_module_->getOctomapPredicted());
+  view_generator_->setCurrentPose(vehicle_->getPose());
+  view_generator_->generateViews();
+
+  if (view_generator_->generated_poses.size() == 0)
+  {
+    std::cout << "[NBVLoop] " << cc.red << "View generator created no poses. Terminating.\n" << cc.reset;
+    state = NBVState::TERMINATION_MET;
+  }
+  else
+  {
+    state = NBVState::VIEWPOINT_GENERATION_COMPLETE;
+  }
+}
+
+void NBVLoop::initAllModules(bool loaded_state)
+{
+  is_debug_load_state = loaded_state;
+
+  // >>>>>>>>>>>>>>>>
+  // Initialize modules
+  // >>>>>>>>>>>>>>>>
+  if (!loaded_state)
+  {
+    history_ = new NBVHistory();
+    initMappingModule();
+  }
+
+  initViewGenerator();
+  initViewSelecter();
+  initVehicle();
+  initModelProfiler();
+  initTerminationChecker();
+
+  if (loaded_state)
+  {
+    // Move to last recorded position
+    geometry_msgs::Pose p = history_->selected_poses.back();
+    vehicle_->setWaypoint(p);
+    vehicle_->setSpeed(-1);
+    vehicle_->moveVehicle();
+  }
+
+  // >>>>>>>>>>>>>>>>>
+  // Parse Inputs
+  // >>>>>>>>>>>>>>>>>
+  bool success = true;
+  if (skip_profiling)
+  {
+    is_done_profiling = true;
+    success = model_profiler_->skipProfiling(skip_profiling_load_map);
+  }
+  else
+  {
+    success = model_profiler_->startProfiling();
+  }
+
+  if (!success)
+  {
+    ros::shutdown();
+    return;
+  }
+}
+
 void NBVLoop::initMappingModule()
 {
   mapping_module_ = new MappingModule();
-
-  // Run in a new thread
-  boost::thread mapping_thread_(&MappingModule::run, mapping_module_);
 }
 
 void NBVLoop::initModelProfiler()
@@ -316,33 +345,6 @@ void NBVLoop::initViewGenerator()
 
 }
 
-ViewSelecterBase* NBVLoop::createViewSelecter(int type)
-{
-  ViewSelecterBase* v;
-  switch(type)
-  {
-  default:
-  case 0:
-    v = new ViewSelecterIg();
-    break;
-  case 1:
-    v = new ViewSelecterIgExpDistance();
-    break;
-  case 2:
-    v = new ViewSelecterPointDensity();
-    break;
-
-  case 10:
-    v = new ViewSelecterProposed();
-    break;
-  case 11:
-    v = new ViewSelecterProposedRayLength();
-    break;
-  }
-
-  return v;
-}
-
 void NBVLoop::initViewSelecter()
 {
   int view_selecter_method, view_selecter_compare_method;
@@ -367,25 +369,35 @@ void NBVLoop::positionVehicleAfterProfiling()
   }
   std::cout << "[NBVLoop] " << cc.yellow << "Note: Moving vehicle after profiling uses a fixed waypoint defined in config settings. Create adaptive method.\n" << cc.reset;
 
-  int pose_number;
-  std::string pose_number_str;
-  ros::param::param<int>("~profiling_complete_pose_number", pose_number, 1);
-  pose_number_str = std::to_string(pose_number);
+  if (is_debug_load_state)
+  {
+    // Move to last recorded position
+    geometry_msgs::Pose p = history_->selected_poses.back();
+    vehicle_->setWaypoint(p);
+  }
+  else
+  {
+    int pose_number;
+    std::string pose_number_str;
+    ros::param::param<int>("~profiling_complete_pose_number", pose_number, 1);
+    pose_number_str = std::to_string(pose_number);
 
-  double x, y, z, yaw;
-  ros::param::param<double>("~uav_pose_x_" + pose_number_str, x, 0);
-  ros::param::param<double>("~uav_pose_y_" + pose_number_str, y, 0);
-  ros::param::param<double>("~uav_pose_z_" + pose_number_str, z, 10);
-  ros::param::param<double>("~uav_pose_yaw_" + pose_number_str, yaw, 0);
+    double x, y, z, yaw;
+    ros::param::param<double>("~uav_pose_x_" + pose_number_str, x, 0);
+    ros::param::param<double>("~uav_pose_y_" + pose_number_str, y, 0);
+    ros::param::param<double>("~uav_pose_z_" + pose_number_str, z, 10);
+    ros::param::param<double>("~uav_pose_yaw_" + pose_number_str, yaw, 0);
 
-  vehicle_->setWaypoint(x, y, z, yaw);
+    vehicle_->setWaypoint(x, y, z, yaw);
+  }
+
   vehicle_->setSpeed(1.0);
   vehicle_->setSpeed(-1); //Allow instant teleportation if using the floating sensor. Ignored by other vehicles
   vehicle_->moveVehicle();
 
-  // Do not process the termination condition, move to view generation
-  state = NBVState::TERMINATION_NOT_MET;
-  //state = NBVState::MOVING_COMPLETE;
+
+  // Process the termination condition
+  terminationCheck();
 }
 
 void NBVLoop::profilingProcessing(){
@@ -413,8 +425,15 @@ void NBVLoop::runStateMachine()
   ROS_INFO("nbv_loop: Ready to take off. Waiting for current position information.");
   state = NBVState::STARTING_ROBOT;
 
-  ros::Rate loop_rate(30);
+  // >>>>>>>>>>>>
+  // Run mapping module in a new thread
+  // >>>>>>>>>>>>
+  boost::thread mapping_thread_(&MappingModule::run, mapping_module_);
 
+  // >>>>>>>>>>>>
+  // Main NBV Loop
+  // >>>>>>>>>>>>
+  ros::Rate loop_rate(30);
   while (ros::ok() && !is_terminating)
   {
     switch(state)
@@ -450,15 +469,14 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::MOVING_COMPLETE:
+        // Update history
+        updateHistory();
+
         timer.start("[NBVLoop]TerminationCheck");
         state = NBVState::TERMINATION_CHECK;
         terminationCheck();
         timer.stop("[NBVLoop]TerminationCheck");
         timer.stop("[NBVLoop]-Iteration");
-
-        // Update history
-        updateHistory();
-
         break;
 
       case NBVState::TERMINATION_MET:
@@ -510,7 +528,9 @@ void NBVLoop::runStateMachine()
     loop_rate.sleep();
   }
 
+  // >>>>>>>>>>>>>>>>>
   // Node achieved termination condition, spin to continue publishing visualization data
+  // >>>>>>>>>>>>>>>>>
   if (is_terminating)
   {
     bool should_spin;
@@ -520,22 +540,27 @@ void NBVLoop::runStateMachine()
       ros::spin();
   }
 
+
+  // >>>>>>>>>>>>>>>>>
+  // Dump time data
+  // >>>>>>>>>>>>>>>>>
+  timer.dump();
+
+  // >>>>>>>>>>>>>>>>>
+  // Clean up
+  // >>>>>>>>>>>>>>>>>
+  std::cout << "[NBVLoop] " << cc.yellow << "Shutting down\n" << cc.reset;
+  ros::shutdown();
+
   return;
 }
 
 void NBVLoop::terminationCheck()
 {
-  if (state != NBVState::TERMINATION_CHECK)
-  {
-    std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to check termination out of order\n" << cc.reset;
-    return;
-  }
   if (is_debug_states)
   {
-    std::cout << "[NBVLoop] " << cc.green << "Checking termination condition\n" << cc.reset;
+    std::cout << "[NBVLoop] " << cc.green << "Checking termination condition for iteration " << history_->iteration << "\n" << cc.reset;
   }
-
-  termination_check_module_->update();
 
   if (termination_check_module_->isTerminated())
     state = NBVState::TERMINATION_MET;
@@ -555,36 +580,6 @@ void NBVLoop::updateHistory()
   history_->total_entropy.push_back(view_selecter_->info_entropy_total_);
   history_->avg_point_density.push_back(mapping_module_->getAveragePointDensity());
   history_->update();
-
-  if (history_->iteration > 0)
-  {
-    printf("1\n");
-
-    // save data to archive
-    {
-        std::ofstream ofs("serialization_test.bin");
-        boost::archive::text_oarchive oa(ofs);
-        // write class instance to archive
-        oa << history_;
-        // archive and stream closed when destructors are called
-    }
-    printf("2\n");
-    // ... some time later restore the class instance to its orginal state
-    NBVHistory* n_hist;
-    {
-        // create and open an archive for input
-        std::ifstream ifs("serialization_test.bin");
-        boost::archive::text_iarchive ia(ifs);
-        // read class state from archive
-        ia >> n_hist;
-        // archive and stream closed when destructors are called
-    }
-
-    printf("Old history: %d\n", history_->iteration);
-    printf("New history: %d\n\n\n", n_hist->iteration);
-  }
-
-
 
   //printf("Time Total: %lf ms, Gen: %lf, Select: %lf, Mapping: %lf, Terminate: %lf\n", time_total_, time_view_generation_, time_view_selection_, time_mapping_, time_termination_);
 
@@ -634,6 +629,4 @@ void NBVLoop::updateHistory()
       pub_iteration_info.publish(iteration_msg);
     }
   }
-
-  std::cout << "[NBVLoop] " << cc.yellow << "Iteration " << history_->iteration << " - Complete\n" << cc.reset;
 }

@@ -25,13 +25,54 @@ int main(int argc, char **argv)
   signal(SIGINT, sigIntHandler);
 
   bool is_save_state, is_load_state;
+  std::string serialization_file = "nbv_serialization.dat";
   ros::param::param("~debug_save_state", is_save_state, false);
   ros::param::param("~debug_load_state", is_load_state, false);
 
+  // >>>>>>>>>
+  // Create NBV class / Load previous state
+  // >>>>>>>>>
+  if (is_load_state)
+  {
+    try
+    {
+      // Create and open an archive for input
+      std::ifstream ifs(serialization_file);
+      boost::archive::text_iarchive ia(ifs);
+      // read class state from archive
+      ia >> n;
+    }
+    catch (...)
+    {
+      is_load_state = false;
+      n = new NBVLoop();
+    }
+  }
+  else
+  {
+    n = new NBVLoop();
+  }
 
-  n = new NBVLoop();
+  // >>>>>>>>>
+  // Run NBV loop
+  // >>>>>>>>>
+  n->initAllModules(is_load_state);
 
+  PointCloudXYZ::Ptr cloud (new PointCloudXYZ);
+  cloud = n->mapping_module_->getPointCloud();
+  std::cout << "Point cloud size: " << cloud->points.size() << "\n\n";
+  n->runStateMachine();
 
+  // >>>>>>>>>
+  // Save NBV state
+  // >>>>>>>>>
+  if (is_save_state)
+  {
+    // Save data to archive
+    std::ofstream ofs(serialization_file);
+    boost::archive::text_oarchive oa(ofs);
+    oa << n;
+  }
 
   return 0;
 }

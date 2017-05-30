@@ -8,6 +8,8 @@ TerminationCheckGlobalEntropyPercentageDifference::TerminationCheckGlobalEntropy
 
 bool TerminationCheckGlobalEntropyPercentageDifference::isTerminated()
 {
+  update();
+
   // If we haven't gone through enough iterations, continue
   if (entropy_change_history_.size() < window_size_)
     return false;

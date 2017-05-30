@@ -7,12 +7,10 @@ class TerminationCheckMaxIterations: public TerminationCheckBase
 {
 public:
   TerminationCheckMaxIterations();
-  void update();
   bool isTerminated();
 
 protected:
   int max_iterations_;
-  int current_iteration_;
 };
 
 #endif // TERMINATIONCHECKBASE_H

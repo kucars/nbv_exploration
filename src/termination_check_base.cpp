@@ -15,8 +15,3 @@ void TerminationCheckBase::setHistory(NBVHistory* h)
 {
   nbv_history_ = h;
 }
-
-void TerminationCheckBase::update()
-{
-  std::cout << "[TerminationCheckBase]: " << cc.yellow << "update() not defined. Used derived class with proper implimentation.\n" << cc.reset;
-}

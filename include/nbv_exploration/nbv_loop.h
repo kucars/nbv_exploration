@@ -82,6 +82,7 @@ public:
 
   // DEBUG
   bool is_debug_states;
+  bool is_debug_load_state;
   bool is_view_selecter_compare;
 
   // STATE VARIABLES
@@ -113,6 +114,7 @@ public:
    * METHODS
    * ========= */
   NBVLoop();
+  void initAllModules(bool loaded_state);
   void runStateMachine();
   void sigIntHandler(int sig);
 
@@ -137,6 +139,23 @@ private:
 
   double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
   double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
+
+
+private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+    ar & history_;
+    ar & mapping_module_;
+    //ar & model_profiler_;
+    //ar & termination_check_module_;
+    //ar & vehicle_;
+    //ar & view_generator_;
+    //ar & view_selecter_;
+    //ar & view_selecter_comparison_;
+  }
 };
 
 #endif // end include

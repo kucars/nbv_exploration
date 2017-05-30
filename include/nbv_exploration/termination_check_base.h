@@ -12,7 +12,6 @@ public:
   TerminationCheckBase();
   virtual bool isTerminated();
   void setHistory(NBVHistory* h);
-  virtual void update();
 
 protected:
   NBVHistory* nbv_history_;

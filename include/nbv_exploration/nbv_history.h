@@ -4,11 +4,6 @@
 #include <ros/ros.h>
 #include "nbv_exploration/common.h"
 
-// include input and output archivers for serialization
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/serialization/vector.hpp>
-
 class NBVHistory
 {
 public:
@@ -47,22 +42,22 @@ private:
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
   {
-      ar & iteration;
-      ar & selected_poses;
-      ar & selected_utility;
-      ar & selected_utility_entropy;
-      ar & selected_utility_density;
-      ar & selected_utility_prediction;
-      ar & selected_utility_occupied_voxels;
+    ar & iteration;
+    ar & selected_poses;
+    ar & selected_utility;
+    ar & selected_utility_entropy;
+    ar & selected_utility_density;
+    ar & selected_utility_prediction;
+    ar & selected_utility_occupied_voxels;
 
-      ar & total_entropy;
-      ar & entropy_diff;
-      ar & avg_entropy_diff_per_voxel;
-      ar & avg_point_density;
-      ar & voxels_observed;
-      ar & time_per_iteration;
+    ar & total_entropy;
+    ar & entropy_diff;
+    ar & avg_entropy_diff_per_voxel;
+    ar & avg_point_density;
+    ar & voxels_observed;
+    ar & time_per_iteration;
 
-      ar & num_voxels_in_view_;
+    ar & num_voxels_in_view_;
   }
 };
 

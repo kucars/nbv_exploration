@@ -5,8 +5,8 @@ debug_nbv_main_states: true
 debug_mapping: false
 debug_view_generator: false
 debug_view_selecter: false
-debug_save_state: true
-debug_load_state: false
+debug_save_state: false
+debug_load_state: true
 
 ############
 ## Scenario settings
@@ -104,7 +104,7 @@ termination_ros_spin_afterwards: true
 termination_window_size: 5
 termination_repeat_window_size: 10
 
-termination_iterations_max: 1
+termination_iterations_max: 100
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05
@@ -116,7 +116,7 @@ termination_utility_min_threshold: 0.05
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 1
+view_generator_type: 0
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
@@ -148,7 +148,7 @@ view_selecter_must_see_occupied: true #if true, views without a single occupied 
 view_selecter_ignore_entropies_at_clamping_points: true
 view_selecter_weight_distance: 0.5
 
-view_selecter_proposed_weight_entropy:    1
+view_selecter_proposed_weight_entropy:    10
 view_selecter_proposed_weight_density:    1
-view_selecter_proposed_weight_prediction: 1
-view_selecter_proposed_weight_distance:   0.1
+view_selecter_proposed_weight_prediction: 2
+view_selecter_proposed_weight_distance:   0

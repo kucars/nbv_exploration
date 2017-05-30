@@ -7,7 +7,6 @@ class TerminationCheckLocalEntropyPerVoxel: public TerminationCheckBase
 {
 public:
   TerminationCheckLocalEntropyPerVoxel();
-  void update();
   bool isTerminated();
 
 protected:

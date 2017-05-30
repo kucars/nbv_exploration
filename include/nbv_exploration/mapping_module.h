@@ -125,6 +125,9 @@ private:
 
   // == Booleans
   bool is_debugging_; //Set to true to see debug text
+  bool is_debug_load_state_;
+  bool is_debug_save_state_;
+
   bool is_filling_octomap_;
   bool is_filling_octomap_continuously_;
   bool is_get_camera_data_;
@@ -151,6 +154,7 @@ private:
   std::string filename_octree_;
   std::string filename_octree_final_;
   std::string filename_pcl_;
+  std::string filename_pcl_save_state_;
   std::string filename_pcl_final_;
   std::string filename_pcl_symmetry_;
 
@@ -177,6 +181,108 @@ private:
   ros::Subscriber sub_scan_command_;
 
   tf::TransformListener *tf_listener_;
+
+private:
+  friend class boost::serialization::access;
+
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+    ar & counter_;
+    // == Config
+    ar & max_rgbd_range_;
+    ar & sensor_data_min_height_;
+    ar & save_iterations_;
+
+    //Voxel grid resolutions
+    ar & profile_grid_res_;
+    ar & depth_grid_res_;
+    ar & octree_res_;
+    ar & octree_thresh_; //Threshold for occupancy
+    ar & predicted_occupancy_value_;
+
+    //octomap::point3d bound_min_, bound_max_;
+    ar & camera_height_px_;
+    ar & camera_width_px_;
+
+    ar & ray_skipping_horizontal_;
+    ar & ray_skipping_vertical_;
+
+    // == Booleans
+    ar & is_debugging_; //Set to true to see debug text
+    ar & is_filling_octomap_;
+    ar & is_filling_octomap_continuously_;
+    ar & is_get_camera_data_;
+    ar & is_scanning_;
+    ar & is_checking_symmetry_;
+    ar & is_integrating_prediction_;
+    ar & skip_load_map_;
+
+    // == Profiling
+    //std::vector<octomap::point3d> pose_vec_, dir_vec_;
+    //std::vector< PointCloudXYZ > scan_vec_;
+    ar &  laser_range_;
+
+
+    // == Point clouds and octrees
+    ar & cloud_ptr_rgbd_;
+    //PointCloudXYZ::Ptr cloud_ptr_profile_;
+    //PointCloudXYZ::Ptr cloud_ptr_profile_symmetry_;
+    //octomap::OcTree* octree_;
+    //octomap::OcTree* octree_prediction_;
+    //std::map<octomap::OcTreeKey, int, OctomapKeyCompare> voxel_densities_;
+
+    // == Strings
+    ar & filename_octree_;
+    ar & filename_octree_final_;
+    ar & filename_pcl_;
+    ar & filename_pcl_final_;
+    ar & filename_pcl_symmetry_;
+
+    ar & topic_depth_;
+    ar & topic_map_;
+    ar & topic_scan_in_;
+    ar & topic_scan_out_;
+    ar & topic_rgbd_out_;
+    ar & topic_tree_;
+    ar & topic_tree_predicted_;
+
+    /*
+    // == Publishers
+    ros::NodeHandle ros_node_;
+
+    ros::Publisher pub_global_cloud_;
+    ros::Publisher pub_scan_cloud_;
+    ros::Publisher pub_rgbd_cloud_;
+    ros::Publisher pub_tree_;
+    ros::Publisher pub_tree_prediction_;
+
+    // == Subscriptions
+    ros::Subscriber sub_rgbd_;
+    ros::Subscriber sub_scan_;
+    ros::Subscriber sub_scan_command_;
+
+    tf::TransformListener *tf_listener_;
+    */
+  }
 };
+
+namespace boost {
+  namespace serialization {
+
+    template<class Archive>
+    void serialize(Archive & ar, PointCloudXYZ::Ptr& cloud, const unsigned int version) {
+        ar & cloud->points;
+    }
+
+    template<class Archive>
+    void serialize(Archive & ar, PointXYZ& p, const unsigned int version) {
+        ar & p.x;
+        ar & p.y;
+        ar & p.z;
+    }
+
+  } // namespace serialization
+} // namespace boost
 
 #endif // SENSING_AND_MAPPING_H
