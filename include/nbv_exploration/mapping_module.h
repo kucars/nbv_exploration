@@ -48,6 +48,12 @@ struct OctomapKeyCompare {
 class MappingModule
 {
 public:
+  struct VoxelDensity{
+    int count;
+    double total;
+    double density;
+  };
+
   // =========
   // Methods
   // =========
@@ -76,6 +82,7 @@ public:
   void run();
 
   void updateVoxelDensities();
+  void updateVoxelDensities(const PointCloudXYZ::Ptr& cloud);
 
 private:
   // =========
@@ -148,7 +155,7 @@ private:
   PointCloudXYZ::Ptr cloud_ptr_profile_symmetry_;
   octomap::OcTree* octree_;
   octomap::OcTree* octree_prediction_;
-  std::map<octomap::OcTreeKey, int, OctomapKeyCompare> voxel_densities_;
+  std::map<octomap::OcTreeKey, VoxelDensity, OctomapKeyCompare> voxel_densities_;
 
   // == Strings
   std::string filename_octree_;

@@ -396,6 +396,11 @@ void NBVLoop::positionVehicleAfterProfiling()
 
   // Process the termination condition
   terminationCheck();
+
+  //=======
+  // Fill a map with point count at each octreekey
+  //=======
+  mapping_module_->updateVoxelDensities();
 }
 
 void NBVLoop::profilingProcessing(){
@@ -420,7 +425,7 @@ void NBVLoop::profilingProcessing(){
 
 void NBVLoop::runStateMachine()
 {
-  ROS_INFO("nbv_loop: Ready to take off. Waiting for current position information.");
+  ROS_INFO("nbv_loop: Starting vehicle. Waiting for current position information.");
   state = NBVState::STARTING_ROBOT;
 
   // >>>>>>>>>>>>
@@ -627,4 +632,10 @@ void NBVLoop::updateHistory()
       pub_iteration_info.publish(iteration_msg);
     }
   }
+
+
+  //=======
+  // Fill a map with point count at each octreekey
+  //=======
+  //mapping_module_->updateVoxelDensities();
 }

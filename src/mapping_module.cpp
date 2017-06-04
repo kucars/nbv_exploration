@@ -398,6 +398,9 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
       timer.stop("[MappingModule]callbackDepth-updatePrediction");
     }
 
+    // == Update density map
+    updateVoxelDensities(cloud_distance_ptr);
+
     // == Done updating
     is_get_camera_data_ = false;
 
@@ -981,17 +984,17 @@ void MappingModule::updatePrediction(octomap::OcTree* octree_in, PointCloudXYZ c
 
 int MappingModule::getDensityAtOcTreeKey(octomap::OcTreeKey key)
 {
-  std::map<octomap::OcTreeKey, int>::iterator it;
+  std::map<octomap::OcTreeKey, VoxelDensity>::iterator it;
   it = voxel_densities_.find(key);
 
   if (it == voxel_densities_.end())
   {
     // Key not found, display error
     //printf("[ViewSelecterBase]: Invalid key, no point count retrieved\n");
-    return 0;
+    return -1;
   }
 
-  return it->second;
+  return it->second.density;
 }
 
 void MappingModule::updateVoxelDensities()
@@ -999,8 +1002,17 @@ void MappingModule::updateVoxelDensities()
   //=======
   // Fill a map with point count at each octreekey
   //=======
-  voxel_densities_.clear(); // Clear old counts
-  std::map<octomap::OcTreeKey, int>::iterator it;
+  voxel_densities_.clear(); // Clear old densities
+
+  // ============
+  // Create KD tree to find nearest neighbors
+  // ============
+  pcl::KdTreeFLANN<PointXYZ> kdtree;
+  kdtree.setInputCloud (cloud_ptr_rgbd_);
+  double search_radius = octree_->getResolution()/sqrt(2); //Encapsulates a voxel
+
+
+  std::map<octomap::OcTreeKey, VoxelDensity>::iterator it;
 
   for (int i=0; i<cloud_ptr_rgbd_->points.size(); i++)
   {
@@ -1010,17 +1022,96 @@ void MappingModule::updateVoxelDensities()
     if( !octree_->coordToKeyChecked(p.x, p.y, p.z, key) )
       continue;
 
+    std::vector<int> pointIndicesOut;
+    std::vector<float> pointRadiusSquaredDistance;
+    kdtree.radiusSearch(p, search_radius, pointIndicesOut, pointRadiusSquaredDistance);
+
     // Get iterator for desired key
     it = voxel_densities_.find(key);
     if (it != voxel_densities_.end())
     {
       // Key found, increment it it
-      it->second++;
+      it->second.count++;
+      it->second.total += pointIndicesOut.size();
+      it->second.density = double(it->second.total)/it->second.count;
     }
     else
     {
       // Key not found, initialize it
-      voxel_densities_.insert(std::make_pair(key, 1));
+      VoxelDensity v;
+      v.count = 1;
+      v.total = pointIndicesOut.size();
+      v.density = double(v.total)/v.count;
+
+      voxel_densities_.insert(std::make_pair(key, v));
+    }
+  }
+}
+
+
+void MappingModule::updateVoxelDensities(const PointCloudXYZ::Ptr& cloud)
+{
+  std::map<octomap::OcTreeKey, VoxelDensity>::iterator it;
+  octomap::OcTreeKey key;
+
+  //=======
+  // Clear old values around newly collected points
+  //=======
+  for (int i=0; i<cloud->points.size(); i++)
+  {
+    PointXYZ p = cloud->points[i];
+    if( !octree_->coordToKeyChecked(p.x, p.y, p.z, key) )
+      continue;
+
+    it = voxel_densities_.find(key);
+    if (it != voxel_densities_.end())
+    {
+      // Key found, clear it
+      it->second.count = 0;
+      it->second.total = 0;
+      it->second.density = -1;
+    }
+  }
+
+  // ============
+  // Create KD tree to find nearest neighbors
+  // ============
+  pcl::KdTreeFLANN<PointXYZ> kdtree;
+  kdtree.setInputCloud (cloud_ptr_rgbd_);
+  double search_radius = octree_->getResolution()/sqrt(2); //Encapsulates a voxel
+
+  // ============
+  // Update voxel densities obtained from camera reading
+  // ============
+  for (int i=0; i<cloud->points.size(); i++)
+  {
+    PointXYZ p = cloud->points[i];
+
+    if( !octree_->coordToKeyChecked(p.x, p.y, p.z, key) )
+      continue;
+
+    std::vector<int> pointIndicesOut;
+    std::vector<float> pointRadiusSquaredDistance;
+    kdtree.radiusSearch(p, search_radius, pointIndicesOut, pointRadiusSquaredDistance);
+
+    // Get iterator for desired key
+    it = voxel_densities_.find(key);
+    if (it != voxel_densities_.end())
+    {
+      // Key found, increment it it
+      it->second.count++;
+      it->second.total += pointIndicesOut.size();
+      it->second.density = double(it->second.total)/it->second.count;
+    }
+    else
+    {
+      // Key not found, initialize it
+      VoxelDensity v;
+      v.count = 1;
+      v.total = pointIndicesOut.size();
+      v.density = double(v.total)/v.count;
+
+      voxel_densities_.insert(std::make_pair(key, v));
     }
   }
 }

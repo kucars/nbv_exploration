@@ -602,11 +602,6 @@ void ViewSelecterBase::update()
     std::cout << "[ViewSelecterBase]: Total entropy remaining: " << info_entropy_total_ << "\n";
   }
 
-  //=======
-  // Fill a map with point count at each octreekey
-  //=======
-  mapping_module_->updateVoxelDensities();
-
   timer.stop("[ViewSelecterBase]update");
 }
 

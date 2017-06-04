@@ -45,22 +45,6 @@ bool ModelProfilerBase::skipProfiling(bool skip_map_loading)
     mapping_module_->commandScanningStop();
     mapping_module_->commandProfilingStop();
     mapping_module_->commandGetCameraData();
-
-    /*
-    mapping_module_->commandProfilingStart();
-    mapping_module_->commandScanningStart();
-
-    double final_z = 1.0;
-    while (ros::ok() && vehicle_->getPosition().z < final_z)
-    {
-      vehicle_->setSpeed(scan_speed_);
-      vehicle_->setWaypointIncrement(0, 0, final_z - vehicle_->getPosition().z, 0);
-      vehicle_->moveVehicle(0.25);
-      ros::spinOnce();
-    }
-    mapping_module_->commandScanningStop();
-    mapping_module_->commandProfilingStop();
-    */
   }
   else
   {

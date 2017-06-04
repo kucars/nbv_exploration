@@ -160,11 +160,11 @@ std::vector<std::vector<octomap::OcTreeKey> > ViewGeneratorFrontier::findFrontie
   density_list  = findFrontierAdjacencies(low_density_cells);
 
   //printf("[ViewGeneratorFrontier] Frontiers -- Entropy: %lu\tDensity: %lu\n", frontier_list.size(), density_list.size() );
-
+  printf("[ViewGeneratorFrontier] Density Frontiers -- Cells %lu\tClusters: %lu\n", low_density_cells.size(), density_list.size() );
 
   std::vector<std::vector<octomap::OcTreeKey> > final_list;
   //final_list.insert(final_list.end(), frontier_list.begin(), frontier_list.end());
-  final_list.insert(final_list.end(), density_list.begin(), density_list.begin()+1);
+  final_list.insert(final_list.end(), density_list.begin(), density_list.end());
 
   return final_list;
 }
@@ -195,8 +195,6 @@ void ViewGeneratorFrontier::generateViews()
 {
   generated_poses.clear();
   std::vector<geometry_msgs::Pose> rejected_poses;
-
-  mapping_module_->updateVoxelDensities();
 
   // ==========
   // Find frontiers

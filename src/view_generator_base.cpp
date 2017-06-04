@@ -289,7 +289,9 @@ visualization_msgs::Marker ViewGeneratorBase::visualizeDeleteArrowMarker(int id)
   pose_marker.header.stamp = ros::Time::now();
   pose_marker.id = id;
 
-  pose_marker.action = visualization_msgs::Marker::DELETE;
+  //pose_marker.action = visualization_msgs::Marker::DELETE;
+  pose_marker.type = visualization_msgs::Marker::ARROW;
+  pose_marker.pose = geometry_msgs::Pose();
   return pose_marker;
 }
 

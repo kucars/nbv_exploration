@@ -14,13 +14,13 @@ NBVHistory::NBVHistory():
 
   if (range_min < 0 || range_max <= 0 || fov_vert <= 0 || fov_hor <= 0 )
   {
-    std::cout << "[TerminationCheckLocalEntropyPerVoxel]: " << cc.red << "ERROR: Camera settings no initialized. Exiting.\n" << cc.reset;
+    std::cout << "[NBVHistory]: " << cc.red << "ERROR: Camera settings no initialized. Exiting.\n" << cc.reset;
     return;
   }
 
   if (octree_res <= 0)
   {
-    std::cout << "[TerminationCheckLocalEntropyPerVoxel]: " << cc.red << "ERROR: Mapping voxel resolution not set. Exiting.\n" << cc.reset;
+    std::cout << "[NBVHistory]: " << cc.red << "ERROR: Mapping voxel resolution not set. Exiting.\n" << cc.reset;
     return;
   }
 
