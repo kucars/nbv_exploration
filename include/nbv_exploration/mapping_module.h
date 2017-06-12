@@ -73,6 +73,7 @@ public:
   int getDensityAtOcTreeKey(octomap::OcTreeKey key);
   octomap::OcTree*   getOctomap();
   octomap::OcTree*   getOctomapPredicted();
+  PointCloudXYZ::Ptr getProfilePointCloud();
   PointCloudXYZ::Ptr getPointCloud();
 
   bool isNodeFree(octomap::OcTreeNode node);

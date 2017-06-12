@@ -834,10 +834,14 @@ octomap::OcTree* MappingModule::getOctomapPredicted()
   return octree_prediction_;
 }
 
+PointCloudXYZ::Ptr MappingModule::getProfilePointCloud()
+{
+  return cloud_ptr_profile_;
+}
+
 PointCloudXYZ::Ptr MappingModule::getPointCloud()
 {
   return cloud_ptr_rgbd_;
-  //return cloud_ptr_profile_;
 }
 
 void MappingModule::initializeParameters()
@@ -1010,7 +1014,6 @@ void MappingModule::updateVoxelDensities()
   pcl::KdTreeFLANN<PointXYZ> kdtree;
   kdtree.setInputCloud (cloud_ptr_rgbd_);
   double search_radius = octree_->getResolution()/sqrt(2); //Encapsulates a voxel
-
 
   std::map<octomap::OcTreeKey, VoxelDensity>::iterator it;
 

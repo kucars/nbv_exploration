@@ -1,7 +1,8 @@
 #filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_box_00_deg_tilt.pcd'
 #filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_box_10_deg_tilt.pcd'
 #filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_circular_00_deg_tilt.pcd'
-filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_circular_10_deg_tilt.pcd'
+#filename_pcd: '/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/profile_cloud/profile_cloud_circular_10_deg_tilt.pcd'
+filename_pcd: '/home/abdullah/.ros/profile_cloud.pcd'
 
 ## Prefilter input
 use_prefilter: false

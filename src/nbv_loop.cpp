@@ -314,7 +314,9 @@ void NBVLoop::initVehicle()
   vehicle_->setWaypoint(x, y, z, yaw);
   vehicle_->setSpeed(1.0);
   vehicle_->setSpeed(-1); //Allow instant teleportation if using the floating sensor. Ignored by other vehicles
+  printf("Moving vehicle\n");
   vehicle_->moveVehicle();
+  printf("Done moving\n");
 }
 
 void NBVLoop::initViewGenerator()
@@ -415,7 +417,7 @@ void NBVLoop::profilingProcessing(){
   }
 
   bool done_profiling;
-  done_profiling = model_profiler_->run(mapping_module_->getPointCloud());
+  done_profiling = model_profiler_->run(mapping_module_->getProfilePointCloud());
 
   if (done_profiling)
   {

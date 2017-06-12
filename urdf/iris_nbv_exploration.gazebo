@@ -30,10 +30,10 @@
     parent_link="base_link"
   >
     <!-- Horizontal -->
-    <!--<origin xyz="0.1 0.0 0.1" rpy="0.0 0.17453 0.0" />-->
+    <origin xyz="0.1 0.0 0.1" rpy="0.0 0.17453 0.0" />
 
     <!-- Tilted 10 degrees-->
-    <origin xyz="0.1 0 0.1" rpy="0.17453 0.17453 0" />
+    <!--<origin xyz="0.1 0 0.1" rpy="0.17453 0.17453 0" />-->
 
     <!-- Tilted 20 degrees-->
     <!--<origin xyz="0.1 0 0.1" rpy="0.34906 0.17453 0" />-->

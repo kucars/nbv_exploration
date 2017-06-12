@@ -47,7 +47,7 @@
     <include if="$(arg start_gazebo)" file="$(find gazebo_ros)/launch/empty_world.launch">
       <arg name="debug" value="false" />
       <arg name="headless" value="false"/>
-      <arg name="gui" value="false"/>
+      <arg name="gui" value="true"/>
 
       <!-- debug box -->
       <arg name="world_name"

@@ -3,10 +3,10 @@
 ############
 debug_nbv_main_states: true
 debug_mapping: false
-debug_view_generator: false
-debug_view_selecter: true
+debug_view_generator: true
+debug_view_selecter: false
 debug_save_state: false
-debug_load_state: false
+debug_load_state: true
 
 ############
 ## Scenario settings
@@ -38,9 +38,11 @@ uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
 
 ## UAV Poses
-uav_pose_x_0: -21
-uav_pose_y_0: -18
-uav_pose_z_0: 5
+uav_start_pose: 1
+
+uav_pose_x_0: 5
+uav_pose_y_0: -5
+uav_pose_z_0: .5
 uav_pose_yaw_0: 1.571
 
 uav_pose_x_1: 0
@@ -83,8 +85,8 @@ profiling_scan_speed: 1.0
 
 # 0: adaptive circular
 # 1: bounded box
-profiling_method: 0
-profiling_circular_waypoints: 8
+profiling_method: 1
+profiling_circular_waypoints: 5
 
 ############
 # UAV starting pose after profiling
@@ -127,7 +129,7 @@ view_generator_nn_adaptive_utility_threshold: 0.1
 view_generator_frontier_density_threshold: 40
 view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
-view_generator_frontier_minimum_size: 1
+view_generator_frontier_minimum_size: 3
 view_generator_frontier_nearest_count: 50
 view_generator_frontier_cylinder_radius: 3.5
 view_generator_frontier_cylinder_height: 1
