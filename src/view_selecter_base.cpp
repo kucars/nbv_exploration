@@ -7,6 +7,7 @@
 #include <std_msgs/Float32.h>
 
 #include <tf_conversions/tf_eigen.h>
+#include <tf/transform_listener.h>
 //#include <culling/occlusion_culling.h>
 
 #include "nbv_exploration/view_generator_base.h"
@@ -25,8 +26,9 @@ ViewSelecterBase::ViewSelecterBase():
   info_selected_occupied_voxels_(0)
 {
   ros::NodeHandle n;
-  marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
-  pose_pub   = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
+  marker_pub     = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+  pose_pub       = n.advertise<geometry_msgs::PoseStamped>("visualization_marker_pose", 10);
+  trajectory_pub = n.advertise<visualization_msgs::Marker>("nbv_exploration/trajectory", 10);
 
   // >>>>>>>>>>>>>>>>>
   // Read parameters
@@ -44,6 +46,38 @@ ViewSelecterBase::ViewSelecterBase():
   ros::param::param("~depth_range_min", r_min, 0.05);
 
   setCameraSettings(fov_h, fov_v, r_max, r_min);
+
+  // == Get camera orientation(s) ==
+  tf::TransformListener tf_listener;
+  tf::StampedTransform transform;
+
+  /* Additional rotation to correct alignment of rays */
+  Eigen::Matrix3d r;
+  //r <<  0,  0, -1,
+  //      0, -1,  0,
+  //     -1,  0,  0;
+
+  r <<   1,  0,  0,
+         0,  1,  0,
+         0,  0,  1;
+
+  // Keep trying until it succeeds
+  // TF failures happen in the few moments after the system starts for the first time
+  while(true)
+  {
+    try
+    {
+      tf_listener.lookupTransform("/floating_sensor/base_link", "/floating_sensor/camera_frame", ros::Time(0), transform);
+      break; // Success, break out of the loop
+    }
+    catch (tf2::LookupException ex){
+      ROS_ERROR("%s",ex.what());
+      ros::Duration(0.1).sleep();
+    }
+  }
+
+  tf_camera = r*pose_conversion::getRotationMatrix(transform);
+  std::cout << tf_camera << "\n";
 }
 
 void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint)
@@ -54,13 +88,13 @@ void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d
   p.x = origin.x();
   p.y = origin.y();
   p.z = origin.z();
-  line_list.points.push_back(p);
+  ray_msg.points.push_back(p);
 
   // End
   p.x = endpoint.x();
   p.y = endpoint.y();
   p.z = endpoint.z();
-  line_list.points.push_back(p);
+  ray_msg.points.push_back(p);
 }
 
 double ViewSelecterBase::calculateIG(Pose p)
@@ -278,17 +312,17 @@ double ViewSelecterBase::calculateUtility(Pose p)
 
 void ViewSelecterBase::clearRayMarkers()
 {
-  line_list.id = 0;
-  line_list.type = visualization_msgs::Marker::LINE_LIST;
-  line_list.scale.x = 0.05;
+  ray_msg.id = 0;
+  ray_msg.type = visualization_msgs::Marker::LINE_LIST;
+  ray_msg.scale.x = 0.05;
 
   // Blue lines
-  line_list.color.r = 1.0;
-  line_list.color.g = 0;
-  line_list.color.b = 1.0;
-  line_list.color.a = 0.1;
+  ray_msg.color.r = 1.0;
+  ray_msg.color.g = 0;
+  ray_msg.color.b = 1.0;
+  ray_msg.color.a = 0.1;
 
-  line_list.points.clear();
+  ray_msg.points.clear();
 
 }
 
@@ -321,18 +355,29 @@ double ViewSelecterBase::computeRelativeRays()
 
 void ViewSelecterBase::computeOrientationMatrix(Pose p)
 {
-  Eigen::Quaterniond q(p.orientation.x,
-                       p.orientation.y,
-                       p.orientation.z,
-                       p.orientation.w);
+  Eigen::Quaterniond q_pose(
+        p.orientation.x,
+        p.orientation.y,
+        p.orientation.z,
+        p.orientation.w
+        );
 
-  /* Additional rotation to correct alignment of rays */
   Eigen::Matrix3d r;
-  r << 0, 0, 1,
-       0, 1, 0,
-       1, 0, 0;
+  r <<   0,  0,  1,
+         0,  1,  0,
+         1,  0,  0;
 
-  rotation_mtx_ = r*q.toRotationMatrix();
+  Eigen::Matrix3d r2;
+  r2 << 0.939692,  0, 0.342023,
+        0       ,  1, 0,
+       -0.342023,  0, 0.939692;
+
+
+  rotation_mtx_  = r;
+  //rotation_mtx_  = r2;
+  //rotation_mtx_ *= tf_camera;
+  rotation_mtx_ *= q_pose.toRotationMatrix();
+
 }
 
 void ViewSelecterBase::evaluate()
@@ -388,6 +433,7 @@ void ViewSelecterBase::evaluate()
 
   // Increase total distance travelled
   info_distance_total_ += calculateDistance(selected_pose_);
+  publishTrajectory();
 
   timer.stop("[ViewSelecterBase]evaluate");
 }
@@ -465,10 +511,10 @@ bool ViewSelecterBase::isPointInBounds(octomap::point3d &p)
 
 void ViewSelecterBase::publishRayMarkers()
 {
-  line_list.header.frame_id = "world";
-  line_list.header.stamp = ros::Time::now();
+  ray_msg.header.frame_id = "world";
+  ray_msg.header.stamp = ros::Time::now();
 
-  marker_pub.publish(line_list);
+  marker_pub.publish(ray_msg);
 }
 
 void ViewSelecterBase::publishPose(Pose p)
@@ -480,6 +526,28 @@ void ViewSelecterBase::publishPose(Pose p)
   msg.pose = p;
 
   pose_pub.publish(msg);
+}
+
+void ViewSelecterBase::publishTrajectory()
+{
+  // Add point to trajectory
+  geometry_msgs::Point p = selected_pose_.position;
+
+  trajectory_msg.points.push_back(p);
+  trajectory_msg.id = 0;
+  trajectory_msg.type = visualization_msgs::Marker::LINE_STRIP;
+  trajectory_msg.scale.x = 0.05;
+
+  // black lines
+  trajectory_msg.color.r = 0.0;
+  trajectory_msg.color.g = 0;
+  trajectory_msg.color.b = 0.0;
+  trajectory_msg.color.a = 0.7;
+
+  // Publish
+  trajectory_msg.header.frame_id = "world";
+  trajectory_msg.header.stamp = ros::Time::now();
+  trajectory_pub.publish(trajectory_msg);
 }
 
 void ViewSelecterBase::setCameraSettings(double fov_h, double fov_v, double r_max, double r_min)
