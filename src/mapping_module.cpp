@@ -25,6 +25,7 @@ MappingModule::MappingModule()
   std::cout << "[Mapping] " << cc.magenta << "Begin Sensing\n" << cc.reset;
   std::cout << "Listening for the following topics: \n";
   std::cout << "\t" << topic_depth_ << "\n";
+  std::cout << "\t" << topic_depth2_ << "\n";
   std::cout << "\t" << topic_scan_in_ << "\n";
   std::cout << "\n";
 }
@@ -315,6 +316,76 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   }
 }
 
+void MappingModule::processDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+{
+  timer.start("[MappingModule]callbackDepth-conversion");
+
+  // == Convert to pcl pointcloud
+  PointCloudXYZ cloud;
+  PointCloudXYZ::Ptr cloud_raw_ptr;
+
+  pcl::fromROSMsg (*cloud_msg, cloud);
+  cloud_raw_ptr = cloud.makeShared();
+
+  // == Create cloud without points that are too far
+  PointCloudXYZ::Ptr cloud_distance_ptr(new PointCloudXYZ);
+
+  for (int i=0; i<cloud.points.size(); i++)
+    if (cloud.points[i].z <= max_rgbd_range_)
+      cloud_distance_ptr->push_back(cloud.points[i]);
+
+  // == Transform
+  tf::StampedTransform transform;
+  try{
+    // Listen for transform
+    //tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, cloud_msg->header.stamp, transform);
+
+    // Wait for the absolute latest position, to ensure we have the correct position
+    // (Latest time needed for teleporting sensor)
+    ros::Time now = ros::Time::now();
+    tf_listener_->waitForTransform("world", cloud_msg->header.frame_id, now, ros::Duration(1.0), ros::Duration(0.01));
+    tf_listener_->lookupTransform ("world", cloud_msg->header.frame_id, now, transform);
+  }
+  catch (tf::TransformException ex){
+    ROS_ERROR("%s",ex.what());
+    ros::Duration(1.0).sleep();
+    return;
+  }
+
+  // == Convert tf:Transform to Eigen::Matrix4d
+  Eigen::Matrix4d tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
+
+  // == Transform point cloud to global frame
+  pcl::transformPointCloud(*cloud_raw_ptr, *cloud_raw_ptr, tf_eigen);
+  pcl::transformPointCloud(*cloud_distance_ptr, *cloud_distance_ptr, tf_eigen);
+
+  timer.stop("[MappingModule]callbackDepth-conversion");
+
+  // == Add filtered to final cloud
+  addPointCloudToPointCloud(cloud_distance_ptr, cloud_ptr_rgbd_, depth_grid_res_);
+
+  // == Update octomap
+  timer.start("[MappingModule]callbackDepth-updateOcto");
+  octomap::point3d origin (transform.getOrigin().x(),
+                           transform.getOrigin().y(),
+                           transform.getOrigin().z());
+  octomap::point3d sensor_dir = pose_conversion::getOctomapDirectionVectorFromTransform(transform);
+
+  addPointCloudToTree(octree_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+  timer.stop("[MappingModule]callbackDepth-updateOcto");
+
+  // == Update prediction, if necessary
+  // If prediction is integrated into map, don't do anything
+  if (is_checking_symmetry_ && !is_integrating_prediction_)
+  {
+    timer.start("[MappingModule]callbackDepth-updatePrediction");
+    updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+    timer.stop("[MappingModule]callbackDepth-updatePrediction");
+  }
+
+  // == Update density map
+  updateVoxelDensities(cloud_distance_ptr);
+}
 
 void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
@@ -325,7 +396,7 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
       std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
     }
 
-    if (!is_get_camera_data_)
+    if (!is_get_camera_data_ || (camera_done_flags_ & 0x01))
     {
       if (is_debugging_)
         std::cout << "[Mapping]" << cc.yellow << "Not allowed to process depth data yet\n";
@@ -333,91 +404,61 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
       return;
     }
 
-    timer.start("[MappingModule]callbackDepth-conversion");
+    processDepth(cloud_msg);
 
-    // == Convert to pcl pointcloud
-    PointCloudXYZ cloud;
-    PointCloudXYZ::Ptr cloud_raw_ptr;
+    // == Done updating
+    camera_done_flags_ |= 0x01;
+    //is_get_camera_data_ = false;
 
-    pcl::fromROSMsg (*cloud_msg, cloud);
-    cloud_raw_ptr = cloud.makeShared();
+    timer.stop("[MappingModule]callbackDepth");
+}
 
-    // == Create cloud without points that are too far
-    PointCloudXYZ::Ptr cloud_distance_ptr(new PointCloudXYZ);
+void MappingModule::callbackDepth2(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+{
+    timer.start("[MappingModule]callbackDepth2");
 
-    for (int i=0; i<cloud.points.size(); i++)
-      if (cloud.points[i].z <= max_rgbd_range_)
-        cloud_distance_ptr->push_back(cloud.points[i]);
-
-    // == Transform
-    tf::StampedTransform transform;
-    try{
-      // Listen for transform
-      //tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, cloud_msg->header.stamp, transform);
-
-      // Wait for the absolute latest position, to ensure we have the correct position
-      // (Latest time needed for teleporting sensor)
-      ros::Time now = ros::Time::now();
-      tf_listener_->waitForTransform("world", cloud_msg->header.frame_id, now, ros::Duration(1.0), ros::Duration(0.01));
-      tf_listener_->lookupTransform ("world", cloud_msg->header.frame_id, now, transform);
+    if (is_debugging_)
+    {
+      std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
     }
-    catch (tf::TransformException ex){
-      ROS_ERROR("%s",ex.what());
-      ros::Duration(1.0).sleep();
+
+    if (!is_get_camera_data_ || (camera_done_flags_ & 0x02))
+    {
+      if (is_debugging_)
+        std::cout << "[Mapping]" << cc.yellow << "Not allowed to process depth data yet\n";
+
       return;
     }
 
-    // == Convert tf:Transform to Eigen::Matrix4d
-    Eigen::Matrix4d tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
-
-    // == Transform point cloud to global frame
-    pcl::transformPointCloud(*cloud_raw_ptr, *cloud_raw_ptr, tf_eigen);
-    pcl::transformPointCloud(*cloud_distance_ptr, *cloud_distance_ptr, tf_eigen);
-
-    timer.stop("[MappingModule]callbackDepth-conversion");
-
-    // == Add filtered to final cloud
-    addPointCloudToPointCloud(cloud_distance_ptr, cloud_ptr_rgbd_, depth_grid_res_);
-
-    // == Update octomap
-    timer.start("[MappingModule]callbackDepth-updateOcto");
-    octomap::point3d origin (transform.getOrigin().x(),
-                             transform.getOrigin().y(),
-                             transform.getOrigin().z());
-    octomap::point3d sensor_dir = pose_conversion::getOctomapDirectionVectorFromTransform(transform);
-
-    addPointCloudToTree(octree_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
-    timer.stop("[MappingModule]callbackDepth-updateOcto");
-
-    // == Update prediction, if necessary
-    // If prediction is integrated into map, don't do anything
-    if (is_checking_symmetry_ && !is_integrating_prediction_)
-    {
-      timer.start("[MappingModule]callbackDepth-updatePrediction");
-      updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
-      timer.stop("[MappingModule]callbackDepth-updatePrediction");
-    }
-
-    // == Update density map
-    updateVoxelDensities(cloud_distance_ptr);
+    processDepth(cloud_msg);
 
     // == Done updating
-    is_get_camera_data_ = false;
+    camera_done_flags_ |= 0x02;
+    //is_get_camera_data_ = false;
 
-    timer.stop("[MappingModule]callbackDepth");
+    timer.stop("[MappingModule]callbackDepth2");
 }
 
 bool MappingModule::commandGetCameraData()
 {
   is_get_camera_data_ = true;
+  camera_done_flags_ = 0;
 
   // Subscribe to topic
   sub_rgbd_ = ros_node_.subscribe(topic_depth_, 0, &MappingModule::callbackDepth, this);
+  sub_rgbd2_ = ros_node_.subscribe(topic_depth2_, 0, &MappingModule::callbackDepth2, this);
 
   timer.start("[MappingModule]commandGetCameraData-waiting");
   std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
-  for (int i=0; i<100 && ros::ok() && is_get_camera_data_; i++)
+  for (int i=0; i<100 && ros::ok(); i++)
   {
+    // Check if all callbacks are done successfully
+    if (camera_done_flags_ == all_done_flags_ )
+    {
+      is_get_camera_data_ = true;
+      break;
+    }
+
     ros::spinOnce();
     ros::Rate(100).sleep();
   }
@@ -508,7 +549,29 @@ bool MappingModule::commandProfileLoad()
     copyPointCloud(*cloud_ptr_profile_, *cloud_ptr_rgbd_);
 
   // Octree
-  if (is_filling_octomap_)
+  if (is_debug_load_state_)
+  {
+    std::cout << "[Mapping] " << "Reading " << filename_octree_final_ << "\n";
+
+    octomap::AbstractOcTree* temp_tree = octomap::AbstractOcTree::read(filename_octree_final_);
+    if(temp_tree)
+    { // read error returns NULL
+      octree_ = dynamic_cast<octomap::OcTree*>(temp_tree);
+      octree_->setOccupancyThres( octree_thresh_ );
+
+      if (!octree_)
+      {
+        std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Type cast failed .Exiting node.\n" << cc.reset;
+        return false;
+      }
+    }
+    else
+    {
+      std::cout << "[Mapping] " << cc.red << "ERROR: Failed to load octomap: Could not read file " << filename_octree_ << ". Exiting node.\n" << cc.reset;
+      return false;
+    }
+  }
+  else if (is_filling_octomap_)
   {
     std::cout << "[Mapping] " << "Reading " << filename_octree_ << "\n";
 
@@ -857,6 +920,7 @@ void MappingModule::initializeParameters()
   filename_octree_final_ = "final_octree.ot";
 
   topic_depth_        = "/nbv_exploration/depth";
+  topic_depth2_       = "/nbv_exploration/depth2";
   topic_map_          = "/nbv_exploration/global_map_cloud";
   topic_scan_in_      = "/nbv_exploration/scan";
   topic_scan_out_     = "/nbv_exploration/scan_cloud";
@@ -901,6 +965,15 @@ void MappingModule::initializeParameters()
   ros::param::param("~height_px", camera_height_px_, 480);
   ros::param::param("~ray_skipping_vertical", ray_skipping_vertical_, 1);
   ros::param::param("~ray_skipping_horizontal", ray_skipping_horizontal_, 1);
+
+
+  int camera_count;
+  ros::param::param("~camera_count", camera_count, 1);
+
+  // The following is equivalent to (2^n)-1
+  // This sets the last n bits to '1'
+  all_done_flags_ = (1 << camera_count) - 1;
+
 }
 
 void MappingModule::initializeTopicHandlers()
@@ -1117,4 +1190,102 @@ void MappingModule::updateVoxelDensities(const PointCloudXYZ::Ptr& cloud)
       voxel_densities_.insert(std::make_pair(key, v));
     }
   }
+}
+
+
+
+
+
+
+void MappingModule::updateVoxelNormals()
+{
+  //=======
+  // Fill a map with point count at each octreekey
+  //=======
+  voxel_normals_.clear(); // Clear old densities
+
+  // ============
+  // Compute normals
+  // ============
+  PointCloudN::Ptr cloud_normals (new PointCloudN);
+  pcl::search::KdTree<PointXYZ>::Ptr tree (new pcl::search::KdTree<PointXYZ> ());
+  pcl::NormalEstimation<PointXYZ, PointN> norm_est;
+
+  norm_est.setSearchMethod (tree);
+  norm_est.setInputCloud (cloud_ptr_rgbd_);
+  norm_est.setKSearch (20);
+  norm_est.compute (*cloud_normals);
+
+  // ===========
+  // Generate histogram
+  // ===========
+  for (int i=0; i<cloud_normals->points.size(); i++)
+  {
+    PointN p = cloud_normals->points[i];
+    PointXYZ p2 = cloud_ptr_rgbd_->points[i];
+
+    octomap::OcTreeKey key;
+    if( !octree_->coordToKeyChecked(p2.x, p2.y, p2.z, key) )
+      continue;
+
+    // Compute histogram
+    /*
+     * histo[0] = x positive
+     * histo[1] = x negative
+     * histo[2] = y positive
+     * histo[3] = y negative
+     * histo[4] = z positive
+     * histo[5] = z negative
+     */
+    NormalHistogram h;
+    h.size = 1;
+
+    float hor_length = sqrt(p.normal[0]*p.normal[0] + p.normal[1]*p.normal[1]);
+    float angle_hor = atan2(p.normal[1],p.normal[0]);
+    float angle_ver = atan2(p.normal[2],hor_length);
+
+    if (angle_ver > M_PI_4)
+      h.histogram[4] = 1;
+    else if (angle_ver < -M_PI_4)
+      h.histogram[5] = 1;
+    else if (-M_PI_4 < angle_hor && angle_hor <= M_PI_4)
+      h.histogram[0] = 1;
+    else if (M_PI_4 < angle_hor && angle_hor <= 3*M_PI_4)
+      h.histogram[2] = 1;
+    else if (-3*M_PI_4 < angle_hor && angle_hor <= -M_PI_4)
+      h.histogram[3] = 1;
+    else
+      h.histogram[1] = 1;
+
+    // Get iterator for desired key
+    std::map<octomap::OcTreeKey, NormalHistogram>::iterator it;
+    it = voxel_normals_.find(key);
+    if (it != voxel_normals_.end())
+    {
+      // Key found, increment it
+      it->second += h;
+    }
+    else
+    {
+      // Key not found, insert it
+      voxel_normals_.insert(std::make_pair(key, h));
+    }
+  }
+}
+
+NormalHistogram MappingModule::getNormalHistogramAtOcTreeKey(octomap::OcTreeKey key)
+{
+  std::map<octomap::OcTreeKey, NormalHistogram>::iterator it;
+  it = voxel_normals_.find(key);
+
+  if (it == voxel_normals_.end())
+  {
+    // Key not found, display error
+    //printf("[ViewSelecterBase]: Invalid key, no point count retrieved\n");
+    NormalHistogram invalid_histo;
+    invalid_histo.histogram[0] = -1;
+    return invalid_histo;
+  }
+
+  return it->second;
 }
