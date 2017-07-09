@@ -75,14 +75,16 @@ double ViewSelecterProposed::calculateUtility(Pose p)
   clearRayMarkers();
   double ig_total = 0;
 
-  for (int i=0; i<rays_far_plane_.size(); i++)
+  for (int i=0; i<rays_far_plane_at_pose_.size(); i++)
   {
-    octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint, endpoint_predicted;
     double ray_length, ray_predicted_length;
 
     // Get length of beam to the far plane of sensor
-    double range = rays_far_plane_[i].norm();
+    double range = rays_far_plane_at_pose_[i].norm();
+
+    // Get the direction of the ray
+    octomap::point3d dir = rays_far_plane_at_pose_[i].normalize();
 
     // ========
     // Get endpoint of ray when cast through main octomap
@@ -326,7 +328,7 @@ double ViewSelecterProposed::calculateUtility(Pose p)
     printf("Utility ----- IG: %f, Density: %f, Predicted: %f, Total: %f\n", weighted_entropy, weighted_density, weighted_prediction, utility);
     printf("Predicted: %d\tUnknown: %d\tOccupied: %d\tFree: %d\n", num_nodes_predicted, num_nodes_unknown, num_nodes_occ, num_nodes_free);
 
-    //std::cout << "\tAverage nodes per ray: " << num_nodes_traversed/rays_far_plane_.size() << "\n";
+    //std::cout << "\tAverage nodes per ray: " << num_nodes_traversed/rays_far_plane_at_pose_.size() << "\n";
   }
 
   temp_utility_density_    = weighted_density;

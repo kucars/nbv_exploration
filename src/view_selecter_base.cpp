@@ -44,40 +44,12 @@ ViewSelecterBase::ViewSelecterBase():
   ros::param::param("~fov_vertical", fov_v, 45.0);
   ros::param::param("~depth_range_max", r_max, 5.0);
   ros::param::param("~depth_range_min", r_min, 0.05);
+  ros::param::param("~camera_count", camera_count_, 1);
 
   setCameraSettings(fov_h, fov_v, r_max, r_min);
 
   // == Get camera orientation(s) ==
-  tf::TransformListener tf_listener;
-  tf::StampedTransform transform;
-
-  /* Additional rotation to correct alignment of rays */
-  Eigen::Matrix3d r;
-  //r <<  0,  0, -1,
-  //      0, -1,  0,
-  //     -1,  0,  0;
-
-  r <<   1,  0,  0,
-         0,  1,  0,
-         0,  0,  1;
-
-  // Keep trying until it succeeds
-  // TF failures happen in the few moments after the system starts for the first time
-  while(true)
-  {
-    try
-    {
-      tf_listener.lookupTransform("/floating_sensor/base_link", "/floating_sensor/camera_frame", ros::Time(0), transform);
-      break; // Success, break out of the loop
-    }
-    catch (tf2::LookupException ex){
-      ROS_ERROR("%s",ex.what());
-      ros::Duration(0.1).sleep();
-    }
-  }
-
-  tf_camera = r*pose_conversion::getRotationMatrix(transform);
-  std::cout << tf_camera << "\n";
+  getCameraRotationMtxs();
 }
 
 void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint)
@@ -117,15 +89,19 @@ double ViewSelecterBase::calculateIG(Pose p)
   clearRayMarkers();
   double ig_total = 0;
 
-  for (int i=0; i<rays_far_plane_.size(); i++)
+  for (int i=0; i<rays_far_plane_at_pose_.size(); i++)
   {
     double ig_ray = 0;
-
-    octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint;
 
     // Get length of beam to the far plane of sensor
-    double range = rays_far_plane_[i].norm();
+    double range = rays_far_plane_at_pose_[i].norm();
+
+    // Get the direction of the ray
+    octomap::point3d dir = rays_far_plane_at_pose_[i].normalize();
+
+
+
 
     // Cast through unknown cells as well as free cells
     bool found_endpoint = tree_->castRay(origin, dir, endpoint, true, range);
@@ -268,7 +244,7 @@ double ViewSelecterBase::calculateIG(Pose p)
     std::cout << "\nIG: " << ig_total << "\tAverage IG: " << ig_total/nodes_processed <<"\n";
     std::cout << "Unobserved: " << nodes_unobserved << "\tUnknown: " << nodes_unknown << "\tOcc: " << nodes_occ << "\tFree: " << nodes_free << "\n";
     std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
-    std::cout << "\tAverage nodes per ray: " << nodes_traversed/rays_far_plane_.size() << "\n";
+    std::cout << "\tAverage nodes per ray: " << nodes_traversed/rays_far_plane_at_pose_.size() << "\n";
   }
   return ig_total;
 }
@@ -328,7 +304,6 @@ void ViewSelecterBase::clearRayMarkers()
 
 double ViewSelecterBase::computeRelativeRays()
 {
-  rays_near_plane_.clear();
   rays_far_plane_.clear();
 
   double deg2rad = M_PI/180;
@@ -344,39 +319,34 @@ double ViewSelecterBase::computeRelativeRays()
   {
     for( double y = min_y; y<=max_y; y+=y_step )
     {
-      Eigen::Vector3d p_far(y, x, range_max_);
+      Eigen::Vector3d p_far(range_max_, x, y);
       rays_far_plane_.push_back(p_far);
-
-      Eigen::Vector3d p_near(y, x, range_min_);
-      rays_near_plane_.push_back(p_near);
     }
   }
 }
 
-void ViewSelecterBase::computeOrientationMatrix(Pose p)
+void ViewSelecterBase::computeRaysAtPose(Pose p)
 {
-  Eigen::Quaterniond q_pose(
-        p.orientation.x,
-        p.orientation.y,
-        p.orientation.z,
-        p.orientation.w
-        );
+  rays_far_plane_at_pose_.clear();
 
-  Eigen::Matrix3d r;
-  r <<   0,  0,  1,
-         0,  1,  0,
-         1,  0,  0;
+  Eigen::Matrix3d r_pose, rotation_mtx_;
+  r_pose = pose_conversion::getRotationMatrix( p );
 
-  Eigen::Matrix3d r2;
-  r2 << 0.939692,  0, 0.342023,
-        0       ,  1, 0,
-       -0.342023,  0, 0.939692;
+  // For each camera, compute the rays
+  for (int c=0; c<camera_count_; c++)
+  {
+    rotation_mtx_ = r_pose * camera_rotation_mtx_[c];
 
+    for (int r=0; r<rays_far_plane_.size(); r++)
+    {
+      // Rotate ray to its final position
+      Eigen::Vector3d temp = rotation_mtx_*rays_far_plane_[r];
 
-  rotation_mtx_  = r;
-  //rotation_mtx_  = r2;
-  //rotation_mtx_ *= tf_camera;
-  rotation_mtx_ *= q_pose.toRotationMatrix();
+      // Create an octomap point to later cast a ray
+      octomap::point3d p (temp[0], temp[1], temp[2]);
+      rays_far_plane_at_pose_.push_back(p);
+    }
+  }
 
 }
 
@@ -394,7 +364,7 @@ void ViewSelecterBase::evaluate()
   for (int i=0; i<view_gen_->generated_poses.size() && ros::ok(); i++)
   {
     Pose p = view_gen_->generated_poses[i];
-    computeOrientationMatrix(p);
+    computeRaysAtPose(p);
 
     double utility = calculateUtility(p);
 
@@ -436,6 +406,47 @@ void ViewSelecterBase::evaluate()
   publishTrajectory();
 
   timer.stop("[ViewSelecterBase]evaluate");
+}
+
+void ViewSelecterBase::getCameraRotationMtxs()
+{
+  tf::TransformListener tf_listener;
+  tf::StampedTransform transform;
+
+  camera_rotation_mtx_.clear();
+
+  for (int c=0; c<camera_count_; c++)
+  {
+    std::string camera_frame;
+
+    if (c==0)
+      camera_frame = "/floating_sensor/camera_frame";
+    else
+    {
+      char sb[ 100 ];
+      sprintf( sb, "/floating_sensor/camera%d_frame", c+1 );
+      camera_frame = sb;
+    }
+
+    // Keep trying until it succeeds
+    // TF failures happen in the few moments after the system starts for the first time
+    while(true)
+    {
+      try
+      {
+        tf_listener.lookupTransform("/floating_sensor/base_link", camera_frame, ros::Time(0), transform);
+        break; // Success, break out of the loop
+      }
+      catch (tf2::LookupException ex){
+        ROS_ERROR("%s",ex.what());
+        ros::Duration(0.1).sleep();
+      }
+    }
+
+    camera_rotation_mtx_.push_back( pose_conversion::getRotationMatrix(transform) );
+  }
+
+
 }
 
 std::string ViewSelecterBase::getMethodName()
@@ -566,14 +577,6 @@ void ViewSelecterBase::setViewGenerator(ViewGeneratorBase* v)
 void ViewSelecterBase::setMappingModule(MappingModule* m)
 {
   mapping_module_ = m;
-}
-
-octomap::point3d ViewSelecterBase::transformToGlobalRay(Eigen::Vector3d ray_dir)
-{
-  Eigen::Vector3d temp = rotation_mtx_*ray_dir;
-  octomap::point3d p (temp[0], temp[1], temp[2]);
-
-  return p;
 }
 
 void ViewSelecterBase::update()

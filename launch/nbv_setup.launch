@@ -30,10 +30,10 @@
     <arg name="vehicle_starting_Y" value="1.5707" if="$(arg world_type_full_size)"/>
 
     <!-- Half sized scenario spawn point -->
-    <arg name="vehicle_starting_x" value="0"      if="$(arg world_type_half_size)"/>
-    <arg name="vehicle_starting_y" value="-20"    if="$(arg world_type_half_size)"/>
-    <arg name="vehicle_starting_z" value="0.5"    if="$(arg world_type_half_size)"/>
-    <arg name="vehicle_starting_Y" value="1.5707" if="$(arg world_type_half_size)"/>
+	<arg name="vehicle_starting_x" value="4"      if="$(arg world_type_half_size)"/>
+	<arg name="vehicle_starting_y" value="-5"    if="$(arg world_type_half_size)"/>
+	<arg name="vehicle_starting_z" value="4"    if="$(arg world_type_half_size)"/>
+	<arg name="vehicle_starting_Y" value="3.14" if="$(arg world_type_half_size)"/>
 
 
     <!-- Misc settings -->
@@ -42,6 +42,7 @@
     
     <arg name="scan_topic" default="/nbv_exploration/scan"/>
     <arg name="depth_topic" default="/nbv_exploration/depth"/>
+	<arg name="depth2_topic" default="/nbv_exploration/depth2"/>
     
     <!-- Start Gazebo and set up the world -->
     <include if="$(arg start_gazebo)" file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -148,6 +149,8 @@
       <remap from="scan_out" to="$(arg scan_topic)"/>
       <remap from="depth_in"  to="/floating_sensor/camera/depth/points"/>
       <remap from="depth_out" to="$(arg depth_topic)"/>
+	  <remap from="depth2_in"  to="/floating_sensor/camera2/depth/points"/>
+	  <remap from="depth2_out" to="$(arg depth2_topic)"/>
     </node>
 
     <node unless="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">

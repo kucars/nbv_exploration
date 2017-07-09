@@ -2,8 +2,6 @@
  * Derived from coverage_quantification.cpp
  */
 
-// catkin_make -DCATKIN_WHITELIST_PACKAGES="aircraft_inspection" && rosrun aircraft_inspection wall_follower
-
 #include <iostream>
 #include <boost/thread/thread.hpp>
 
@@ -521,7 +519,8 @@ void NBVLoop::runStateMachine()
 
         timer.start("[NBVLoop]commandGetCameraData");
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
-        ros::Duration(0.15).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+        //ros::Duration(0.30).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+        ros::Duration(1.0).sleep(); // 2 cameras
         mapping_module_->commandGetCameraData();
         timer.stop("[NBVLoop]commandGetCameraData");
 

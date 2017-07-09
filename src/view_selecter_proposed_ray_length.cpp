@@ -37,16 +37,18 @@ double ViewSelecterProposedRayLength::calculateUtility(Pose p)
   clearRayMarkers();
   double ig_total = 0;
 
-  for (int i=0; i<rays_far_plane_.size(); i++)
+  for (int i=0; i<rays_far_plane_at_pose_.size(); i++)
   {
     double ig_ray = 0;
 
-    octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint, endpoint_predicted;
     double ray_len, ray_len_predicted;
 
     // Get length of beam to the far plane of sensor
-    double range = rays_far_plane_[i].norm();
+    double range = rays_far_plane_at_pose_[i].norm();
+
+    // Get the direction of the ray
+    octomap::point3d dir = rays_far_plane_at_pose_[i].normalize();
 
     // Cast through unknown cells as well as free cells
     bool found_endpoint = tree_->castRay(origin, dir, endpoint, true, range);
@@ -187,7 +189,7 @@ double ViewSelecterProposedRayLength::calculateUtility(Pose p)
     std::cout << "\nIG: " << ig_total << "\tAverage IG: " << ig_total/nodes_processed <<"\n";
     std::cout << "Unobserved: " << nodes_unobserved << "\tUnknown: " << nodes_unknown << "\tOcc: " << nodes_occ << "\tFree: " << nodes_free << "\n";
     std::cout << "Time: " << t_end-t_start << " sec\tNodes: " << nodes_processed << "/" << nodes_traversed<< " (" << 1000*(t_end-t_start)/nodes_processed << " ms/node)\n";
-    std::cout << "\tAverage nodes per ray: " << nodes_traversed/rays_far_plane_.size() << "\n";
+    std::cout << "\tAverage nodes per ray: " << nodes_traversed/rays_far_plane_at_pose_.size() << "\n";
   }
 
   return ig_total;

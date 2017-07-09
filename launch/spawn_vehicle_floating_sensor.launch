@@ -36,11 +36,38 @@
     100"
   />
 
-  <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbd_tf" args="
-    0.05  0.0  0.1
-    0.5 -0.5 0.5 -0.5
-    /floating_sensor/base_link
-    /floating_sensor/camera_depth_optical_frame
+  <!-- Camera1 -->
+  <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbda_tf" args="
+	0.05  0.0 0.1
+	0.98481 0 0.17365 0
+	/floating_sensor/base_link
+	/floating_sensor/camera_frame
+	100"
+  />
+
+  <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbdb_tf" args="
+	0 0 0
+	0.5 0.5 0.5 0.5
+	/floating_sensor/camera_frame
+	/floating_sensor/camera_depth_optical_frame
+	100"
+  />
+
+
+  <!-- Camera2 -->
+  <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbd2a_tf" args="
+	0.05  0.0 -0.1
+	0.98481 0 -0.17365 0
+	/floating_sensor/base_link
+	/floating_sensor/camera2_frame
+	100"
+  />
+
+  <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbd2b_tf" args="
+	0 0 0
+	0.5 0.5 0.5 0.5
+	/floating_sensor/camera2_frame
+	/floating_sensor/camera2_depth_optical_frame
     100"
   />
 </launch>

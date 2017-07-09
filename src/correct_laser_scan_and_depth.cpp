@@ -38,16 +38,20 @@ double fov_vertical, fov_horizontal;
 double depth_range_upper_adjustment;
 
 // == Consts
-std::string topic_scan_in   = "scan_in";
-std::string topic_scan_out  = "scan_out";
-std::string topic_depth_in  = "depth_in";
-std::string topic_depth_out = "depth_out";
+std::string topic_scan_in    = "scan_in";
+std::string topic_scan_out   = "scan_out";
+std::string topic_depth_in   = "depth_in";
+std::string topic_depth_out  = "depth_out";
+std::string topic_depth2_in  = "depth2_in";
+std::string topic_depth2_out = "depth2_out";
 
 // == Publishers
 ros::Subscriber sub_scan;
 ros::Subscriber sub_depth;
+ros::Subscriber sub_depth2;
 ros::Publisher  pub_scan;
 ros::Publisher  pub_depth;
+ros::Publisher  pub_depth2;
 
 
 // ======================
@@ -55,45 +59,49 @@ ros::Publisher  pub_depth;
 // ======================
 void callbackScan(const sensor_msgs::LaserScan& input_msg);
 void callbackDepth(const sensor_msgs::PointCloud2& input_msg);
+void callbackDepth2(const sensor_msgs::PointCloud2& input_msg);
 void createMaxRangeCloud();
+pcl::PointCloud<pcl::PointXYZRGB> correctDepth(const sensor_msgs::PointCloud2& input_msg);
 
 int main(int argc, char **argv)
 {
-    // >>>>>>>>>>>>>>>>>
-    // Initialize ROS
-    // >>>>>>>>>>>>>>>>>
-    ros::init(argc, argv, "correct_laser_scan_and_depth");
-    ros::NodeHandle ros_node;
+  // >>>>>>>>>>>>>>>>>
+  // Initialize ROS
+  // >>>>>>>>>>>>>>>>>
+  ros::init(argc, argv, "correct_laser_scan_and_depth");
+  ros::NodeHandle ros_node;
 
-    // >>>>>>>>>>>>>>>>>
-    // Get input parameters
-    ros::param::param("~laser_range_upper_threshold_trim", laser_range_upper_threshold_trim, 0.5);
-    ros::param::param("~laser_range_lower_threshold_trim", laser_range_lower_threshold_trim, 0.5);
-    ros::param::param("~laser_range_upper_adjustment", laser_range_upper_adjustment, 0.1);
-    
-    ros::param::param("~depth_range_max", depth_range_max, 8.0);
-    ros::param::param("~depth_range_min", depth_range_min, 0.5);
-    ros::param::param("~width_px", width_px, 640);
-    ros::param::param("~height_px", height_px, 480);
-    ros::param::param("~fov_vertical", fov_vertical, 45.0);
-    ros::param::param("~fov_horizontal", fov_horizontal, 60.0);
-    
-    ros::param::param("~depth_range_upper_adjustment", depth_range_upper_adjustment, 0.1);
-    
+  // >>>>>>>>>>>>>>>>>
+  // Get input parameters
+  ros::param::param("~laser_range_upper_threshold_trim", laser_range_upper_threshold_trim, 0.5);
+  ros::param::param("~laser_range_lower_threshold_trim", laser_range_lower_threshold_trim, 0.5);
+  ros::param::param("~laser_range_upper_adjustment", laser_range_upper_adjustment, 0.1);
 
-    // >>>>>>>>>>>>>>>>>
-    // Topic Handlers
-    // >>>>>>>>>>>>>>>>>
-    sub_scan  = ros_node.subscribe(topic_scan_in, 5, callbackScan);
-    sub_depth = ros_node.subscribe(topic_depth_in, 5, callbackDepth);
-    
-    pub_scan  = ros_node.advertise<sensor_msgs::LaserScan>(topic_scan_out, 40);
-    pub_depth = ros_node.advertise<sensor_msgs::PointCloud2>(topic_depth_out, 10);
-    
-    createMaxRangeCloud();
-           
-    ros::spin();
-    return 0;
+  ros::param::param("~depth_range_max", depth_range_max, 8.0);
+  ros::param::param("~depth_range_min", depth_range_min, 0.5);
+  ros::param::param("~width_px", width_px, 640);
+  ros::param::param("~height_px", height_px, 480);
+  ros::param::param("~fov_vertical", fov_vertical, 45.0);
+  ros::param::param("~fov_horizontal", fov_horizontal, 60.0);
+
+  ros::param::param("~depth_range_upper_adjustment", depth_range_upper_adjustment, 0.1);
+
+
+  // >>>>>>>>>>>>>>>>>
+  // Topic Handlers
+  // >>>>>>>>>>>>>>>>>
+  sub_scan   = ros_node.subscribe(topic_scan_in, 2, callbackScan);
+  sub_depth  = ros_node.subscribe(topic_depth_in, 2, callbackDepth);
+  sub_depth2 = ros_node.subscribe(topic_depth2_in, 2, callbackDepth2);
+
+  pub_scan   = ros_node.advertise<sensor_msgs::LaserScan>(topic_scan_out, 40);
+  pub_depth  = ros_node.advertise<sensor_msgs::PointCloud2>(topic_depth_out, 10);
+  pub_depth2 = ros_node.advertise<sensor_msgs::PointCloud2>(topic_depth2_out, 10);
+
+  createMaxRangeCloud();
+
+  ros::spin();
+  return 0;
 }
 
 void callbackScan(const sensor_msgs::LaserScan& input_msg){
@@ -135,29 +143,26 @@ void callbackScan(const sensor_msgs::LaserScan& input_msg){
 }
 
 
-void callbackDepth(const sensor_msgs::PointCloud2& input_msg)
+pcl::PointCloud<pcl::PointXYZRGB> correctDepth(const sensor_msgs::PointCloud2& input_msg)
 {
-  if (pub_depth.getNumSubscribers() == 0)
-    return;
-
   /*
    * Points near the max and min range are pushed outside the range
    * This way, they can be ignored
-   * 
-   * IMPORTANT: NANs are considered to be beyond the max range, and NOT before the earlier range
+   *
+   * IMPORTANT: NANs are considered to be beyond the max range, and NOT before the earlier range.
    * Violating this condition will result in occupied areas considered as "free"
    */
-  
+
   // Convert to point cloud
   pcl::PointCloud<pcl::PointXYZRGB> cloud;
   pcl::fromROSMsg (input_msg, cloud);
-  
+
   if (cloud.points.size() != width_px*height_px)
   {
     ROS_ERROR("Number of points in cloud (%d) do not match supplied inputs (%dx%d px)", (int) cloud.points.size(), width_px, height_px);
-    return;
+    return cloud;
   }
-  
+
   for (int i=0; i<cloud.points.size(); i++)
   {
     if (std::isfinite(cloud.points[i].x) &&
@@ -167,21 +172,61 @@ void callbackDepth(const sensor_msgs::PointCloud2& input_msg)
       // Point is valid, continue
       continue;
     }
-    
+
     int x_px = i%width_px;
     int y_px = i/width_px;
 
     cloud.points[i] = cloud_max_range[y_px*width_px + x_px];
   }
-  
-  
+
+  return cloud;
+}
+
+void callbackDepth(const sensor_msgs::PointCloud2& input_msg)
+{
+  if (pub_depth.getNumSubscribers() == 0)
+    return;
+
+  pcl::PointCloud<pcl::PointXYZRGB> cloud;
+  cloud = correctDepth(input_msg);
+
+  if (cloud.points.size() != width_px*height_px)
+  {
+    ROS_ERROR("Number of points in cloud (%d) do not match supplied inputs (%dx%d px)", (int) cloud.points.size(), width_px, height_px);
+    return;
+  }
+
   // Publish
   sensor_msgs::PointCloud2 output_msg;
-  pcl::toROSMsg(cloud, output_msg); 	//cloud of original (white) using original cloud
+  pcl::toROSMsg(cloud, output_msg);
   output_msg.header = input_msg.header;
   output_msg.is_dense = true;
   
   pub_depth.publish(output_msg);
+}
+
+
+void callbackDepth2(const sensor_msgs::PointCloud2& input_msg)
+{
+  if (pub_depth2.getNumSubscribers() == 0)
+    return;
+
+  pcl::PointCloud<pcl::PointXYZRGB> cloud;
+  cloud = correctDepth(input_msg);
+
+  if (cloud.points.size() != width_px*height_px)
+  {
+    ROS_ERROR("Number of points in cloud (%d) do not match supplied inputs (%dx%d px)", (int) cloud.points.size(), width_px, height_px);
+    return;
+  }
+
+  // Publish
+  sensor_msgs::PointCloud2 output_msg;
+  pcl::toROSMsg(cloud, output_msg);
+  output_msg.header = input_msg.header;
+  output_msg.is_dense = true;
+
+  pub_depth2.publish(output_msg);
 }
 
 

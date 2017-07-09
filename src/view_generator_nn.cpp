@@ -40,10 +40,10 @@ void ViewGeneratorNN::generateViews(bool generate_at_current_location)
     std::cout << "[ViewGeneratorNN] No points in map. Rotating" << std::endl;
     
     Pose p;
-    p.position.x = std::numeric_limits<double>::quiet_NaN(); //Set to NaN
-    p.position.y = std::numeric_limits<double>::quiet_NaN();;
-    p.position.z = std::numeric_limits<double>::quiet_NaN();;
-    p.orientation = pose_conversion::getQuaternionFromYaw(res_yaw_); //Rotate 22.5 deg
+    p.position.x = currX; //Set to NaN
+    p.position.y = currY;
+    p.position.z = currZ;
+    p.orientation = pose_conversion::getQuaternionFromYaw(currYaw + res_yaw_); //Rotate 22.5 deg
     
     generated_poses.push_back(p);
   }
@@ -61,10 +61,7 @@ void ViewGeneratorNN::generateViews(bool generate_at_current_location)
           for (int i_yaw=-1; i_yaw<=1; i_yaw++)
           {
             // Do not generate any viewpoints in current location
-            if (!generate_at_current_location && i_x==0 && i_y==0 && i_z==0)
-              continue;
-
-            if (i_x==0 && i_y==0 && i_z==0 && i_yaw==0)
+            if (!generate_at_current_location && i_x==0 && i_y==0 && i_z==0 && i_yaw==0)
               continue;
             
             Pose p;

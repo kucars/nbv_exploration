@@ -19,6 +19,17 @@ MappingModule::MappingModule()
   initializeParameters();
   initializeTopicHandlers();
 
+  // Depth cloud correction
+  ros::param::param("~camera_range_max", camera_range_max, 8.0);
+  ros::param::param("~camera_range_min", camera_range_min, 0.5);
+  ros::param::param("~camera_width_px", camera_width_px, 640);
+  ros::param::param("~camera_height_px", camera_height_px, 480);
+  ros::param::param("~camera_fov_vertical", camera_fov_vertical, 45.0);
+  ros::param::param("~camera_fov_horizontal", camera_fov_horizontal, 60.0);
+
+  ros::param::param("~camera_range_upper_adjustment", camera_range_upper_adjustment, 0.1);
+  createMaxRangeCloud();
+
   // >>>>>>>>>>>>>>>>>
   // Main function
   // >>>>>>>>>>>>>>>>>
@@ -316,23 +327,93 @@ void MappingModule::callbackScan(const sensor_msgs::LaserScan& laser_msg){
   }
 }
 
-void MappingModule::processDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+void MappingModule::createMaxRangeCloud()
 {
-  timer.start("[MappingModule]callbackDepth-conversion");
+  cloud_max_range_ = new PointXYZ[camera_width_px*camera_height_px];
+
+  double r = camera_range_max + camera_range_upper_adjustment;
+
+  double x_step = tan(camera_fov_horizontal/2*M_PI/180)/(camera_width_px/2);
+  double y_step = tan(camera_fov_vertical/2*M_PI/180)/(camera_height_px/2);
+
+  for (int j=0; j<camera_height_px; j++)
+  {
+    for (int i=0; i<camera_width_px; i++)
+    {
+      PointXYZ p;
+
+      p.x = (i-camera_width_px/2+0.5)*x_step*r;
+      p.y = (j-camera_height_px/2+0.5)*y_step*r;
+      p.z = r;
+
+      cloud_max_range_[j*camera_width_px + i] = p;
+    }
+  }
+}
+
+PointCloudXYZ::Ptr MappingModule::correctDepth(const sensor_msgs::PointCloud2& input_msg)
+{
+  /*
+   * Points near the max and min range are pushed outside the range
+   * This way, they can be ignored
+   *
+   * IMPORTANT: NANs are considered to be beyond the max range, and NOT before the earlier range.
+   * Violating this condition will result in occupied areas considered as "free"
+   */
 
   // == Convert to pcl pointcloud
   PointCloudXYZ cloud;
-  PointCloudXYZ::Ptr cloud_raw_ptr;
+  PointCloudXYZ::Ptr cloud_ptr;
 
-  pcl::fromROSMsg (*cloud_msg, cloud);
-  cloud_raw_ptr = cloud.makeShared();
+  pcl::fromROSMsg (input_msg, cloud);
+  cloud_ptr = cloud.makeShared();
+
+  // == Check the number of points is correct
+  if (cloud.points.size() != camera_width_px*camera_height_px)
+  {
+    ROS_ERROR("Number of points in cloud (%d) do not match supplied inputs (%dx%d px)", (int) cloud.points.size(), camera_width_px, camera_height_px);
+    return NULL;
+  }
+
+  // == Create points slighly out of range if needed
+  for (int i=0; i<cloud_ptr->points.size(); i++)
+  {
+    if (std::isfinite(cloud_ptr->points[i].x) &&
+        std::isfinite(cloud_ptr->points[i].y) &&
+        std::isfinite(cloud_ptr->points[i].z) )
+    {
+      // Point is valid, continue
+      continue;
+    }
+
+    int x_px = i%camera_width_px;
+    int y_px = i/camera_width_px;
+
+    cloud_ptr->points[i] = cloud_max_range_[y_px*camera_width_px + x_px];
+  }
+
+  return cloud_ptr;
+}
+
+
+void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
+{
+  timer.start("[MappingModule]callbackDepth-conversion");
+
+  PointCloudXYZ::Ptr cloud_raw_ptr;
+  cloud_raw_ptr = correctDepth(cloud_msg);
+
+  if (cloud_raw_ptr == NULL)
+    return;
 
   // == Create cloud without points that are too far
   PointCloudXYZ::Ptr cloud_distance_ptr(new PointCloudXYZ);
 
-  for (int i=0; i<cloud.points.size(); i++)
-    if (cloud.points[i].z <= max_rgbd_range_)
-      cloud_distance_ptr->push_back(cloud.points[i]);
+  for (int i=0; i<cloud_raw_ptr->points.size(); i++)
+  {
+    if (cloud_raw_ptr->points[i].z <= max_rgbd_range_)
+      cloud_distance_ptr->push_back(cloud_raw_ptr->points[i]);
+  }
 
   // == Transform
   tf::StampedTransform transform;
@@ -343,8 +424,8 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud
     // Wait for the absolute latest position, to ensure we have the correct position
     // (Latest time needed for teleporting sensor)
     ros::Time now = ros::Time::now();
-    tf_listener_->waitForTransform("world", cloud_msg->header.frame_id, now, ros::Duration(1.0), ros::Duration(0.01));
-    tf_listener_->lookupTransform ("world", cloud_msg->header.frame_id, now, transform);
+    tf_listener_->waitForTransform("world", cloud_msg.header.frame_id, now, ros::Duration(1.0), ros::Duration(0.01));
+    tf_listener_->lookupTransform ("world", cloud_msg.header.frame_id, now, transform);
   }
   catch (tf::TransformException ex){
     ROS_ERROR("%s",ex.what());
@@ -387,7 +468,7 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud
   updateVoxelDensities(cloud_distance_ptr);
 }
 
-void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+void MappingModule::callbackDepth(const sensor_msgs::PointCloud2& cloud_msg)
 {
     timer.start("[MappingModule]callbackDepth");
 
@@ -413,7 +494,7 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& clou
     timer.stop("[MappingModule]callbackDepth");
 }
 
-void MappingModule::callbackDepth2(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
+void MappingModule::callbackDepth2(const sensor_msgs::PointCloud2& cloud_msg)
 {
     timer.start("[MappingModule]callbackDepth2");
 
@@ -919,8 +1000,10 @@ void MappingModule::initializeParameters()
   filename_octree_       = "profile_octree.ot";
   filename_octree_final_ = "final_octree.ot";
 
-  topic_depth_        = "/nbv_exploration/depth";
-  topic_depth2_       = "/nbv_exploration/depth2";
+  topic_depth_        = "/floating_sensor/camera/depth/points";
+  topic_depth2_       = "/floating_sensor/camera2/depth/points";
+  //topic_depth_        = "/nbv_exploration/depth";
+  //topic_depth2_       = "/nbv_exploration/depth2";
   topic_map_          = "/nbv_exploration/global_map_cloud";
   topic_scan_in_      = "/nbv_exploration/scan";
   topic_scan_out_     = "/nbv_exploration/scan_cloud";

@@ -21,7 +21,7 @@
 
 <robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:property name="pi" value="3.14159265359" />
-  <xacro:include filename="$(find rotors_description)/urdf/component_snippets.xacro" />.gazebo" />
+  <xacro:include filename="$(find nbv_exploration)/urdf/component_snippets.xacro" />.gazebo" />
 
   <gazebo>
     <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
@@ -33,43 +33,5 @@
     <static>true</static>
     <gravity>0</gravity>
   </gazebo>
-
-  <!-- Mount a laser-sensor above the iris. -->
-  <xacro:hokuyo_laser
-    namespace="floating_sensor"
-    parent_link="base_link"
-  >
-    <!-- Horizontal -->
-    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.17453 0.0" />
-
-    <!-- Tilted 10 degrees-->
-    <!--<origin xyz="0.1 0 0.1" rpy="0.17453 0.17453 0" />-->
-  </xacro:hokuyo_laser>
-  
-   <!-- Mount a Xtion sensor under IRIS  -->
-  <xacro:sensor_asus_xtion_macro
-    namespace="floating_sensor"
-    parent_link="base_link"
-    enable_ground_truth="true"
-  >
-    <!--<origin xyz="0.05 0.022 -0.055" rpy="0 0.093 0" />-->
-    <origin xyz="0.05 0.022 -0.055" rpy="0 0 0" />
-  </xacro:sensor_asus_xtion_macro>
-
-     <!-- Mount a Camera sensor above IRIS  -->
- <!-- <xacro:sensor_camera_macro
-    namespace="${namespace}/camera_sensor"
-    parent_link="base_link"
-    enable_ground_truth="true"
-  >-->
-    <!--<origin xyz="0.073 0.0 0.085" rpy="0.0 0.0 0.0" />--> <!--  this origin need to be changed cuz it might be not good on the quadrotor but at least the propellers does not appear in the scene :D-->
-<!--  </xacro:sensor_camera_macro>-->
-  
-   <!-- Mount a Kinect sensor under IRIS (NOT WORKING) -->
- <!-- <xacro:kinect_macro
-    namespace="${namespace}/kinect_sensor"
-    parent_link="base_link"
-  >
-  </xacro:kinect_macro>-->
   
 </robot>

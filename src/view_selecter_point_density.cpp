@@ -16,14 +16,16 @@ double ViewSelecterPointDensity::calculateUtility(Pose p)
   std::vector <octomap::OcTreeKey> checked_keys;
   clearRayMarkers();
 
-  for (int i=0; i<rays_far_plane_.size(); i++)
+  for (int i=0; i<rays_far_plane_at_pose_.size(); i++)
   {
-    octomap::point3d origin (p.position.x, p.position.y, p.position.z);
-    octomap::point3d dir = transformToGlobalRay(rays_far_plane_[i]).normalize();
     octomap::point3d endpoint;
 
     // Get length of beam to the far plane of sensor
-    double range = rays_far_plane_[i].norm();
+    double range = rays_far_plane_at_pose_[i].norm();
+
+    // Get the direction of the ray
+    octomap::point3d origin (p.position.x, p.position.y, p.position.z);
+    octomap::point3d dir = rays_far_plane_at_pose_[i].normalize();
 
     // Cast through unknown cells as well as free cells
     bool found_endpoint = tree_->castRay(origin, dir, endpoint, true, range);

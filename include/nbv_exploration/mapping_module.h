@@ -45,6 +45,32 @@ struct OctomapKeyCompare {
   }
 };
 
+struct NormalHistogram{
+  int size;
+  int histogram[6];
+
+  NormalHistogram()
+  {
+    size = 0;
+    for (int i=0; i<6; i++)
+    {
+      histogram[i] = 0;
+    }
+  }
+
+  struct NormalHistogram& operator+=(const NormalHistogram& rhs)
+  {
+    size += rhs.size;
+    for (int i=0; i<6; i++)
+    {
+      histogram[i] += rhs.histogram[i];
+    }
+
+    return *this;
+  }
+};
+
+
 class MappingModule
 {
 public:
@@ -71,6 +97,7 @@ public:
 
   double getAveragePointDensity();
   int getDensityAtOcTreeKey(octomap::OcTreeKey key);
+  NormalHistogram getNormalHistogramAtOcTreeKey(octomap::OcTreeKey key);
   octomap::OcTree*   getOctomap();
   octomap::OcTree*   getOctomapPredicted();
   PointCloudXYZ::Ptr getProfilePointCloud();
@@ -84,6 +111,7 @@ public:
 
   void updateVoxelDensities();
   void updateVoxelDensities(const PointCloudXYZ::Ptr& cloud);
+  void updateVoxelNormals();
 
 private:
   // =========
@@ -94,9 +122,12 @@ private:
   void addPredictedPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in);
   void addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar=false);
 
-
-  void callbackDepth(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
   void callbackScan(const sensor_msgs::LaserScan& laser_msg);
+  void callbackDepth(const sensor_msgs::PointCloud2& cloud_msg);
+  void callbackDepth2(const sensor_msgs::PointCloud2& cloud_msg);
+  void createMaxRangeCloud();
+  PointCloudXYZ::Ptr correctDepth(const sensor_msgs::PointCloud2& input_msg);
+  void processDepth(const sensor_msgs::PointCloud2& cloud_msg);
 
   void computeTreeUpdatePlanar(octomap::OcTree* octree_in, const octomap::Pointcloud& scan,
                         const octomap::point3d& origin, octomap::point3d& sensor_dir,
@@ -124,6 +155,13 @@ private:
   double octree_thresh_; //Threshold for occupancy
   double predicted_occupancy_value_;
 
+  // Depth cloud correction
+  PointXYZ* cloud_max_range_;
+  int camera_width_px, camera_height_px;
+  double camera_fov_vertical, camera_fov_horizontal;
+  double camera_range_max, camera_range_min;
+  double camera_range_upper_adjustment;
+
   octomap::point3d bound_min_, bound_max_;
   int camera_height_px_;
   int camera_width_px_;
@@ -139,6 +177,8 @@ private:
   bool is_filling_octomap_;
   bool is_filling_octomap_continuously_;
   bool is_get_camera_data_;
+  uint camera_done_flags_;
+  uint all_done_flags_;
   bool is_scanning_;
   bool is_checking_symmetry_;
   bool is_integrating_prediction_;
@@ -157,6 +197,7 @@ private:
   octomap::OcTree* octree_;
   octomap::OcTree* octree_prediction_;
   std::map<octomap::OcTreeKey, VoxelDensity, OctomapKeyCompare> voxel_densities_;
+  std::map<octomap::OcTreeKey, NormalHistogram, OctomapKeyCompare> voxel_normals_;
 
   // == Strings
   std::string filename_octree_;
@@ -167,6 +208,7 @@ private:
   std::string filename_pcl_symmetry_;
 
   std::string topic_depth_;
+  std::string topic_depth2_;
   std::string topic_map_;
   std::string topic_scan_in_;
   std::string topic_scan_out_;
@@ -185,6 +227,7 @@ private:
 
   // == Subscriptions
   ros::Subscriber sub_rgbd_;
+  ros::Subscriber sub_rgbd2_;
   ros::Subscriber sub_scan_;
   ros::Subscriber sub_scan_command_;
 
@@ -248,6 +291,7 @@ private:
     ar & filename_pcl_symmetry_;
 
     ar & topic_depth_;
+    ar & topic_depth2_;
     ar & topic_map_;
     ar & topic_scan_in_;
     ar & topic_scan_out_;

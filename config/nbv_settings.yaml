@@ -6,7 +6,7 @@ debug_mapping: false
 debug_view_generator: true
 debug_view_selecter: false
 debug_save_state: false
-debug_load_state: true
+debug_load_state: false
 
 ############
 ## Scenario settings
@@ -32,6 +32,9 @@ object_bounds_z_min: 0
 # 0: floating sensor
 # 1: iris
 vehicle_type: 0
+
+## Number of RBGD cameras used
+camera_count: 2
 
 ## UAV dimensions (used in collision detection)
 uav_obstacle_distance_min: 4
@@ -106,7 +109,7 @@ termination_ros_spin_afterwards: true
 termination_window_size: 5
 termination_repeat_window_size: 10
 
-termination_iterations_max: 400
+termination_iterations_max: 10
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05
@@ -118,7 +121,7 @@ termination_utility_min_threshold: 0.05
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 2
+view_generator_type: 0
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
@@ -126,10 +129,10 @@ view_generator_nn_pos_res_yaw: rad(pi/4)
 view_generator_nn_adaptive_local_minima_threshold: 0.005
 view_generator_nn_adaptive_local_minima_iterations: 3
 view_generator_nn_adaptive_utility_threshold: 0.1
-view_generator_frontier_density_threshold: 40
+view_generator_frontier_density_threshold: 100
 view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
-view_generator_frontier_minimum_size: 3
+view_generator_frontier_minimum_size: 5
 view_generator_frontier_nearest_count: 50
 view_generator_frontier_cylinder_radius: 3.5
 view_generator_frontier_cylinder_height: 1
@@ -143,7 +146,7 @@ view_generator_frontier_cylinder_height: 1
 # 2: Point Density
 # 10: Proposed
 # 11: Proposed (ray length)
-view_selecter_type: 10
+view_selecter_type: 1
 view_selecter_compare: false
 view_selecter_compare_type: 0
 
@@ -151,8 +154,8 @@ view_selecter_must_see_occupied: true #if true, views without a single occupied 
 view_selecter_ignore_entropies_at_clamping_points: true
 view_selecter_weight_distance: 0.5
 
-view_selecter_proposed_weight_entropy:    0.1
-view_selecter_proposed_weight_density:    1
-view_selecter_proposed_weight_prediction: 0.05
-view_selecter_proposed_weight_distance:   0.01
+view_selecter_proposed_weight_entropy:    0
+view_selecter_proposed_weight_density:    0.5
+view_selecter_proposed_weight_prediction: 0
+view_selecter_proposed_weight_distance:   0.00
 view_selecter_proposed_use_node_count: false

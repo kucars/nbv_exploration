@@ -66,6 +66,7 @@ public:
   virtual std::string getMethodName();
 
   virtual bool isCollidingWithOctree(Pose p);
+  bool isRecentPose(Pose p);
   virtual bool isInsideBounds(Pose p);
   virtual bool isValidViewpoint(Pose p);
   bool isInFreeSpace(Pose p);

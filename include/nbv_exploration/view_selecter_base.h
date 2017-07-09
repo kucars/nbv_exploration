@@ -62,7 +62,9 @@ protected:
 
   Pose current_pose_;
   Pose selected_pose_;
-  Eigen::Matrix3d rotation_mtx_;
+
+  int camera_count_;
+  std::vector<Eigen::Matrix3d> camera_rotation_mtx_; // Camera rotation mtx
   
   double fov_horizontal_;
   double fov_vertical_;
@@ -74,14 +76,16 @@ protected:
   bool must_see_occupied_;
   bool is_ignoring_clamping_entropies_;
   
-  std::vector<Eigen::Vector3d> rays_near_plane_;
   std::vector<Eigen::Vector3d> rays_far_plane_;
+  std::vector<octomap::point3d> rays_far_plane_at_pose_;
   
-  visualization_msgs::Marker line_list;
+  visualization_msgs::Marker ray_msg;
+  visualization_msgs::Marker trajectory_msg;
 
   // Topic handlers
   ros::Publisher marker_pub;
   ros::Publisher pose_pub;
+  ros::Publisher trajectory_pub;
 
 protected:
   bool isEntropyLow();
@@ -91,13 +95,13 @@ protected:
   bool isNodeUnknown(octomap::OcTreeNode node);
   bool isPointInBounds(octomap::point3d &p);
 
+  void   getCameraRotationMtxs();
   double getNodeOccupancy(octomap::OcTreeNode* node);
   double getNodeEntropy(octomap::OcTreeNode* node);
   int    getPointCountAtOcTreeKey(octomap::OcTreeKey key);
 
   double computeRelativeRays();
-  void computeOrientationMatrix(Pose p);
-  octomap::point3d transformToGlobalRay(Eigen::Vector3d ray_dir);
+  void   computeRaysAtPose(Pose p);
 
 
   double calculateIG(Pose p);
@@ -110,6 +114,7 @@ protected:
   void clearRayMarkers();
   void publishRayMarkers();
   void publishPose(Pose p);
+  void publishTrajectory();
 };
 
 #endif

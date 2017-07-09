@@ -79,8 +79,9 @@
 
 
   <!-- RGB-D camera (simulates Asus Xtion) -->
+  <!-- above drone -->
   <link name="rgbd_link">
-    <pose>0.05 0 0.1 0 0 0</pose>
+	<pose>0.05 0 0.1 0 -0.35 0</pose>
     <collision name="camera_collision">
       <geometry>
         <box>
@@ -129,6 +130,70 @@
         <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
         <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
         <frameName>camera_depth_optical_frame</frameName>
+        <baseline>0.1</baseline>
+        <distortion_k1>0.0</distortion_k1>
+        <distortion_k2>0.0</distortion_k2>
+        <distortion_k3>0.0</distortion_k3>
+        <distortion_t1>0.0</distortion_t1>
+        <distortion_t2>0.0</distortion_t2>
+        <pointCloudCutoff>0.4</pointCloudCutoff>
+      </plugin>
+    </sensor>
+  </link>
+  
+  
+  <!-- RGB-D camera2 (simulates Asus Xtion) -->
+  <!-- below drone -->
+  <link name="rgbd2_link">
+	<pose>0.05 0 -0.1 0 0.35 0</pose>
+    <collision name="camera2_collision">
+      <geometry>
+        <box>
+          <size>0.1 0.1 0.1</size>
+        </box>
+      </geometry>
+    </collision>
+
+    <visual name="rgbd2_visual">
+      <geometry>
+        <box>
+          <size>0.1 0.1 0.1</size>
+        </box>
+      </geometry>
+      <material>
+          <ambient>0 1 0 1</ambient>
+          <diffuse>0 1 0 1</diffuse>
+          <specular>0 1 0 1</specular>
+      </material>
+    </visual>
+
+    <sensor type="depth" name="floating_sensor_camera2">
+      <always_on>true</always_on>
+      <update_rate>20.0</update_rate>
+      <camera>
+        <horizontal_fov>1.047197</horizontal_fov> <!-- 60 degrees -->
+        <image>
+          <format>R8G8B8</format>
+          <width>640</width>
+          <height>480</height>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>8.0</far>
+        </clip>
+      </camera>
+
+      <plugin name="floating_sensor_camera2" filename="libgazebo_ros_openni_kinect.so">
+        <robotNamespace>floating_sensor</robotNamespace>
+        <cameraName>camera2</cameraName>
+        <alwaysOn>true</alwaysOn>
+        <updateRate>10</updateRate>
+        <imageTopicName>rgb/image_raw</imageTopicName>
+        <depthImageTopicName>depth/image_raw</depthImageTopicName>
+        <pointCloudTopicName>depth/points</pointCloudTopicName>
+        <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
+        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+        <frameName>camera2_depth_optical_frame</frameName>
         <baseline>0.1</baseline>
         <distortion_k1>0.0</distortion_k1>
         <distortion_k2>0.0</distortion_k2>

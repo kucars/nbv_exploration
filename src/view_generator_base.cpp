@@ -59,6 +59,30 @@ std::string ViewGeneratorBase::getMethodName()
   return "Base";
 }
 
+bool ViewGeneratorBase::isRecentPose(Pose p)
+{
+  bool is_recent = false;
+
+  int num_poses = 50;
+  if (nbv_history_->selected_poses.size() < num_poses)
+    num_poses = nbv_history_->selected_poses.size();
+
+  int end = nbv_history_->selected_poses.size()-1;
+  double yaw = pose_conversion::getYawFromQuaternion(p.orientation);
+  for (int i=0; i<num_poses & !is_recent; i++)
+  {
+    Pose p2 = nbv_history_->selected_poses[end-i];
+    double yaw2 = pose_conversion::getYawFromQuaternion(p2.orientation);
+
+    is_recent |=  fabs(p2.position.x - p.position.x) < 0.05 &&
+                  fabs(p2.position.y - p.position.y) < 0.05 &&
+                  fabs(p2.position.z - p.position.z) < 0.05 &&
+                  fabs(yaw - yaw2) < 0.1;
+  }
+
+  return is_recent;
+}
+
 bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
 {
   /* Collision detection based on octomap
@@ -149,6 +173,9 @@ bool ViewGeneratorBase::isValidViewpoint(Pose p)
     return false;
     
   if (isCollidingWithOctree(p) )
+    return false;
+
+  if (isRecentPose(p))
     return false;
 
   return true;

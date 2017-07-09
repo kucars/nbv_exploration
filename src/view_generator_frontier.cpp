@@ -180,7 +180,7 @@ std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findLowDensityCells()
     // Ignore high density cells and invalid keys
 
     int density = mapping_module_->getDensityAtOcTreeKey(key);
-    if (density < 0 || density >= density_threshold_)
+    if (density <= 0 || density >= density_threshold_)
       continue;
 
     //Store low density keys
@@ -207,6 +207,12 @@ void ViewGeneratorFrontier::generateViews()
   timer.stop("[ViewGeneratorFrontier]findFrontiers");
 
   // ===========
+  // Find normals
+  // ===========
+  //mapping_module_->updateVoxelNormals();
+
+
+  // ===========
   // Get centroids of frontiers
   // ===========
   timer.start("[ViewGeneratorFrontier]getCentroids");
@@ -221,8 +227,16 @@ void ViewGeneratorFrontier::generateViews()
     PointXYZ centroid;
     centroid.x=0; centroid.y=0; centroid.z=0;
 
+    //NormalHistogram histo_frontier;
     for (int i_c=0; i_c<c_count; i_c++)
     {
+      // Compute histogram
+      //NormalHistogram h = mapping_module_->getNormalHistogramAtOcTreeKey(f[i_c]);
+      //if (h.histogram[0] == -1)
+      //  continue;
+      //histo_frontier += h;
+
+      // Compute centroid
       octomap::point3d pt = tree_->keyToCoord(f[i_c]);
       centroid.x += pt.x()/c_count;
       centroid.y += pt.y()/c_count;
@@ -230,6 +244,19 @@ void ViewGeneratorFrontier::generateViews()
 
       visualization_cloud->points.push_back( PointXYZ(pt.x(), pt.y(), pt.z()) );
     }
+
+    /*
+    printf("Pos: [%2.1f,%2.1f,%2.1f], Histo: [%d, %d, %d, %d, %d, %d]\n",
+        centroid.x,
+        centroid.y,
+        centroid.z,
+        histo_frontier.histogram[0],
+        histo_frontier.histogram[1],
+        histo_frontier.histogram[2],
+        histo_frontier.histogram[3],
+        histo_frontier.histogram[4],
+        histo_frontier.histogram[5]);
+    */
 
     centroid_cloud->points.push_back(centroid);
   }
@@ -268,7 +295,7 @@ void ViewGeneratorFrontier::generateViews()
     // Generate poses around the centroid
     for (int z_inc=-1; z_inc<=1; z_inc+=1)
     {
-      for (double theta=0; theta<=2*M_PI; theta+=M_PI_2)
+      for (double theta=0; theta<=2*M_PI; theta+=M_PI_4)
       {
         Pose pose;
         pose.position.x = centroid.x + cylinder_radius_*cos(theta);
