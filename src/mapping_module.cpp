@@ -5,6 +5,11 @@
 // catkin_make -DCATKIN_WHITELIST_PACKAGES="aircraft_inspection" && rosrun aircraft_inspection wall_follower
 
 #include "nbv_exploration/mapping_module.h"
+#include <mutex>
+
+std::mutex mutex_profile;
+std::mutex mutex_octo;
+std::mutex mutex_depth_callback;
 
 MappingModule::MappingModule()
   : cloud_ptr_rgbd_ (new PointCloudXYZ),
@@ -59,7 +64,9 @@ void MappingModule::run()
       if (cloud_ptr_profile_ && pub_scan_cloud_.getNumSubscribers() > 0)
       {
         sensor_msgs::PointCloud2 cloud_msg;
+        mutex_profile.lock();
         pcl::toROSMsg(*cloud_ptr_profile_, cloud_msg);
+        mutex_profile.unlock();
         cloud_msg.header.frame_id = "world";
         cloud_msg.header.stamp = ros::Time::now();
         pub_scan_cloud_.publish(cloud_msg);
@@ -69,7 +76,9 @@ void MappingModule::run()
       if (cloud_ptr_rgbd_ && pub_rgbd_cloud_.getNumSubscribers() > 0)
       {
         sensor_msgs::PointCloud2 cloud_msg;
+        mutex_profile.lock();
         pcl::toROSMsg(*cloud_ptr_rgbd_, cloud_msg);
+        mutex_profile.unlock();
         cloud_msg.header.frame_id = "world";
         cloud_msg.header.stamp = ros::Time::now();
         pub_rgbd_cloud_.publish(cloud_msg);
@@ -150,6 +159,9 @@ void MappingModule::addPredictedPointCloudToTree(octomap::OcTree* octree_in, Poi
 
 void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXYZ cloud_in, octomap::point3d sensor_origin, octomap::point3d sensor_dir, double range, bool isPlanar)
 {
+  // Lock the octree
+  mutex_octo.lock();
+
   // Note that "range" is the perpendicular distance to the end of the camera plane
 
   octomap::Pointcloud ocCloud;
@@ -187,6 +199,8 @@ void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXY
       octree_in->updateNode(*it, true);
     }
   }
+
+  mutex_octo.unlock();
 }
 
 void MappingModule::addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out) {
@@ -207,7 +221,12 @@ void MappingModule::addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in
     if (cloud_in->points[i].z >= sensor_data_min_height_)
       cloud_out->push_back(cloud_in->points[i]);
 }
+
 void MappingModule::addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in, PointCloudXYZ::Ptr& cloud_out, double filter_res) {
+  // Since this function typically operates on the profile, we will lock the profile
+  // This prevents race condition if two callbacks occur simultaneously
+  mutex_profile.lock();
+
   // Add two point clouds
   addPointCloudToPointCloud(cloud_in, cloud_out);
 
@@ -225,6 +244,8 @@ void MappingModule::addPointCloudToPointCloud(const PointCloudXYZ::Ptr& cloud_in
   {
     std::cout << "[Mapping] " << cc.blue << "Number of points in filtered map: " << cloud_out->points.size() << "\n" << cc.reset;
   }
+
+  mutex_profile.unlock();
 }
 
 
@@ -423,15 +444,20 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
 
     // Wait for the absolute latest position, to ensure we have the correct position
     // (Latest time needed for teleporting sensor)
-    ros::Time now = ros::Time::now();
-    tf_listener_->waitForTransform("world", cloud_msg.header.frame_id, now, ros::Duration(1.0), ros::Duration(0.01));
-    tf_listener_->lookupTransform ("world", cloud_msg.header.frame_id, now, transform);
+    //ros::Time now = ros::Time::now();
+    tf_listener_->waitForTransform("world", cloud_msg.header.frame_id, cloud_msg.header.stamp, ros::Duration(1.0), ros::Duration(0.01));
+    tf_listener_->lookupTransform ("world", cloud_msg.header.frame_id, cloud_msg.header.stamp, transform);
   }
   catch (tf::TransformException ex){
     ROS_ERROR("%s",ex.what());
     ros::Duration(1.0).sleep();
     return;
   }
+
+  std::cout << "Depth Topic: " << cloud_msg.header.frame_id << "\n";
+  std::cout << "Depth stamp: " << cloud_msg.header.stamp << "\n";
+  std::cout << "Transform stamp: " << transform.stamp_ << "\n";
+
 
   // == Convert tf:Transform to Eigen::Matrix4d
   Eigen::Matrix4d tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
@@ -485,11 +511,12 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2& cloud_msg)
       return;
     }
 
+    mutex_depth_callback.lock();
     processDepth(cloud_msg);
 
     // == Done updating
     camera_done_flags_ |= 0x01;
-    //is_get_camera_data_ = false;
+    mutex_depth_callback.unlock();
 
     timer.stop("[MappingModule]callbackDepth");
 }
@@ -511,11 +538,12 @@ void MappingModule::callbackDepth2(const sensor_msgs::PointCloud2& cloud_msg)
       return;
     }
 
+    mutex_depth_callback.lock();
     processDepth(cloud_msg);
 
     // == Done updating
     camera_done_flags_ |= 0x02;
-    //is_get_camera_data_ = false;
+    mutex_depth_callback.unlock();
 
     timer.stop("[MappingModule]callbackDepth2");
 }

@@ -100,7 +100,7 @@ termination_ros_spin_afterwards: false
 termination_window_size: 5
 termination_repeat_window_size: 10 #Number of permissible repetitions before the UAV is considered stuck in a local minima
 
-termination_iterations_max: 500
+termination_iterations_max: 100
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05

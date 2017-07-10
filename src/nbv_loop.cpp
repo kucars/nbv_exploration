@@ -514,13 +514,13 @@ void NBVLoop::runStateMachine()
 
         timer.start("[NBVLoop]Moving");
         vehicle_->moveVehicle(0.25); //Make sure we go to the exact position
-        timer.start("[NBVLoop]Moving");
+        timer.stop("[NBVLoop]Moving");
 
 
         timer.start("[NBVLoop]commandGetCameraData");
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
-        //ros::Duration(0.30).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
-        ros::Duration(1.0).sleep(); // 2 cameras
+        //ros::Duration(0.3).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+        ros::Duration(2.0).sleep(); // 2 cameras
         mapping_module_->commandGetCameraData();
         timer.stop("[NBVLoop]commandGetCameraData");
 

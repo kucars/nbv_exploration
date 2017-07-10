@@ -33,7 +33,7 @@
     0 0.08716 0 0.99619
     /floating_sensor/base_link
     /floating_sensor/laser_frame
-    100"
+	500"
   />
 
   <!-- Camera1 -->
@@ -42,7 +42,7 @@
 	0.98481 0 0.17365 0
 	/floating_sensor/base_link
 	/floating_sensor/camera_frame
-	100"
+	500"
   />
 
   <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbdb_tf" args="
@@ -50,7 +50,7 @@
 	0.5 0.5 0.5 0.5
 	/floating_sensor/camera_frame
 	/floating_sensor/camera_depth_optical_frame
-	100"
+	500"
   />
 
 
@@ -60,7 +60,7 @@
 	0.98481 0 -0.17365 0
 	/floating_sensor/base_link
 	/floating_sensor/camera2_frame
-	100"
+	500"
   />
 
   <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbd2b_tf" args="
@@ -68,6 +68,6 @@
 	0.5 0.5 0.5 0.5
 	/floating_sensor/camera2_frame
 	/floating_sensor/camera2_depth_optical_frame
-    100"
+	500"
   />
 </launch>
