@@ -48,6 +48,9 @@ ViewSelecterBase::ViewSelecterBase():
 
   setCameraSettings(fov_h, fov_v, r_max, r_min);
 
+
+  ros::param::param("~vehicle_type", vehicle_type_, 0);
+
   // == Get camera orientation(s) ==
   getCameraRotationMtxs();
 }
@@ -418,14 +421,36 @@ void ViewSelecterBase::getCameraRotationMtxs()
   for (int c=0; c<camera_count_; c++)
   {
     std::string camera_frame;
+    std::string base_frame;
 
-    if (c==0)
-      camera_frame = "/floating_sensor/camera_frame";
-    else
+    if (vehicle_type_ == 0)
     {
-      char sb[ 100 ];
-      sprintf( sb, "/floating_sensor/camera%d_frame", c+1 );
-      camera_frame = sb;
+      base_frame = "/floating_sensor/base_link";
+
+      if (c==0)
+        camera_frame = "/floating_sensor/camera_frame";
+      else
+      {
+        char sb[ 100 ];
+        sprintf( sb, "/floating_sensor/camera%d_frame", c+1 );
+        camera_frame = sb;
+      }
+    }
+
+
+    else if (vehicle_type_ == 1)
+    {
+      base_frame = "/iris/xtion_sensor/ground_truth/iris/xtion_sensor/ground_truth/odometry_sensor_link";
+
+      if (c==0)
+        camera_frame = "/iris/xtion_sensor/camera_depth_optical_frame";
+
+      else
+      {
+        char sb[ 100 ];
+        sprintf( sb, "/iris/xtion_sensor%d/camera_depth_optical_frame", c+1 );
+        camera_frame = sb;
+      }
     }
 
     // Keep trying until it succeeds
@@ -434,11 +459,15 @@ void ViewSelecterBase::getCameraRotationMtxs()
     {
       try
       {
-        tf_listener.lookupTransform("/floating_sensor/base_link", camera_frame, ros::Time(0), transform);
+        tf_listener.lookupTransform(base_frame, camera_frame, ros::Time(0), transform);
         break; // Success, break out of the loop
       }
       catch (tf2::LookupException ex){
-        ROS_ERROR("%s",ex.what());
+        ROS_ERROR("[ViewSelecterBase] %s",ex.what());
+        ros::Duration(0.1).sleep();
+      }
+      catch (tf2::ExtrapolationException ex){
+        ROS_ERROR("[ViewSelecterBase] %s",ex.what());
         ros::Duration(0.1).sleep();
       }
     }

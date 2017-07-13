@@ -1,7 +1,7 @@
 ############
 ## Debug settings
 ############
-debug_nbv_main_states: true
+debug_nbv_main_states: false
 debug_mapping: false
 debug_view_generator: false
 debug_view_selecter: false
@@ -31,7 +31,7 @@ object_bounds_z_min: 0
 ############
 # 0: floating sensor
 # 1: iris
-vehicle_type: 1
+vehicle_type: 0
 
 ## Number of RBGD cameras used
 camera_count: 2
@@ -41,27 +41,17 @@ uav_obstacle_distance_min: 4
 uav_collision_radius: 0.8
 
 ## UAV Poses
-uav_start_pose: 1
-
-uav_pose_x_0: 5
-uav_pose_y_0: -5
-uav_pose_z_0: .5
-uav_pose_yaw_0: 1.571
-
 uav_pose_x_1: 0
-uav_pose_y_1: -20
-uav_pose_z_1: 5
-uav_pose_yaw_1: 1.571
+uav_pose_y_1: -10
+uav_pose_z_1: 8
+uav_pose_yaw_1: 1.57
 
-uav_pose_x_2: -3
-uav_pose_y_2: 0
-uav_pose_z_2: 5
-uav_pose_yaw_2: 0
+uav_pose_x_inc: 0
+uav_pose_y_inc: 0.5
+uav_pose_z_inc: 0
+uav_pose_yaw_inc: 0
 
-uav_pose_x_3: 10
-uav_pose_y_3: 10
-uav_pose_z_3: 5
-uav_pose_yaw_3: 0.3
+uav_pose_iterations: 20
 
 ############
 ## Mapping settings
@@ -80,10 +70,10 @@ mapping_voxel_grid_res_rgbd: 0.02
 ############
 profiling_skip: true
 profiling_skip_load_map: false #if profiling was skipped, load a preexisting map?
-profiling_check_symmetry: true
+profiling_check_symmetry: false
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
-profiling_use_symmetry: true
+profiling_use_symmetry: false
 profiling_scan_speed: 1.0
 
 # 0: adaptive circular

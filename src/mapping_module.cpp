@@ -6,6 +6,12 @@
 
 #include "nbv_exploration/mapping_module.h"
 #include <mutex>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync_policy;
 
 std::mutex mutex_profile;
 std::mutex mutex_octo;
@@ -438,25 +444,30 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
 
   // == Transform
   tf::StampedTransform transform;
-  try{
-    // Listen for transform
-    //tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, cloud_msg->header.stamp, transform);
+  while (true)
+  {
+    try{
+      // Listen for transform
+      //tf_listener_->lookupTransform("world", cloud_msg->header.frame_id, cloud_msg->header.stamp, transform);
 
-    // Wait for the absolute latest position, to ensure we have the correct position
-    // (Latest time needed for teleporting sensor)
-    //ros::Time now = ros::Time::now();
-    tf_listener_->waitForTransform("world", cloud_msg.header.frame_id, cloud_msg.header.stamp, ros::Duration(1.0), ros::Duration(0.01));
-    tf_listener_->lookupTransform ("world", cloud_msg.header.frame_id, cloud_msg.header.stamp, transform);
-  }
-  catch (tf::TransformException ex){
-    ROS_ERROR("%s",ex.what());
-    ros::Duration(1.0).sleep();
-    return;
+      // Wait for the absolute latest position, to ensure we have the correct position
+      // (Latest time needed for teleporting sensor)
+      //ros::Time now = ros::Time::now();
+      tf_listener_->waitForTransform("world", cloud_msg.header.frame_id, cloud_msg.header.stamp, ros::Duration(1.0), ros::Duration(0.01));
+      tf_listener_->lookupTransform ("world", cloud_msg.header.frame_id, cloud_msg.header.stamp, transform);
+      break;
+    }
+    catch (tf::TransformException ex){
+      ROS_ERROR("%s",ex.what());
+      ros::Duration(0.1).sleep();
+      return;
+    }
   }
 
-  std::cout << "Depth Topic: " << cloud_msg.header.frame_id << "\n";
-  std::cout << "Depth stamp: " << cloud_msg.header.stamp << "\n";
-  std::cout << "Transform stamp: " << transform.stamp_ << "\n";
+  // std::cout << "Depth Topic: " << cloud_msg.header.frame_id << "\n";
+  // std::cout << "Depth stamp: " << cloud_msg.header.stamp << "\n";
+  // std::cout << "Transform stamp: " << transform.stamp_ << "\n";
+  std::cout << "MAP: Y: " << transform.getOrigin().getY() << "\n";
 
 
   // == Convert tf:Transform to Eigen::Matrix4d
@@ -492,6 +503,37 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
 
   // == Update density map
   updateVoxelDensities(cloud_distance_ptr);
+}
+
+
+void MappingModule::callbackDepthSync(const sensor_msgs::PointCloud2ConstPtr& cloud_msg1, const sensor_msgs::PointCloud2ConstPtr& cloud_msg2)
+{
+  std::cout << "[Mapping] " << cc.green << "HERE\n" << cc.reset;
+
+    timer.start("[MappingModule]callbackDepthSync");
+
+    if (is_debugging_)
+    {
+      std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
+    }
+
+    if (!is_get_camera_data_)
+    {
+      if (is_debugging_)
+        std::cout << "[Mapping]" << cc.yellow << "Not allowed to process depth data yet\n";
+
+      return;
+    }
+
+    mutex_depth_callback.lock();
+    processDepth(*cloud_msg1);
+    processDepth(*cloud_msg2);
+
+    // == Done updating
+    camera_done_flags_ |= 0x03;
+    mutex_depth_callback.unlock();
+
+    timer.stop("[MappingModule]callbackDepthSync");
 }
 
 void MappingModule::callbackDepth(const sensor_msgs::PointCloud2& cloud_msg)
@@ -554,12 +596,12 @@ bool MappingModule::commandGetCameraData()
   camera_done_flags_ = 0;
 
   // Subscribe to topic
-  sub_rgbd_ = ros_node_.subscribe(topic_depth_, 0, &MappingModule::callbackDepth, this);
-  sub_rgbd2_ = ros_node_.subscribe(topic_depth2_, 0, &MappingModule::callbackDepth2, this);
+  //sub_rgbd_ = ros_node_.subscribe(topic_depth_, 1, &MappingModule::callbackDepth, this);
+  //sub_rgbd2_ = ros_node_.subscribe(topic_depth2_, 1, &MappingModule::callbackDepth2, this);
 
   timer.start("[MappingModule]commandGetCameraData-waiting");
   std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
-  for (int i=0; i<100 && ros::ok(); i++)
+  for (int i=0; i<500 && ros::ok(); i++)
   {
     // Check if all callbacks are done successfully
     if (camera_done_flags_ == all_done_flags_ )
@@ -1028,10 +1070,10 @@ void MappingModule::initializeParameters()
   filename_octree_       = "profile_octree.ot";
   filename_octree_final_ = "final_octree.ot";
 
-  topic_depth_        = "/floating_sensor/camera/depth/points";
-  topic_depth2_       = "/floating_sensor/camera2/depth/points";
-  //topic_depth_        = "/nbv_exploration/depth";
-  //topic_depth2_       = "/nbv_exploration/depth2";
+  //topic_depth_        = "/floating_sensor/camera/depth/points";
+  //topic_depth2_       = "/floating_sensor/camera2/depth/points";
+  topic_depth_        = "/nbv_exploration/depth";
+  topic_depth2_       = "/nbv_exploration/depth2";
   topic_map_          = "/nbv_exploration/global_map_cloud";
   topic_scan_in_      = "/nbv_exploration/scan";
   topic_scan_out_     = "/nbv_exploration/scan_cloud";
@@ -1094,6 +1136,16 @@ void MappingModule::initializeTopicHandlers()
   // >>>>>>>>>>>>>>>>>
 
   // Sensor data
+  sub_rgbd_ = ros_node_.subscribe(topic_depth_, 1, &MappingModule::callbackDepth, this);
+  sub_rgbd2_ = ros_node_.subscribe(topic_depth2_, 1, &MappingModule::callbackDepth2, this);
+
+  //message_filters::Subscriber<sensor_msgs::PointCloud2> depth1_sub(ros_node_, topic_depth_, 1);
+  //message_filters::Subscriber<sensor_msgs::PointCloud2> depth2_sub(ros_node_, topic_depth2_, 1);
+  //message_filters::TimeSynchronizer<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync(depth1_sub, depth2_sub, 10);
+  //message_filters::Synchronizer<sync_policy> sync(sync_policy(10), depth1_sub, depth2_sub);
+  //sync.registerCallback(boost::bind(&MappingModule::callbackDepthSync, this, _1, _2));
+
+
   //sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
   //sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
 

@@ -65,6 +65,7 @@ protected:
 
   int camera_count_;
   std::vector<Eigen::Matrix3d> camera_rotation_mtx_; // Camera rotation mtx
+  int vehicle_type_;
   
   double fov_horizontal_;
   double fov_vertical_;

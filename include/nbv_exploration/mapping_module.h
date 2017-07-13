@@ -125,6 +125,7 @@ private:
   void callbackScan(const sensor_msgs::LaserScan& laser_msg);
   void callbackDepth(const sensor_msgs::PointCloud2& cloud_msg);
   void callbackDepth2(const sensor_msgs::PointCloud2& cloud_msg);
+  void callbackDepthSync(const sensor_msgs::PointCloud2ConstPtr& cloud_msg1, const sensor_msgs::PointCloud2ConstPtr& cloud_msg2);
   void createMaxRangeCloud();
   PointCloudXYZ::Ptr correctDepth(const sensor_msgs::PointCloud2& input_msg);
   void processDepth(const sensor_msgs::PointCloud2& cloud_msg);

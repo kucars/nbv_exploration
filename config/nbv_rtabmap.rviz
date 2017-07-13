@@ -268,7 +268,7 @@ Visualization Manager:
       Unreliable: false
       Value: false
     - Class: octomap_rviz_plugin/OccupancyGrid
-      Enabled: true
+      Enabled: false
       Max. Height Display: 3.40282e+38
       Max. Octree Depth: 16
       Min. Height Display: -3.40282e+38
@@ -276,7 +276,7 @@ Visualization Manager:
       Octomap Topic: /nbv_exploration/output_tree
       Queue Size: 1
       Unknown voxel distance: 1
-      Value: true
+      Value: false
       Voxel Alpha: 1
       Voxel Coloring: Cell Probability
       Voxel Rendering: Unknown Near Occupied 2
@@ -401,7 +401,7 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
-          Max Intensity: 6.72623e-44
+          Max Intensity: 6.26002e-38
           Min Color: 0; 0; 0
           Min Intensity: 0
           Name: Scan
@@ -421,16 +421,39 @@ Visualization Manager:
           Frame Timeout: 15
           Frames:
             All Enabled: true
+            floating_sensor/base_link:
+              Value: true
+            floating_sensor/camera2_depth_optical_frame:
+              Value: true
+            floating_sensor/camera2_frame:
+              Value: true
+            floating_sensor/camera_depth_optical_frame:
+              Value: true
+            floating_sensor/camera_frame:
+              Value: true
+            floating_sensor/laser_frame:
+              Value: true
+            world:
+              Value: true
           Marker Scale: 1
           Name: TF
           Show Arrows: true
           Show Axes: true
           Show Names: true
           Tree:
-            {}
+            world:
+              floating_sensor/base_link:
+                floating_sensor/camera2_frame:
+                  floating_sensor/camera2_depth_optical_frame:
+                    {}
+                floating_sensor/camera_frame:
+                  floating_sensor/camera_depth_optical_frame:
+                    {}
+                floating_sensor/laser_frame:
+                  {}
           Update Interval: 0
           Value: true
-      Enabled: false
+      Enabled: true
       Name: Floating Sensor
     - Class: rviz/Group
       Displays:
@@ -439,7 +462,7 @@ Visualization Manager:
           Marker Topic: /visualization_marker
           Name: Evaluation Rays
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 1
@@ -462,7 +485,7 @@ Visualization Manager:
           Marker Topic: generated_pose_marker_array
           Name: Viewpoint Array
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/Marker
@@ -510,7 +533,7 @@ Visualization Manager:
       Marker Topic: /nbv_exploration/trajectory
       Name: Trajectory
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -537,22 +560,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 26.359
+      Distance: 12.3634
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -2.91519
-        Y: -12.7134
-        Z: 5.60288
+        X: 1.05928
+        Y: -13.5024
+        Z: 4.60753
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.744796
+      Pitch: 0.659797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.20678
+      Yaw: 4.65177
     Saved: ~
 Window Geometry:
   Displays:

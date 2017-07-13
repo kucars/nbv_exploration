@@ -312,6 +312,9 @@ void NBVLoop::initVehicle()
   vehicle_->setWaypoint(x, y, z, yaw);
   vehicle_->setSpeed(1.0);
   vehicle_->setSpeed(-1); //Allow instant teleportation if using the floating sensor. Ignored by other vehicles
+
+  printf("Starting vehicle\n");
+  vehicle_->start();
   printf("Moving vehicle\n");
   vehicle_->moveVehicle();
   printf("Done moving\n");
@@ -520,7 +523,7 @@ void NBVLoop::runStateMachine()
         timer.start("[NBVLoop]commandGetCameraData");
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
         //ros::Duration(0.3).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
-        ros::Duration(2.0).sleep(); // 2 cameras
+        //ros::Duration(2.0).sleep(); // 2 cameras
         mapping_module_->commandGetCameraData();
         timer.stop("[NBVLoop]commandGetCameraData");
 

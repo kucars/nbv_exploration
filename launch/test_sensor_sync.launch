@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<launch>
+	<arg name="debug" default="false"/>
+	<arg name="nbv_settings_file" default="$(find nbv_exploration)/config/test_sensor_sync.yaml"/>
+
+
+	<node pkg="nbv_exploration" name="test_sensor_sync" type="test_sensor_sync" required="true" output="screen" >
+      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+      <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
+	  <rosparam file="$(arg nbv_settings_file)" command="load" />
+	</node>
+</launch>

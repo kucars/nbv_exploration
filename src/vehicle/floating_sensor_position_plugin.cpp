@@ -136,6 +136,7 @@ void FloatingSensorPosition::Update()
 
   // Update position with set speed
   // pos += speed*dt
+  /*
   current_pos_x_     += current_twist_.linear.x*duration_sec;
   current_pos_y_     += current_twist_.linear.y*duration_sec;
   current_pos_z_     += current_twist_.linear.z*duration_sec;
@@ -147,7 +148,7 @@ void FloatingSensorPosition::Update()
   current_pos_roll_  = fmod(current_pos_roll_,  2*M_PI);
   current_pos_pitch_ = fmod(current_pos_pitch_, 2*M_PI);
   current_pos_yaw_   = fmod(current_pos_yaw_,   2*M_PI);
-
+  */
   // Publish position
   UpdatePosition();
 
@@ -246,7 +247,15 @@ void FloatingSensorPosition::UpdatePosition()
   // Publish current pose
   if (pub_pose_.getNumSubscribers() > 0)
   {
-    GetCurrentPose();
+    current_pose_.position.x = current_pos_x_;
+    current_pose_.position.y = current_pos_y_;
+    current_pose_.position.z = current_pos_z_;
+    current_pose_.orientation.x = q.x();
+    current_pose_.orientation.y = q.y();
+    current_pose_.orientation.z = q.z();
+    current_pose_.orientation.w = q.w();
+//    GetCurrentPose();
+
     pub_pose_.publish(current_pose_);
   }
 }

@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   libmavconn
   mav_msgs
   message_generation
+  message_filters
   roscpp
   rospy
   sensor_msgs
@@ -178,6 +179,27 @@ target_link_libraries(test_object_segmentation ${catkin_LIBRARIES}  ${PCL_LIBRAR
 add_executable(test_octomap src/component_test/test_octomap.cpp)
 add_dependencies(test_octomap ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_octomap ${catkin_LIBRARIES}  ${OCTOMAP_LIBRARIES})
+
+add_executable(test_sensor_sync
+  src/component_test/test_sensor_sync.cpp
+
+  src/control/vehicle_control_base.cpp
+  src/control/vehicle_control_floating_sensor.cpp
+
+  src/mapping_module.cpp
+  src/symmetry_detector.cpp
+  src/lib/MeanShift/MeanShift.cpp
+  src/utilities/time_profiler.cpp
+  )
+add_dependencies(test_sensor_sync ${catkin_EXPORTED_TARGETS})
+target_link_libraries(test_sensor_sync
+	${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+	${catkin_LIBRARIES} -lgmp -lmpfr
+	${Eigen_LIBRARIES}#
+	${fcl_LIBRARIES}#
+	${OCTOMAP_LIBRARIES}
+	${PCL_LIBRARIES}
+	)
 
 add_executable(test_symmetry_detection
   src/component_test/test_symmetry_detection.cpp

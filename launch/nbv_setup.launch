@@ -2,11 +2,11 @@
 <launch>
     <!-- World types are mutually exclusive. Only set ONE of them to "1" -->
     <arg name="world_type_debug_box" default="0"/>
-    <arg name="world_type_full_size" default="0"/>
-    <arg name="world_type_half_size" default="1"/>
+	<arg name="world_type_full_size" default="0"/>
+	<arg name="world_type_half_size" default="1"/>
 
     <!-- Vehicle settings -->
-    <arg name="use_floating_sensor" default="true"/>
+	<arg name="use_floating_sensor" default="false"/>
     <arg name="floating_sensor_model" value="$(find nbv_exploration)/urdf/floating_sensor.gazebo"/>
 
     <arg name="ns" default="iris"/>
@@ -145,10 +145,10 @@
     <node if="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
 
-      <remap from="scan_in"  to="/floating_sensor/scan"/>
-      <remap from="scan_out" to="$(arg scan_topic)"/>
-      <remap from="depth_in"  to="/floating_sensor/camera/depth/points"/>
-      <remap from="depth_out" to="$(arg depth_topic)"/>
+	  <remap from="scan_in"    to="/floating_sensor/scan"/>
+	  <remap from="scan_out"   to="$(arg scan_topic)"/>
+	  <remap from="depth_in"   to="/floating_sensor/camera/depth/points"/>
+	  <remap from="depth_out"  to="$(arg depth_topic)"/>
 	  <remap from="depth2_in"  to="/floating_sensor/camera2/depth/points"/>
 	  <remap from="depth2_out" to="$(arg depth2_topic)"/>
     </node>
@@ -156,9 +156,11 @@
     <node unless="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
       
-      <remap from="scan_in"  to="/iris/scan"/>
-      <remap from="scan_out" to="$(arg scan_topic)"/>
-      <remap from="depth_in"  to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points"/>
-      <remap from="depth_out" to="$(arg depth_topic)"/>
+	  <remap from="scan_in"    to="/iris/scan"/>
+	  <remap from="scan_out"   to="$(arg scan_topic)"/>
+	  <remap from="depth_in"   to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points"/>
+	  <remap from="depth_out"  to="$(arg depth_topic)"/>
+	  <remap from="depth2_in"  to="/iris/xtion_sensor/iris/xtion_sensor_camera2/depth/points"/>
+	  <remap from="depth2_out" to="$(arg depth2_topic)"/>
     </node>
 </launch>
