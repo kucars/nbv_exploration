@@ -9,12 +9,8 @@
 	<arg name="use_floating_sensor" default="false"/>
     <arg name="floating_sensor_model" value="$(find nbv_exploration)/urdf/floating_sensor.gazebo"/>
 
-    <arg name="ns" default="iris"/>
     <arg name="rtab_ns" default="rtabmap"/>
-    <arg name="mav_name" default="iris"/>
-    <env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
-    <arg name="vehicle_model" value="$(find nbv_exploration)/urdf/$(arg mav_name)_nbv_exploration.gazebo"/>
-
+	<env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
 
     <!-- Starting position -->
     <!-- Debug box UAV start location -->
@@ -77,7 +73,7 @@
       <arg name="vehicle_starting_Y" value="$(arg vehicle_starting_Y)"/>
     </include>
 
-    <include unless="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_uav.launch" ns="$(arg mav_name)">
+	<include unless="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_uav.launch">
       <arg name="vehicle_starting_x" value="$(arg vehicle_starting_x)"/>
       <arg name="vehicle_starting_y" value="$(arg vehicle_starting_y)"/>
       <arg name="vehicle_starting_z" value="$(arg vehicle_starting_z)"/>
