@@ -149,7 +149,10 @@ add_executable(nbv_main
 
   src/lib/MeanShift/MeanShift.cpp
   )
-add_dependencies(nbv_main ${catkin_EXPORTED_TARGETS})
+add_dependencies(nbv_main
+  ${catkin_EXPORTED_TARGETS}
+  nbv_exploration_generate_messages_cpp
+  )
 target_link_libraries(nbv_main
     ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} 
     ${catkin_LIBRARIES} -lgmp -lmpfr

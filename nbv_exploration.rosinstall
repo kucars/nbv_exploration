@@ -2,3 +2,23 @@
     local-name: px4/Firmware
     uri: https://github.com/kuri-kustar/Firmware.git
     version:  24feea6346db3ea09391cfc0fb4d683748459f73
+
+- git:
+    local-name: rotors_simulator
+    uri: https://github.com/kuri-kustar/rotors_simulator.git
+    version:  be50de52a658e280fc91a9e0ef9bddf5001dbb44
+
+- git:
+    local-name: mav_comm
+    uri: https://github.com/PX4/mav_comm.git
+    version: 5e0a51c242f9f8ac05c645a728ea25621b69c860
+
+- git:
+    local-name: glog_catkin
+    uri: https://github.com/ethz-asl/glog_catkin.git
+    version: eb23bbb6889c678c91fcd3be628809f2f11654b3
+
+- git:
+    local-name: catkin_simple
+    uri: https://github.com/catkin/catkin_simple.git
+    version: fcd87fa0ad3d7d92c1af8d4d1d1fe1d0ea23a93c
