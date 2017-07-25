@@ -22,3 +22,8 @@
     local-name: catkin_simple
     uri: https://github.com/catkin/catkin_simple.git
     version: fcd87fa0ad3d7d92c1af8d4d1d1fe1d0ea23a93c
+
+- git:
+    local-name: octomap_rviz_plugins
+    uri: https://github.com/Abdullah-Abduldayem/octomap_rviz_plugins.git
+    version: 94b6d357e672710a24504445311d2b5a0161593d

@@ -24,3 +24,17 @@ To run the main program, run the following commands in two separate terminals:
 roslaunch nbv_exploration nbv_setup.launch
 roslaunch nbv_exploration nbv_loop.launch
 ```
+
+## Issues
+For your first run, you may get the following message:
+```
+[pcl::PCDReader::readHeader] Could not find file 'profile_cloud.pcd'.
+```
+
+In that case, open the file `config/nbv_settings.yaml` and set:
+  - `profiling_skip` to `false`
+  - `profiling_skip_load_map` to `true`
+
+This will create a profile from scratch. If you'd like to skip the profiling stage in future runs, set:
+  - `profiling_skip` to `true`
+  - `profiling_skip_load_map` to `false`
