@@ -59,7 +59,7 @@ std::string ViewGeneratorBase::getMethodName()
   return "Base";
 }
 
-bool ViewGeneratorBase::isRecentPose(Pose p)
+bool ViewGeneratorBase::isRecentPose(geometry_msgs::Pose p)
 {
   bool is_recent = false;
 
@@ -71,7 +71,7 @@ bool ViewGeneratorBase::isRecentPose(Pose p)
   double yaw = pose_conversion::getYawFromQuaternion(p.orientation);
   for (int i=0; i<num_poses & !is_recent; i++)
   {
-    Pose p2 = nbv_history_->selected_poses[end-i];
+    geometry_msgs::Pose p2 = nbv_history_->selected_poses[end-i];
     double yaw2 = pose_conversion::getYawFromQuaternion(p2.orientation);
 
     is_recent |=  fabs(p2.position.x - p.position.x) < 0.05 &&
@@ -83,7 +83,7 @@ bool ViewGeneratorBase::isRecentPose(Pose p)
   return is_recent;
 }
 
-bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
+bool ViewGeneratorBase::isCollidingWithOctree(geometry_msgs::Pose p)
 {
   /* Collision detection based on octomap
    * 
@@ -124,7 +124,7 @@ bool ViewGeneratorBase::isCollidingWithOctree(Pose p)
   return collisionDetected;
 }
 
-bool ViewGeneratorBase::isInFreeSpace(Pose p)
+bool ViewGeneratorBase::isInFreeSpace(geometry_msgs::Pose p)
 {
   // Create a cloud with the point to check
 
@@ -152,7 +152,7 @@ bool ViewGeneratorBase::isInFreeSpace(Pose p)
   return true;
 }
 
-bool ViewGeneratorBase::isInsideBounds(Pose p)
+bool ViewGeneratorBase::isInsideBounds(geometry_msgs::Pose p)
 {
   if (p.position.x < nav_bounds_x_min_ || p.position.x > nav_bounds_x_max_ ||
       p.position.y < nav_bounds_y_min_ || p.position.y > nav_bounds_y_max_ ||
@@ -164,7 +164,7 @@ bool ViewGeneratorBase::isInsideBounds(Pose p)
   return true;
 }
 
-bool ViewGeneratorBase::isValidViewpoint(Pose p)
+bool ViewGeneratorBase::isValidViewpoint(geometry_msgs::Pose p)
 {
   if (!isInsideBounds(p) )
     return false;
@@ -186,7 +186,7 @@ void ViewGeneratorBase::setCollisionRadius(double r)
   collision_radius_ = r;
 }
 
-void ViewGeneratorBase::setCurrentPose(Pose p)
+void ViewGeneratorBase::setCurrentPose(geometry_msgs::Pose p)
 {
   current_pose_ = p;
 }
@@ -259,7 +259,7 @@ void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
   }
 }
 
-void ViewGeneratorBase::visualize(std::vector<Pose> valid_poses, std::vector<Pose> invalid_poses)
+void ViewGeneratorBase::visualize(std::vector<geometry_msgs::Pose> valid_poses, std::vector<geometry_msgs::Pose> invalid_poses)
 {
   if (pub_view_marker_array_.getNumSubscribers() == 0)
     return;
@@ -322,7 +322,7 @@ visualization_msgs::Marker ViewGeneratorBase::visualizeDeleteArrowMarker(int id)
   return pose_marker;
 }
 
-visualization_msgs::Marker ViewGeneratorBase::visualizeCreateArrowMarker(int id, Pose pose, bool valid, double max_z, double min_z)
+visualization_msgs::Marker ViewGeneratorBase::visualizeCreateArrowMarker(int id, geometry_msgs::Pose pose, bool valid, double max_z, double min_z)
 {
   visualization_msgs::Marker pose_marker;
 
@@ -363,7 +363,7 @@ visualization_msgs::Marker ViewGeneratorBase::visualizeCreateArrowMarker(int id,
   return pose_marker;
 }
 
-void ViewGeneratorBase::visualizeDrawSphere(Pose p, double r)
+void ViewGeneratorBase::visualizeDrawSphere(geometry_msgs::Pose p, double r)
 {
   if (pub_collision_marker_.getNumSubscribers() == 0)
     return;

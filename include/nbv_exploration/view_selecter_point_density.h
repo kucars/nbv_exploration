@@ -28,7 +28,7 @@ public:
 protected:
   double w_dist_; //weight of distance in exp
 
-  double calculateUtility(Pose p);
+  double calculateUtility(geometry_msgs::Pose p);
   std::string getMethodName();
 };
 

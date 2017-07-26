@@ -17,8 +17,6 @@
 #include "nbv_exploration/nbv_history.h"
 #include "nbv_exploration/mapping_module.h"
 
-typedef geometry_msgs::Pose Pose;
-
 
 class ViewGeneratorBase
 {
@@ -44,8 +42,8 @@ public:
   PointCloudXYZ::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
   octomap::OcTree* tree_prediction_;
-  Pose current_pose_;
-  std::vector<Pose> generated_poses;
+  geometry_msgs::Pose current_pose_;
+  std::vector<geometry_msgs::Pose> generated_poses;
 
   // Visualizer
   int vis_marker_array_prev_size_;
@@ -65,14 +63,14 @@ public:
 
   virtual std::string getMethodName();
 
-  virtual bool isCollidingWithOctree(Pose p);
-  bool isRecentPose(Pose p);
-  virtual bool isInsideBounds(Pose p);
-  virtual bool isValidViewpoint(Pose p);
-  bool isInFreeSpace(Pose p);
+  virtual bool isCollidingWithOctree(geometry_msgs::Pose p);
+  bool isRecentPose(geometry_msgs::Pose p);
+  virtual bool isInsideBounds(geometry_msgs::Pose p);
+  virtual bool isValidViewpoint(geometry_msgs::Pose p);
+  bool isInFreeSpace(geometry_msgs::Pose p);
 
   virtual void setCollisionRadius(double r);
-  virtual void setCurrentPose(Pose p);
+  virtual void setCurrentPose(geometry_msgs::Pose p);
   virtual void setDebug(bool b);
   virtual void setHistory(NBVHistory* h);
   virtual void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
@@ -81,10 +79,10 @@ public:
   
   virtual void updateCollisionBoxesFromOctomap();
 
-  virtual void visualize(std::vector<Pose> valid_poses, std::vector<Pose> invalid_poses);
+  virtual void visualize(std::vector<geometry_msgs::Pose> valid_poses, std::vector<geometry_msgs::Pose> invalid_poses);
   visualization_msgs::Marker visualizeDeleteArrowMarker(int id);
-  visualization_msgs::Marker visualizeCreateArrowMarker(int id, Pose pose, bool valid, double max_z = 0, double min_z = 0);
-  void visualizeDrawSphere(Pose p, double r);
+  visualization_msgs::Marker visualizeCreateArrowMarker(int id, geometry_msgs::Pose pose, bool valid, double max_z = 0, double min_z = 0);
+  void visualizeDrawSphere(geometry_msgs::Pose p, double r);
 };
 
 #endif

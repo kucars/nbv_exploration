@@ -26,7 +26,7 @@ public:
   ViewSelecterProposed();
 
 protected:
-  double calculateUtility(Pose p);
+  double calculateUtility(geometry_msgs::Pose p);
   std::string getMethodName();
   void insertKeyIfUnique(std::set<octomap::OcTreeKey, OctomapKeyCompare>& list, octomap::OcTreeKey key);
   void update();

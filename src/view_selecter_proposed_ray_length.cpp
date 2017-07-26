@@ -14,7 +14,7 @@ ViewSelecterProposedRayLength::ViewSelecterProposedRayLength():
 {
 }
 
-double ViewSelecterProposedRayLength::calculateUtility(Pose p)
+double ViewSelecterProposedRayLength::calculateUtility(geometry_msgs::Pose p)
 {
   // Modified version of ViewSelecterBase::calculateIG()
   // Computes length of rays in original and predicted and uses those as weights for entropies

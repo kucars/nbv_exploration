@@ -8,7 +8,7 @@ ViewSelecterPointDensity::ViewSelecterPointDensity():
 {
 }
 
-double ViewSelecterPointDensity::calculateUtility(Pose p)
+double ViewSelecterPointDensity::calculateUtility(geometry_msgs::Pose p)
 {
   int num_of_voxels = 0;
   int num_of_points = 0;

@@ -23,7 +23,7 @@ protected:
 
   void setCollisionRadius(double r);
   void setMappingModule(MappingModule* m);
-  void setCurrentPose(Pose p);
+  void setCurrentPose(geometry_msgs::Pose p);
   void setDebug(bool b);
   void setHistory(NBVHistory* h);
   void setNavigationBounds(double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);

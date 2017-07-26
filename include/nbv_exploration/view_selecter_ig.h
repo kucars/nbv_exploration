@@ -26,7 +26,7 @@ public:
   ViewSelecterIg();
 
 protected:
-  double calculateUtility(Pose p);
+  double calculateUtility(geometry_msgs::Pose p);
   std::string getMethodName();
 };
 

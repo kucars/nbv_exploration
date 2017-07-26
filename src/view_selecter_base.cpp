@@ -72,7 +72,7 @@ void ViewSelecterBase::addToRayMarkers(octomap::point3d origin, octomap::point3d
   ray_msg.points.push_back(p);
 }
 
-double ViewSelecterBase::calculateIG(Pose p)
+double ViewSelecterBase::calculateIG(geometry_msgs::Pose p)
 {
   // Source: Borrowed partially from
   // https://github.com/uzh-rpg/rpg_ig_active_reconstruction/blob/master/ig_active_reconstruction_octomap/src/code_base/octomap_basic_ray_ig_calculator.inl
@@ -252,7 +252,7 @@ double ViewSelecterBase::calculateIG(Pose p)
   return ig_total;
 }
 
-double ViewSelecterBase::calculateDistance(Pose p)
+double ViewSelecterBase::calculateDistance(geometry_msgs::Pose p)
 {
   return sqrt(
         (p.position.x-current_pose_.position.x)*(p.position.x-current_pose_.position.x) +
@@ -261,7 +261,7 @@ double ViewSelecterBase::calculateDistance(Pose p)
         );
 }
 
-double ViewSelecterBase::calculateAngularDistance(Pose p)
+double ViewSelecterBase::calculateAngularDistance(geometry_msgs::Pose p)
 {
   double yaw1 = pose_conversion::getYawFromQuaternion(current_pose_.orientation);
   double yaw2 = pose_conversion::getYawFromQuaternion(p.orientation);
@@ -280,7 +280,7 @@ double ViewSelecterBase::calculateAngularDistance(Pose p)
   return fabs(yaw_diff);
 }
 
-double ViewSelecterBase::calculateUtility(Pose p)
+double ViewSelecterBase::calculateUtility(geometry_msgs::Pose p)
 {
   std::cout << "[ViewSelecterBase]: " << cc.yellow << "Warning: calculateUtility() not implimented, defaulting to classical IG calculation\n" << cc.reset;
   double IG = calculateIG(p);
@@ -328,7 +328,7 @@ double ViewSelecterBase::computeRelativeRays()
   }
 }
 
-void ViewSelecterBase::computeRaysAtPose(Pose p)
+void ViewSelecterBase::computeRaysAtPose(geometry_msgs::Pose p)
 {
   rays_far_plane_at_pose_.clear();
 
@@ -366,7 +366,7 @@ void ViewSelecterBase::evaluate()
 
   for (int i=0; i<view_gen_->generated_poses.size() && ros::ok(); i++)
   {
-    Pose p = view_gen_->generated_poses[i];
+    geometry_msgs::Pose p = view_gen_->generated_poses[i];
     computeRaysAtPose(p);
 
     double utility = calculateUtility(p);
@@ -508,7 +508,7 @@ double ViewSelecterBase::getNodeEntropy(octomap::OcTreeNode* node)
   return - p*log(p) - (1-p)*log(1-p);
 }
 
-Pose ViewSelecterBase::getTargetPose()
+geometry_msgs::Pose ViewSelecterBase::getTargetPose()
 {
   return selected_pose_;
 }
@@ -557,7 +557,7 @@ void ViewSelecterBase::publishRayMarkers()
   marker_pub.publish(ray_msg);
 }
 
-void ViewSelecterBase::publishPose(Pose p)
+void ViewSelecterBase::publishPose(geometry_msgs::Pose p)
 {
   geometry_msgs::PoseStamped msg;
   msg.header.frame_id = "world";

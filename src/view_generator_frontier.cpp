@@ -297,7 +297,7 @@ void ViewGeneratorFrontier::generateViews()
     {
       for (double theta=0; theta<=2*M_PI; theta+=M_PI_4)
       {
-        Pose pose;
+        geometry_msgs::Pose pose;
         pose.position.x = centroid.x + cylinder_radius_*cos(theta);
         pose.position.y = centroid.y + cylinder_radius_*sin(theta);
         pose.position.z = centroid.z + z_inc*cylinder_height_;

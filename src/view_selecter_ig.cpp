@@ -15,7 +15,7 @@ ViewSelecterIg::ViewSelecterIg():
 {
 }
 
-double ViewSelecterIg::calculateUtility(Pose p)
+double ViewSelecterIg::calculateUtility(geometry_msgs::Pose p)
 {
   double IG = calculateIG(p);
   return IG;

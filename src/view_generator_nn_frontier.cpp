@@ -49,7 +49,7 @@ void ViewGeneratorNNFrontier::setCollisionRadius(double r)
   generator_frontier_.setCollisionRadius(r);
 }
 
-void ViewGeneratorNNFrontier::setCurrentPose(Pose p)
+void ViewGeneratorNNFrontier::setCurrentPose(geometry_msgs::Pose p)
 {
   ViewGeneratorNNAdaptive::setCurrentPose(p);
   generator_frontier_.setCurrentPose(p);

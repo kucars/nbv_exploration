@@ -19,8 +19,6 @@
 #include "nbv_exploration/view_generator_base.h"
 #include "nbv_exploration/mapping_module.h"
 
-typedef geometry_msgs::Pose Pose;
-
 
 class ViewSelecterBase
 {
@@ -47,7 +45,7 @@ public:
 
   void evaluate();
   virtual std::string getMethodName();
-  Pose  getTargetPose();
+  geometry_msgs::Pose  getTargetPose();
   void setCameraSettings(double fov_h, double fov_v, double r_max, double r_min);
   void setViewGenerator(ViewGeneratorBase* v);
   void setMappingModule(MappingModule* m);
@@ -60,8 +58,8 @@ protected:
   PointCloudXYZ::Ptr cloud_occupied_ptr_;
   octomap::OcTree* tree_;
 
-  Pose current_pose_;
-  Pose selected_pose_;
+  geometry_msgs::Pose current_pose_;
+  geometry_msgs::Pose selected_pose_;
 
   int camera_count_;
   std::vector<Eigen::Matrix3d> camera_rotation_mtx_; // Camera rotation mtx
@@ -102,19 +100,19 @@ protected:
   int    getPointCountAtOcTreeKey(octomap::OcTreeKey key);
 
   double computeRelativeRays();
-  void   computeRaysAtPose(Pose p);
+  void   computeRaysAtPose(geometry_msgs::Pose p);
 
 
-  double calculateIG(Pose p);
-  double calculateDistance(Pose p);
-  double calculateAngularDistance(Pose p);
-  virtual double calculateUtility(Pose p);
+  double calculateIG(geometry_msgs::Pose p);
+  double calculateDistance(geometry_msgs::Pose p);
+  double calculateAngularDistance(geometry_msgs::Pose p);
+  virtual double calculateUtility(geometry_msgs::Pose p);
   
 
   void addToRayMarkers(octomap::point3d origin, octomap::point3d endpoint);
   void clearRayMarkers();
   void publishRayMarkers();
-  void publishPose(Pose p);
+  void publishPose(geometry_msgs::Pose p);
   void publishTrajectory();
 };
 

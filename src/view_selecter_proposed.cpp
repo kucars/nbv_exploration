@@ -49,7 +49,7 @@ ViewSelecterProposed::ViewSelecterProposed():
   max_density_ = 3*std::pow( (octomap_vox_size/filter_vox_size), 2);
 }
 
-double ViewSelecterProposed::calculateUtility(Pose p)
+double ViewSelecterProposed::calculateUtility(geometry_msgs::Pose p)
 {
   // Modified version of ViewSelecterBase::calculateIG()
   // Computes classical entropy as well as entropy in predicted voxel grid

@@ -10,7 +10,7 @@ ViewSelecterIgExpDistance::ViewSelecterIgExpDistance():
   ros::param::param<double>("~view_selecter_weight_distance", w_dist_, 1.0);
 }
 
-double ViewSelecterIgExpDistance::calculateUtility(Pose p)
+double ViewSelecterIgExpDistance::calculateUtility(geometry_msgs::Pose p)
 {
   double IG = calculateIG(p);
   double dist = calculateDistance(p);

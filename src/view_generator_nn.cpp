@@ -24,7 +24,7 @@ void ViewGeneratorNN::generateViews()
 
 void ViewGeneratorNN::generateViews(bool generate_at_current_location)
 {
-  std::vector<Pose> initial_poses;
+  std::vector<geometry_msgs::Pose> initial_poses;
   generated_poses.clear();
   
   double currX = current_pose_.position.x;
@@ -39,7 +39,7 @@ void ViewGeneratorNN::generateViews(bool generate_at_current_location)
   {
     std::cout << "[ViewGeneratorNN] No points in map. Rotating" << std::endl;
     
-    Pose p;
+    geometry_msgs::Pose p;
     p.position.x = currX; //Set to NaN
     p.position.y = currY;
     p.position.z = currZ;
@@ -64,7 +64,7 @@ void ViewGeneratorNN::generateViews(bool generate_at_current_location)
             if (!generate_at_current_location && i_x==0 && i_y==0 && i_z==0 && i_yaw==0)
               continue;
             
-            Pose p;
+            geometry_msgs::Pose p;
             p.position.x = currX + res_x_*i_x*cos(currYaw) + res_y_*i_y*sin(currYaw);
             p.position.y = currY - res_x_*i_x*sin(currYaw) + res_y_*i_y*cos(currYaw);
             p.position.z = currZ + res_z_*i_z;
@@ -76,7 +76,7 @@ void ViewGeneratorNN::generateViews(bool generate_at_current_location)
       }
     }
     
-    std::vector<Pose> rejected_poses;
+    std::vector<geometry_msgs::Pose> rejected_poses;
     for (int i=0; i<initial_poses.size(); i++)
     {
       if ( isValidViewpoint(initial_poses[i]) )
