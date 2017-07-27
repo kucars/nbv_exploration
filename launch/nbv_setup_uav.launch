@@ -6,7 +6,7 @@
 	<arg name="world_type_half_size" default="1"/>
 
     <!-- Vehicle settings -->
-	<arg name="use_floating_sensor" default="true"/>
+	<arg name="use_floating_sensor" default="false"/>
     <arg name="floating_sensor_model" value="$(find nbv_exploration)/urdf/floating_sensor.gazebo"/>
 
     <arg name="rtab_ns" default="rtabmap"/>

@@ -25,6 +25,13 @@ roslaunch nbv_exploration nbv_setup.launch
 roslaunch nbv_exploration nbv_loop.launch
 ```
 
+To launch the UAV simulation, run the following instead:
+
+```
+roslaunch nbv_exploration nbv_setup_uav.launch
+roslaunch nbv_exploration nbv_loop_uav.launch
+```
+
 ## Issues
 For your first run, you may get the following message:
 ```

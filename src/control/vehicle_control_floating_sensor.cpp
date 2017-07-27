@@ -71,8 +71,27 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
   // Compute new velocities
   updateTwist();
 
+  double rate = 50;
+  geometry_msgs::Pose temp_target_;
+  temp_target_ = vehicle_current_pose_;
+
+  for (int i=0; i<time_to_target_*rate; i++)
+  {
+    temp_target_.position.x += twist_.linear.x/rate;
+    temp_target_.position.y += twist_.linear.y/rate;
+    temp_target_.position.z += twist_.linear.z/rate;
+
+    pub_pose.publish(temp_target_);
+
+    ros::Rate(rate).sleep();
+    ros::spinOnce();
+  }
+
+  /*
   // Publish speed so vehicle will move
   pub_twist.publish(twist_);
+
+  std::cout << twist_ << "\n";
 
   // Sleep until we arrive at destination
   ros::Duration(time_to_target_).sleep();
@@ -85,6 +104,7 @@ void VehicleControlFloatingSensor::moveVehicle(double threshold_sensitivity)
   twist_.angular.y = 0;
   twist_.angular.z = 0;
   pub_twist.publish(twist_);
+  */
 
   // Done, publish setpoint to make sure we're in target location
   pub_pose.publish(setpoint_);
