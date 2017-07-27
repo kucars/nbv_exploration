@@ -17,6 +17,7 @@ public:
   double angular_threshold_;
   double linear_speed_threshold_;
   double angular_speed_threshold_;
+  double speed_;
 
   geometry_msgs::Pose  vehicle_current_pose_;
   geometry_msgs::Twist vehicle_current_twist_;

@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
 
 #include "control/vehicle_control_base.h"
@@ -13,9 +14,15 @@ class VehicleControlIris : public VehicleControlBase
 private:
   ros::Subscriber sub_odom;
   ros::Publisher  pub_setpoint;
+  ros::Publisher  pub_vel_setpoint;
 
   double uav_height_min_;
   double uav_height_max_;
+
+  double max_accel_;
+  double dist_decel_;
+
+  double computeLinearSpeed(double target, double current);
 
 public:
   VehicleControlIris();

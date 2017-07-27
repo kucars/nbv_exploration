@@ -15,7 +15,6 @@ private:
   ros::Publisher  pub_pose;
   ros::Publisher  pub_twist;
 
-  double speed_;
   double time_to_target_;
   geometry_msgs::Twist twist_;
 

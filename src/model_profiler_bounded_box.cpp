@@ -105,7 +105,7 @@ bool ModelProfilerBoundedBox::run(PointCloudXYZ::Ptr profile_cloud_ptr)
   vehicle_->setWaypoint(w.x, w.y, w.z, w.yaw);
   vehicle_->setSpeed(1);
   vehicle_->setSpeed(-1); //Allow floating sensor to teleport, ignored by other vehicles
-  vehicle_->moveVehicle(0);
+  vehicle_->moveVehicle(0.25);
 
   current_position = vehicle_->getPosition();
   printf("Done moving: [%lf, %lf, %lf]\n", current_position.x, current_position.y, current_position.z);
