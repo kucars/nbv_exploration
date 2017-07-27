@@ -45,3 +45,9 @@ In that case, open the file `config/nbv_settings.yaml` and set:
 This will create a profile from scratch. If you'd like to skip the profiling stage in future runs, set:
   - `profiling_skip` to `true`
   - `profiling_skip_load_map` to `false`
+
+
+## Planned Updates
+  - Path planning for UAV navigation to frontiers
+  - 2 sensors for UAV
+  - Improved frontier viewpoint generation scheme
