@@ -91,14 +91,17 @@ bool ViewGeneratorBase::isCollidingWithOctree(geometry_msgs::Pose p)
    */
   
   // Create UAV collision object
-  boost::shared_ptr<fcl::Sphere> Shpere0(new fcl::Sphere(collision_radius_));
+  fcl::Sphere Shpere0(collision_radius_);
+  std::shared_ptr<fcl::CollisionGeometry > cgeomSphere_(&Shpere0);
+  //boost::shared_ptr<fcl::Sphere>
   
   fcl::Transform3f tf0;
   tf0.setIdentity();
   tf0.setTranslation(fcl::Vec3f(p.position.x, p.position.y, p.position.z));
 
-  fcl::CollisionObject co0(Shpere0, tf0);
-  
+
+  fcl::CollisionObject* co0 = new fcl::CollisionObject(cgeomSphere_, tf0);
+
   // Visualize
   visualizeDrawSphere(p, collision_radius_);
   
@@ -112,7 +115,7 @@ bool ViewGeneratorBase::isCollidingWithOctree(geometry_msgs::Pose p)
 
     fcl::CollisionResult result;
     fcl::CollisionRequest request(num_max_contacts, enable_contact);
-    fcl::collide(&co0, box, request, result);
+    fcl::collide(co0, box, request, result);
 
     if ( result.isCollision() )
     {
@@ -239,8 +242,8 @@ void ViewGeneratorBase::setObjectBounds(double x_min, double x_max, double y_min
 void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
 {
   // convert the octomap::octree to fcl::octree fcl_octree object
-  fcl::OcTree* tree2 = new fcl::OcTree(boost::shared_ptr<const octomap::OcTree>(tree_));
-  std::vector<boost::array<fcl::FCL_REAL, 6> > boxes = tree2->toBoxes();
+  fcl::OcTree* tree2 = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(tree_));
+  std::vector<std::array<fcl::FCL_REAL, 6> > boxes = tree2->toBoxes();
 
   collision_boxes_.clear();
   for(std::size_t i = 0; i < boxes.size(); ++i)
@@ -254,7 +257,7 @@ void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
     fcl::Box* box = new fcl::Box(size, size, size);
     box->cost_density = cost;
     box->threshold_occupied = threshold;
-    fcl::CollisionObject* obj = new fcl::CollisionObject(boost::shared_ptr<fcl::CollisionGeometry>(box), fcl::Transform3f(fcl::Vec3f(x, y, z)));
+    fcl::CollisionObject* obj = new fcl::CollisionObject(std::shared_ptr<fcl::CollisionGeometry>(box), fcl::Transform3f(fcl::Vec3f(x, y, z)));
     collision_boxes_.push_back(obj);
   }
 }

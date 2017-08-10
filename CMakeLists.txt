@@ -4,8 +4,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #PCL fails in debug mode with c++11. Set to release mode
 set(CMAKE_BUILD_TYPE Release)
 
-
-
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_definitions(-D__PX4_ROS)
 add_definitions(-D__EXPORT=)
@@ -17,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_msgs
   gazebo_ros
   geometry_msgs
-  keyboard
+#  keyboard
   libmavconn
   mav_msgs
   message_generation
@@ -32,10 +30,20 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Boost REQUIRED)
 find_package(Eigen REQUIRED)
-find_package(fcl REQUIRED)
 find_package(gazebo REQUIRED)
 find_package(octomap REQUIRED)
 find_package(PCL REQUIRED)
+
+set( ROS_DISTRO $ENV{ROS_DISTRO} )
+if(${ROS_DISTRO} STREQUAL "indigo" )
+    find_package(fcl REQUIRED)
+elseif(${ROS_DISTRO} STREQUAL "kinetic")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBFCL REQUIRED fcl)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+else()
+    message("Unsupported ROS Distro")
+endif()
 
 # OCTOMAP_OMP = enable OpenMP parallelization (experimental, defaults to OFF)
 SET(OCTOMAP_OMP TRUE CACHE BOOL "Enable/disable OpenMP parallelization")
@@ -69,7 +77,6 @@ catkin_package(
   #DEPENDS system_lib
 )
 
-
 include_directories(
     ${Eigen_INCLUDE_DIRS}
     ${GAZEBO_INCLUDE_DIRS}
@@ -82,7 +89,6 @@ include_directories(
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 link_libraries(${OCTOMAP_LIBRARIES})
-
 
 ####
 # Gazebo plugins
@@ -160,6 +166,7 @@ target_link_libraries(nbv_main
     ${fcl_LIBRARIES}
     ${OCTOMAP_LIBRARIES}
     ${PCL_LIBRARIES}
+    ${LIBFCL_LIBRARIES}
     )
 
 add_executable(correct_laser_scan_and_depth src/correct_laser_scan_and_depth.cpp)
@@ -211,8 +218,6 @@ add_executable(test_symmetry_detection
   src/utilities/time_profiler.cpp)
 add_dependencies(test_symmetry_detection ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_symmetry_detection ${catkin_LIBRARIES}  ${PCL_LIBRARIES})
-
-
 
 add_executable(pcd2ply src/utilities/pcd2ply.cpp)
 add_dependencies(pcd2ply ${catkin_EXPORTED_TARGETS})

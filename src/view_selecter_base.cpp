@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <cmath>
 #include <ros/ros.h>
 
 #include <geometry_msgs/PoseStamped.h>
@@ -399,7 +399,7 @@ void ViewSelecterBase::evaluate()
 
 
   // No valid poses found, end
-  if ( isnan(selected_pose_.position.x) )
+  if(std::isnan(selected_pose_.position.x) )
   {
     return;
   }
