@@ -2,8 +2,7 @@
 <launch>
     <arg name="debug" default="false"/>
     <arg name="batch" default="false"/>
-	<arg name="nbv_settings_file" default="$(find nbv_exploration)/config/nbv_settings_uav.yaml"/>
-
+    <arg name="nbv_settings_file" default="$(find nbv_exploration)/config/nbv_settings_uav.yaml"/>
 
     <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="true" output="screen" if="$(arg debug)" launch-prefix="gdb -ex run --args" >
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />

@@ -2,11 +2,11 @@
 <launch>
     <!-- World types are mutually exclusive. Only set ONE of them to "1" -->
     <arg name="world_type_debug_box" default="0"/>
-	<arg name="world_type_full_size" default="0"/>
-	<arg name="world_type_half_size" default="1"/>
+    <arg name="world_type_full_size" default="0"/>
+    <arg name="world_type_half_size" default="1"/>
 
     <!-- Vehicle settings -->
-	<arg name="use_floating_sensor" default="false"/>
+    <arg name="use_floating_sensor" default="false"/>
     <arg name="floating_sensor_model" value="$(find nbv_exploration)/urdf/floating_sensor.gazebo"/>
 
     <arg name="rtab_ns" default="rtabmap"/>

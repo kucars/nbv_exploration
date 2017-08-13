@@ -39,7 +39,7 @@
       </material>
     </visual>
 
-    <sensor type="ray" name="floating_sensor_laser">
+    <sensor type="gpu_ray" name="floating_sensor_laser">
       <!-- 10 degrees downward pitch -->
       <pose>0.1 0 0 0 0.1745 0</pose>
       <visualize>true</visualize>
@@ -68,7 +68,7 @@
           <stddev>0.01</stddev>
         </noise>
       </ray>
-      <plugin name="gazebo_ros_laser_scanner" filename="libgazebo_ros_laser.so">
+      <plugin name="gazebo_ros_laser_scanner" filename="libgazebo_ros_gpu_laser.so">
         <gaussianNoise>0.005</gaussianNoise>
         <alwaysOn>true</alwaysOn>
         <topicName>floating_sensor/scan</topicName>
@@ -81,7 +81,7 @@
   <!-- RGB-D camera (simulates Asus Xtion) -->
   <!-- above drone -->
   <link name="rgbd_link">
-	<pose>0.05 0 0.1 0 -0.35 0</pose>
+        <pose>0.05 0 0.1 0 -0.35 0</pose>
     <collision name="camera_collision">
       <geometry>
         <box>
@@ -136,7 +136,7 @@
         <distortion_k3>0.0</distortion_k3>
         <distortion_t1>0.0</distortion_t1>
         <distortion_t2>0.0</distortion_t2>
-        <pointCloudCutoff>0.4</pointCloudCutoff>
+        <pointCloudCutoff>0.5</pointCloudCutoff>
       </plugin>
     </sensor>
   </link>
@@ -145,7 +145,7 @@
   <!-- RGB-D camera2 (simulates Asus Xtion) -->
   <!-- below drone -->
   <link name="rgbd2_link">
-	<pose>0.05 0 -0.1 0 0.35 0</pose>
+        <pose>0.05 0 -0.1 0 0.35 0</pose>
     <collision name="camera2_collision">
       <geometry>
         <box>
@@ -200,7 +200,7 @@
         <distortion_k3>0.0</distortion_k3>
         <distortion_t1>0.0</distortion_t1>
         <distortion_t2>0.0</distortion_t2>
-        <pointCloudCutoff>0.4</pointCloudCutoff>
+        <pointCloudCutoff>0.5</pointCloudCutoff>
       </plugin>
     </sensor>
   </link>

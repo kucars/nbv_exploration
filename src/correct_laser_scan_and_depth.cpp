@@ -104,7 +104,8 @@ int main(int argc, char **argv)
   return 0;
 }
 
-void callbackScan(const sensor_msgs::LaserScan& input_msg){
+void callbackScan(const sensor_msgs::LaserScan& input_msg)
+{
   if (pub_scan.getNumSubscribers() == 0)
     return;
 
@@ -141,7 +142,6 @@ void callbackScan(const sensor_msgs::LaserScan& input_msg){
   
   pub_scan.publish(output_msg);
 }
-
 
 pcl::PointCloud<pcl::PointXYZRGB> correctDepth(const sensor_msgs::PointCloud2& input_msg)
 {
@@ -205,7 +205,6 @@ void callbackDepth(const sensor_msgs::PointCloud2& input_msg)
   pub_depth.publish(output_msg);
 }
 
-
 void callbackDepth2(const sensor_msgs::PointCloud2& input_msg)
 {
   if (pub_depth2.getNumSubscribers() == 0)
@@ -229,8 +228,6 @@ void callbackDepth2(const sensor_msgs::PointCloud2& input_msg)
   pub_depth2.publish(output_msg);
 }
 
-
-
 void createMaxRangeCloud()
 {
   cloud_max_range = new pcl::PointXYZRGB[width_px*height_px];
@@ -246,8 +243,8 @@ void createMaxRangeCloud()
     {
       pcl::PointXYZRGB p;
       
-      p.x = (i-width_px/2+0.5)*x_step*r;
-      p.y = (j-height_px/2+0.5)*y_step*r;
+      p.x = (i-width_px/2.0+0.5)*x_step*r;
+      p.y = (j-height_px/2.0+0.5)*y_step*r;
       p.z = r;
       
       cloud_max_range[j*width_px + i] = p;

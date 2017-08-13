@@ -2,11 +2,11 @@
 <launch>
     <!-- World types are mutually exclusive. Only set ONE of them to "1" -->
     <arg name="world_type_debug_box" default="0"/>
-	<arg name="world_type_full_size" default="0"/>
-	<arg name="world_type_half_size" default="1"/>
+    <arg name="world_type_full_size" default="0"/>
+    <arg name="world_type_half_size" default="1"/>
 
     <!-- Vehicle settings -->
-	<arg name="use_floating_sensor" default="true"/>
+    <arg name="use_floating_sensor" default="true"/>
     <arg name="floating_sensor_model" value="$(find nbv_exploration)/urdf/floating_sensor.gazebo"/>
 
     <arg name="rtab_ns" default="rtabmap"/>
@@ -28,17 +28,17 @@
     <!-- Half sized scenario spawn point -->
 	<arg name="vehicle_starting_x" value="4"    if="$(arg world_type_half_size)"/>
 	<arg name="vehicle_starting_y" value="-5"   if="$(arg world_type_half_size)"/>
-	<arg name="vehicle_starting_z" value="4"    if="$(arg world_type_half_size)"/>
+        <arg name="vehicle_starting_z" value="3"    if="$(arg world_type_half_size)"/>
 	<arg name="vehicle_starting_Y" value="3.14" if="$(arg world_type_half_size)"/>
 
 
     <!-- Misc settings -->
-    <arg name="enable_rtab" default="false"/>
+    <arg name="enable_rtab"  default="false"/>
     <arg name="start_gazebo" default="true"/>
     
     <arg name="scan_topic" default="/nbv_exploration/scan"/>
     <arg name="depth_topic" default="/nbv_exploration/depth"/>
-	<arg name="depth2_topic" default="/nbv_exploration/depth2"/>
+    <arg name="depth2_topic" default="/nbv_exploration/depth2"/>
     
     <!-- Start Gazebo and set up the world -->
     <include if="$(arg start_gazebo)" file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -73,7 +73,7 @@
       <arg name="vehicle_starting_Y" value="$(arg vehicle_starting_Y)"/>
     </include>
 
-	<include unless="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_uav.launch">
+    <include unless="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_uav.launch">
       <arg name="vehicle_starting_x" value="$(arg vehicle_starting_x)"/>
       <arg name="vehicle_starting_y" value="$(arg vehicle_starting_y)"/>
       <arg name="vehicle_starting_z" value="$(arg vehicle_starting_z)"/>
@@ -81,9 +81,8 @@
     </include>
     
     <!-- Start RVIZ -->
-    <node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/config/nbv_rtabmap.rviz" required="false" />
-    
-    
+    <!--node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/config/nbv_rtabmap.rviz" required="false" /-->
+     
     <!-- Set up RTAB -->
     <group ns="$(arg rtab_ns)" if="$(arg enable_rtab)">
       <node pkg="rtabmap_ros" name="rtabmap" type="rtabmap" output="screen" args="--delete_db_on_start">
@@ -140,7 +139,6 @@
     <!-- correct the laser scan points near the max and min range -->
     <node if="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
-
 	  <remap from="scan_in"    to="/floating_sensor/scan"/>
 	  <remap from="scan_out"   to="$(arg scan_topic)"/>
 	  <remap from="depth_in"   to="/floating_sensor/camera/depth/points"/>
@@ -150,8 +148,7 @@
     </node>
 
     <node unless="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
-      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
-      
+      <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />     
 	  <remap from="scan_in"    to="/iris/scan"/>
 	  <remap from="scan_out"   to="$(arg scan_topic)"/>
 	  <remap from="depth_in"   to="/iris/xtion_sensor/iris/xtion_sensor_camera/depth/points"/>
