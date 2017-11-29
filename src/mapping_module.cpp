@@ -517,7 +517,7 @@ void MappingModule::callbackDepthSync(const sensor_msgs::PointCloud2ConstPtr& cl
       std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
     }
 
-    if (!is_get_camera_data_)
+    if (!getCameraData)
     {
       if (is_debugging_)
         std::cout << "[Mapping]" << cc.yellow << "Not allowed to process depth data yet\n";
@@ -545,7 +545,7 @@ void MappingModule::callbackDepth(const sensor_msgs::PointCloud2& cloud_msg)
       std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
     }
 
-    if (!is_get_camera_data_ || (camera_done_flags_ & 0x01))
+    if (!getCameraData || (camera_done_flags_ & 0x01))
     {
       if (is_debugging_)
         std::cout << "[Mapping]" << cc.yellow << "Not allowed to process depth data yet\n";
@@ -572,7 +572,7 @@ void MappingModule::callbackDepth2(const sensor_msgs::PointCloud2& cloud_msg)
       std::cout << "[Mapping] " << cc.green << "Depth sensing\n" << cc.reset;
     }
 
-    if (!is_get_camera_data_ || (camera_done_flags_ & 0x02))
+    if (!getCameraData || (camera_done_flags_ & 0x02))
     {
       if (is_debugging_)
         std::cout << "[Mapping]" << cc.yellow << "Not allowed to process depth data yet\n";
@@ -592,7 +592,7 @@ void MappingModule::callbackDepth2(const sensor_msgs::PointCloud2& cloud_msg)
 
 bool MappingModule::commandGetCameraData()
 {
-  is_get_camera_data_ = true;
+  getCameraData = true;
   camera_done_flags_ = 0;
 
   // Subscribe to topic
@@ -606,7 +606,7 @@ bool MappingModule::commandGetCameraData()
     // Check if all callbacks are done successfully
     if (camera_done_flags_ == all_done_flags_ )
     {
-      is_get_camera_data_ = true;
+      getCameraData = true;
       break;
     }
 
@@ -615,7 +615,7 @@ bool MappingModule::commandGetCameraData()
   }
   timer.stop("[MappingModule]commandGetCameraData-waiting");
 
-  if (is_get_camera_data_)
+  if (getCameraData)
   {
     std::cout << "[Mapping] " << cc.magenta << "Could not get camera data\n" << cc.reset;
   }
@@ -1060,7 +1060,7 @@ PointCloudXYZ::Ptr MappingModule::getPointCloud()
 
 void MappingModule::initializeParameters()
 {
-  is_get_camera_data_ = false;
+  getCameraData = false;
   is_scanning_ = false;
 
   filename_pcl_          = "profile_cloud.pcd";
@@ -1136,14 +1136,15 @@ void MappingModule::initializeTopicHandlers()
   // >>>>>>>>>>>>>>>>>
 
   // Sensor data
-  sub_rgbd_ = ros_node_.subscribe(topic_depth_, 1, &MappingModule::callbackDepth, this);
+  /*
+  sub_rgbd_  = ros_node_.subscribe(topic_depth_, 1, &MappingModule::callbackDepth, this);
   sub_rgbd2_ = ros_node_.subscribe(topic_depth2_, 1, &MappingModule::callbackDepth2, this);
-
-  //message_filters::Subscriber<sensor_msgs::PointCloud2> depth1_sub(ros_node_, topic_depth_, 1);
-  //message_filters::Subscriber<sensor_msgs::PointCloud2> depth2_sub(ros_node_, topic_depth2_, 1);
-  //message_filters::TimeSynchronizer<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync(depth1_sub, depth2_sub, 10);
+  */
+  message_filters::Subscriber<sensor_msgs::PointCloud2> depth1_sub(ros_node_, topic_depth_, 1);
+  message_filters::Subscriber<sensor_msgs::PointCloud2> depth2_sub(ros_node_, topic_depth2_, 1);
+  message_filters::TimeSynchronizer<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync(depth1_sub, depth2_sub, 10);
   //message_filters::Synchronizer<sync_policy> sync(sync_policy(10), depth1_sub, depth2_sub);
-  //sync.registerCallback(boost::bind(&MappingModule::callbackDepthSync, this, _1, _2));
+  sync.registerCallback(boost::bind(&MappingModule::callbackDepthSync, this, _1, _2));
 
 
   //sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
@@ -1354,11 +1355,6 @@ void MappingModule::updateVoxelDensities(const PointCloudXYZ::Ptr& cloud)
     }
   }
 }
-
-
-
-
-
 
 void MappingModule::updateVoxelNormals()
 {

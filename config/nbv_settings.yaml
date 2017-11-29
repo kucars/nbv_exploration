@@ -11,11 +11,11 @@ debug_load_state: false
 ############
 ## Scenario settings
 ############
-nav_bounds_x_max: 20
-nav_bounds_x_min: -20
-nav_bounds_y_max: 20
-nav_bounds_y_min: -20
-nav_bounds_z_max: 20
+nav_bounds_x_max: 5
+nav_bounds_x_min: -5
+nav_bounds_y_max: 5
+nav_bounds_y_min: -5
+nav_bounds_z_max: 5
 nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may collide with the floor
 
 object_bounds_x_max: 20
@@ -49,8 +49,8 @@ uav_pose_z_0: .5
 uav_pose_yaw_0: 1.571
 
 uav_pose_x_1: 0
-uav_pose_y_1: -20
-uav_pose_z_1: 5
+uav_pose_y_1: -5
+uav_pose_z_1: 2
 uav_pose_yaw_1: 1.571
 
 uav_pose_x_2: -3
@@ -78,8 +78,8 @@ mapping_voxel_grid_res_rgbd: 0.02
 ############
 ## Profiling settings
 ############
-profiling_skip: false
-profiling_skip_load_map: false #if profiling was skipped, load a preexisting map?
+profiling_skip: true
+profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false

@@ -177,7 +177,7 @@ private:
 
   bool is_filling_octomap_;
   bool is_filling_octomap_continuously_;
-  bool is_get_camera_data_;
+  bool getCameraData;
   uint camera_done_flags_;
   uint all_done_flags_;
   bool is_scanning_;
@@ -264,7 +264,7 @@ private:
     ar & is_debugging_; //Set to true to see debug text
     ar & is_filling_octomap_;
     ar & is_filling_octomap_continuously_;
-    ar & is_get_camera_data_;
+    ar & getCameraData;
     ar & is_scanning_;
     ar & is_checking_symmetry_;
     ar & is_integrating_prediction_;

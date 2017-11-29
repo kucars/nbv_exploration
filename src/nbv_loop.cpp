@@ -446,9 +446,11 @@ void NBVLoop::runStateMachine()
     {
       case NBVState::IDLE:
         state = NBVState::MOVING_COMPLETE;
+        ROS_INFO_THROTTLE(1,"IDLE");
       break;
 
       case NBVState::STARTING_ROBOT:
+        ROS_INFO_THROTTLE(1,"Starting Robot");
         if( vehicle_->isReady() )
         {
           state = NBVState::STARTING_ROBOT_COMPLETE;
@@ -459,6 +461,7 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::STARTING_ROBOT_COMPLETE:
+        ROS_INFO_THROTTLE(1,"Starting Profiling");
         if (!is_done_profiling)
         {
           state = NBVState::PROFILING_PROCESSING;

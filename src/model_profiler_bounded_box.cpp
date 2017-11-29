@@ -135,16 +135,13 @@ bool ModelProfilerBoundedBox::run(PointCloudXYZ::Ptr profile_cloud_ptr)
   return false; //Not done profiling
 }
 
-
-
-
-
 void ModelProfilerBoundedBox::scan()
 {
   // Make sure sensor is stationary/at target location
   // Helps with floating sensor when it's teleporting
   while (ros::ok() && !vehicle_->isStationary(1) )
   {
+    ROS_INFO_THROTTLE(1,"Stabalizing Vehicle");
     ros::spinOnce();
   }
 

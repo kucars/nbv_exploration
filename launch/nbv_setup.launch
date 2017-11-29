@@ -10,7 +10,7 @@
     <arg name="floating_sensor_model" value="$(find nbv_exploration)/urdf/floating_sensor.gazebo"/>
 
     <arg name="rtab_ns" default="rtabmap"/>
-	<env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
+    <env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
 
     <!-- Starting position -->
     <!-- Debug box UAV start location -->
