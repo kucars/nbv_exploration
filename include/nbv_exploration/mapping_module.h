@@ -33,8 +33,15 @@
 #include <pcl/registration/icp.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+
 #include "nbv_exploration/common.h"
 #include "nbv_exploration/symmetry_detector.h"
+
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync_policy;
 
 struct OctomapKeyCompare {
   bool operator() (const octomap::OcTreeKey& lhs, const octomap::OcTreeKey& rhs) const
@@ -83,8 +90,9 @@ public:
   // =========
   // Methods
   // =========
-  MappingModule();
-
+  MappingModule(const ros::NodeHandle& nh_, const ros::NodeHandle& nh_private_);
+  MappingModule(){}
+  ~MappingModule();
   bool commandGetCameraData();
   bool commandFinalMapLoad();
   bool commandFinalMapSave();
@@ -218,7 +226,8 @@ private:
   std::string topic_tree_predicted_;
 
   // == Publishers
-  ros::NodeHandle ros_node_;
+  ros::NodeHandle nh;
+  ros::NodeHandle nh_private;
 
   ros::Publisher pub_global_cloud_;
   ros::Publisher pub_scan_cloud_;
@@ -233,6 +242,9 @@ private:
   ros::Subscriber sub_scan_command_;
 
   tf::TransformListener *tf_listener_;
+  message_filters::Subscriber<sensor_msgs::PointCloud2> *depth1_sub;
+  message_filters::Subscriber<sensor_msgs::PointCloud2> *depth2_sub;
+  message_filters::Synchronizer<sync_policy> *sync;
 
 private:
   friend class boost::serialization::access;

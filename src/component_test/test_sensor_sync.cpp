@@ -141,10 +141,11 @@ int main(int argc, char **argv)
 
   ros::init(argc, argv, "test_sensor_sync");
 
+  ros::NodeHandle nh, nh_private("~");
   vehicle_ = new VehicleControlFloatingSensor();
   vehicle_->start();
 
-  mapping_module_ = new MappingModule();
+  mapping_module_ = new MappingModule(nh,nh_private);
   mapping_module_->commandProfilingStart();
   mapping_module_->commandProfilingStop();
   boost::thread mapping_thread_(&MappingModule::run, mapping_module_);

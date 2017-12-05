@@ -34,8 +34,8 @@ for file in filenames:
   if not os.path.exists(resultfolder):
       os.makedirs(resultfolder)
 
-  shutil.copy2('/home/abdullah/.ros/final_octree.ot',resultfolder)
-  shutil.copy2('/home/abdullah/.ros/final_cloud.pcd',resultfolder)
+  shutil.copy2('/tmp/final_octree.ot',resultfolder)
+  shutil.copy2('/tmp/final_cloud.pcd',resultfolder)
 
   """
   os.chdir( resultfolder )

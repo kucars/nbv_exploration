@@ -31,7 +31,6 @@ void ModelProfilerBase::setScanSpeed(double speed)
   scan_speed_ = speed;
 }
 
-
 bool ModelProfilerBase::skipProfiling(bool skip_map_loading)
 {
   if (skip_map_loading)
@@ -61,7 +60,6 @@ bool ModelProfilerBase::skipProfiling(bool skip_map_loading)
 
   return true;
 }
-
 
 bool ModelProfilerBase::startProfiling()
 {

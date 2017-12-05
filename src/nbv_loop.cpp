@@ -38,7 +38,9 @@
 #include "nbv_exploration/nbv_loop.h"
 
 
-NBVLoop::NBVLoop()
+NBVLoop::NBVLoop(const ros::NodeHandle &nh_, const ros::NodeHandle &nh_private_):
+  nh(nh_),
+  nh_private(nh_private_)
 {
   // >>>>>>>>>>>>>>>>>
   // Initialize ROS
@@ -199,7 +201,7 @@ void NBVLoop::initAllModules(bool loaded_state)
 
 void NBVLoop::initMappingModule()
 {
-  mapping_module_ = new MappingModule();
+  mapping_module_ = new MappingModule(nh,nh_private);
 }
 
 void NBVLoop::initModelProfiler()
@@ -485,7 +487,7 @@ void NBVLoop::runStateMachine()
         state = NBVState::TERMINATION_CHECK;
         terminationCheck();
         timer.stop("[NBVLoop]TerminationCheck");
-        timer.stop("[NBVLoop]-Iteration");
+        timer.stop("[NBVLoop]Iteration");
         break;
 
       case NBVState::TERMINATION_MET:
@@ -501,7 +503,7 @@ void NBVLoop::runStateMachine()
         break;
 
       case NBVState::TERMINATION_NOT_MET:
-        timer.start("[NBVLoop]-Iteration");
+        timer.start("[NBVLoop]Iteration");
         state = NBVState::VIEWPOINT_GENERATION;
         timer.start("[NBVLoop]Generator");
         generateViewpoints();
@@ -522,14 +524,12 @@ void NBVLoop::runStateMachine()
         vehicle_->moveVehicle(0.25); //Make sure we go to the exact position
         timer.stop("[NBVLoop]Moving");
 
-
         timer.start("[NBVLoop]commandGetCameraData");
         std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
         //ros::Duration(0.3).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
         //ros::Duration(2.0).sleep(); // 2 cameras
         mapping_module_->commandGetCameraData();
         timer.stop("[NBVLoop]commandGetCameraData");
-
         state = NBVState::MOVING_COMPLETE;
         break;
     }
@@ -611,7 +611,7 @@ void NBVLoop::updateHistory()
     iteration_msg.selected_utility_prediction      = view_selecter_->info_selected_utility_prediction_;
     iteration_msg.selected_utility_occupied_voxels = view_selecter_->info_selected_occupied_voxels_;
 
-    iteration_msg.time_iteration   = timer.getLatestTime("[NBVLoop]-Iteration");
+    iteration_msg.time_iteration   = timer.getLatestTime("[NBVLoop]Iteration");
     iteration_msg.time_generation  = timer.getLatestTime("[NBVLoop]Generator");
     iteration_msg.time_selection   = timer.getLatestTime("[NBVLoop]Evaluate");
     iteration_msg.time_mapping     = timer.getLatestTime("[NBVLoop]commandGetCameraData");

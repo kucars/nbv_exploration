@@ -6,23 +6,22 @@
 
 #include "nbv_exploration/mapping_module.h"
 #include <mutex>
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-
-typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync_policy;
 
 std::mutex mutex_profile;
 std::mutex mutex_octo;
 std::mutex mutex_depth_callback;
 
-MappingModule::MappingModule()
+MappingModule::MappingModule(const ros::NodeHandle& nh_, const ros::NodeHandle& nh_private_)
   : cloud_ptr_rgbd_ (new PointCloudXYZ),
     cloud_ptr_profile_ (new PointCloudXYZ),
     cloud_ptr_profile_symmetry_ (new PointCloudXYZ),
     octree_(NULL),
-    counter_(0)
+    counter_(0),
+    nh(nh_),
+    nh_private(nh_private_),
+    depth1_sub(NULL),
+    depth2_sub(NULL),
+    sync(NULL)
 {
   // >>>>>>>>>>>>>>>>>
   // Initialization
@@ -50,6 +49,16 @@ MappingModule::MappingModule()
   std::cout << "\t" << topic_depth2_ << "\n";
   std::cout << "\t" << topic_scan_in_ << "\n";
   std::cout << "\n";
+}
+
+MappingModule::~MappingModule()
+{
+  if(depth1_sub)
+    delete depth1_sub;
+  if(depth2_sub)
+    delete depth2_sub;
+  if(sync)
+    delete sync;
 }
 
 void MappingModule::run()
@@ -425,6 +434,7 @@ PointCloudXYZ::Ptr MappingModule::correctDepth(const sensor_msgs::PointCloud2& i
 
 void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
 {
+  std::cout << "[Mapping] " << cc.green << "Processing Depth\n" << cc.reset;
   timer.start("[MappingModule]callbackDepth-conversion");
 
   PointCloudXYZ::Ptr cloud_raw_ptr;
@@ -503,13 +513,11 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
 
   // == Update density map
   updateVoxelDensities(cloud_distance_ptr);
+  std::cout << "[Mapping] " << cc.green << "Done Processing Depth\n" << cc.reset;
 }
-
 
 void MappingModule::callbackDepthSync(const sensor_msgs::PointCloud2ConstPtr& cloud_msg1, const sensor_msgs::PointCloud2ConstPtr& cloud_msg2)
 {
-  std::cout << "[Mapping] " << cc.green << "HERE\n" << cc.reset;
-
     timer.start("[MappingModule]callbackDepthSync");
 
     if (is_debugging_)
@@ -592,37 +600,24 @@ void MappingModule::callbackDepth2(const sensor_msgs::PointCloud2& cloud_msg)
 
 bool MappingModule::commandGetCameraData()
 {
-  getCameraData = true;
+  getCameraData      = true;
   camera_done_flags_ = 0;
 
-  // Subscribe to topic
-  //sub_rgbd_ = ros_node_.subscribe(topic_depth_, 1, &MappingModule::callbackDepth, this);
-  //sub_rgbd2_ = ros_node_.subscribe(topic_depth2_, 1, &MappingModule::callbackDepth2, this);
-
   timer.start("[MappingModule]commandGetCameraData-waiting");
-  std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
-  for (int i=0; i<500 && ros::ok(); i++)
+  while(camera_done_flags_ != all_done_flags_ )
   {
-    // Check if all callbacks are done successfully
-    if (camera_done_flags_ == all_done_flags_ )
-    {
-      getCameraData = true;
-      break;
-    }
-
+    std::cout << "[Mapping] " << cc.magenta << "Waiting for camera data\n" << cc.reset;
     ros::spinOnce();
-    ros::Rate(100).sleep();
+    ros::Rate(1000).sleep();
   }
+  getCameraData = false;
+
   timer.stop("[MappingModule]commandGetCameraData-waiting");
 
   if (getCameraData)
   {
     std::cout << "[Mapping] " << cc.magenta << "Could not get camera data\n" << cc.reset;
   }
-
-  // Unsubscribe from topic
-  //sub_rgbd_.shutdown();
-
 
   // Save final map ever 'x' iterations
   counter_++;
@@ -819,7 +814,7 @@ bool MappingModule::commandProfilingStart()
 {
   std::cout << "[Mapping] " << cc.green << "Started profiling\n" << cc.reset;
 
-  sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
+  sub_scan_ = nh.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
 
   if (!octree_)
   {
@@ -1063,15 +1058,13 @@ void MappingModule::initializeParameters()
   getCameraData = false;
   is_scanning_ = false;
 
-  filename_pcl_          = "profile_cloud.pcd";
-  filename_pcl_save_state_= "rgbd_cloud_save_state.pcd";
-  filename_pcl_final_    = "final_cloud.pcd";
-  filename_pcl_symmetry_ = "profile_cloud_symmetry.pcd";
-  filename_octree_       = "profile_octree.ot";
-  filename_octree_final_ = "final_octree.ot";
+  filename_pcl_           = "/tmp/profile_cloud.pcd";
+  filename_pcl_save_state_= "/tmp/rgbd_cloud_save_state.pcd";
+  filename_pcl_final_     = "/tmp/final_cloud.pcd";
+  filename_pcl_symmetry_  = "/tmp/profile_cloud_symmetry.pcd";
+  filename_octree_        = "/tmp/profile_octree.ot";
+  filename_octree_final_  = "/tmp/final_octree.ot";
 
-  //topic_depth_        = "/floating_sensor/camera/depth/points";
-  //topic_depth2_       = "/floating_sensor/camera2/depth/points";
   topic_depth_        = "/nbv_exploration/depth";
   topic_depth2_       = "/nbv_exploration/depth2";
   topic_map_          = "/nbv_exploration/global_map_cloud";
@@ -1136,32 +1129,24 @@ void MappingModule::initializeTopicHandlers()
   // >>>>>>>>>>>>>>>>>
 
   // Sensor data
-  /*
-  sub_rgbd_  = ros_node_.subscribe(topic_depth_, 1, &MappingModule::callbackDepth, this);
-  sub_rgbd2_ = ros_node_.subscribe(topic_depth2_, 1, &MappingModule::callbackDepth2, this);
-  */
-  message_filters::Subscriber<sensor_msgs::PointCloud2> depth1_sub(ros_node_, topic_depth_, 1);
-  message_filters::Subscriber<sensor_msgs::PointCloud2> depth2_sub(ros_node_, topic_depth2_, 1);
-  message_filters::TimeSynchronizer<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync(depth1_sub, depth2_sub, 10);
-  //message_filters::Synchronizer<sync_policy> sync(sync_policy(10), depth1_sub, depth2_sub);
-  sync.registerCallback(boost::bind(&MappingModule::callbackDepthSync, this, _1, _2));
 
+  depth1_sub = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh, topic_depth_, 1);
+  depth2_sub = new message_filters::Subscriber<sensor_msgs::PointCloud2>(nh, topic_depth2_, 1);
+  sync = new message_filters::Synchronizer<sync_policy>(sync_policy(10), *depth1_sub, *depth2_sub);
 
-  //sub_rgbd_ = ros_node_.subscribe(topic_depth_, 10, &MappingModule::callbackDepth, this);
-  //sub_scan_ = ros_node_.subscribe(topic_scan_in_, 10, &MappingModule::callbackScan, this);
-
-  //ros::ServiceServer service = ros_node_.advertiseService("/nbv_exploration/mapping_command", &MappingModule::callbackCommand, this);
+  //message_filters::TimeSynchronizer<sensor_msgs::PointCloud2, sensor_msgs::PointCloud2> sync(depth1_sub, depth2_sub, 10);
+  sync->registerCallback(boost::bind(&MappingModule::callbackDepthSync, this, _1, _2));
 
   tf_listener_ = new tf::TransformListener();
 
   // >>>>>>>>>>>>>>>>>
   // Publishers
   // >>>>>>>>>>>>>>>>>
-  pub_global_cloud_  = ros_node_.advertise<sensor_msgs::PointCloud2>(topic_map_, 10);
-  pub_scan_cloud_    = ros_node_.advertise<sensor_msgs::PointCloud2>(topic_scan_out_, 10);
-  pub_rgbd_cloud_    = ros_node_.advertise<sensor_msgs::PointCloud2>(topic_rgbd_out_, 10);
-  pub_tree_          = ros_node_.advertise<octomap_msgs::Octomap>(topic_tree_, 10);
-  pub_tree_prediction_ = ros_node_.advertise<octomap_msgs::Octomap>(topic_tree_predicted_, 10);
+  pub_global_cloud_  = nh.advertise<sensor_msgs::PointCloud2>(topic_map_, 10);
+  pub_scan_cloud_    = nh.advertise<sensor_msgs::PointCloud2>(topic_scan_out_, 10);
+  pub_rgbd_cloud_    = nh.advertise<sensor_msgs::PointCloud2>(topic_rgbd_out_, 10);
+  pub_tree_          = nh.advertise<octomap_msgs::Octomap>(topic_tree_, 10);
+  pub_tree_prediction_ = nh.advertise<octomap_msgs::Octomap>(topic_tree_predicted_, 10);
 }
 
 void MappingModule::processScans()

@@ -24,6 +24,9 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "nbv_loop", ros::init_options::NoSigintHandler);
   signal(SIGINT, sigIntHandler);
 
+  ros::NodeHandle nh;
+  ros::NodeHandle nh_private("~");
+
   bool is_save_state, is_load_state;
   std::string serialization_file = "nbv_serialization.dat";
   ros::param::param("~debug_save_state", is_save_state, false);
@@ -45,12 +48,12 @@ int main(int argc, char **argv)
     catch (...)
     {
       is_load_state = false;
-      n = new NBVLoop();
+      n = new NBVLoop(nh,nh_private);
     }
   }
   else
   {
-    n = new NBVLoop();
+    n = new NBVLoop(nh,nh_private);
   }
 
   // >>>>>>>>>

@@ -72,6 +72,8 @@ public:
 
   // Topic handlers
   ros::Publisher pub_iteration_info;
+  ros::NodeHandle nh;
+  ros::NodeHandle nh_private;
 
   // Timing
   double time_view_generation_;
@@ -113,7 +115,8 @@ public:
   /* =========
    * METHODS
    * ========= */
-  NBVLoop();
+  NBVLoop(const ros::NodeHandle& nh_, const ros::NodeHandle& nh_private_);
+  NBVLoop(){}
   void initAllModules(bool loaded_state);
   void runStateMachine();
   void sigIntHandler(int sig);
