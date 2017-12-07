@@ -190,7 +190,6 @@ void MappingModule::addPointCloudToTree(octomap::OcTree* octree_in, PointCloudXY
   // == Insert point cloud based on planar (camera) or spherical (laser) scan data
   octomap::KeySet free_cells, occupied_cells;
 
-
   if (isPlanar)
     computeTreeUpdatePlanar(octree_in, ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
   else
@@ -436,6 +435,13 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
 {
   std::cout << "[Mapping] " << cc.green << "Processing Depth\n" << cc.reset;
   timer.start("[MappingModule]callbackDepth-conversion");
+  if(cloud_msg.data.size() == 0)
+  {
+    std::cout << "[Mapping] " << cc.red << "Cloud Empty, Skipping\n" << cc.reset;
+    return;
+  }
+  else
+    std::cout << "[Mapping] " << cc.green << "Point Size:"<<cloud_msg.data.size()<<"\n" << cc.reset;
 
   PointCloudXYZ::Ptr cloud_raw_ptr;
   cloud_raw_ptr = correctDepth(cloud_msg);
@@ -477,8 +483,7 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
   // std::cout << "Depth Topic: " << cloud_msg.header.frame_id << "\n";
   // std::cout << "Depth stamp: " << cloud_msg.header.stamp << "\n";
   // std::cout << "Transform stamp: " << transform.stamp_ << "\n";
-  std::cout << "MAP: Y: " << transform.getOrigin().getY() << "\n";
-
+  // std::cout << "MAP: Y: " << transform.getOrigin().getY() << "\n";
 
   // == Convert tf:Transform to Eigen::Matrix4d
   Eigen::Matrix4d tf_eigen = pose_conversion::convertStampedTransform2Matrix4d(transform);
@@ -507,7 +512,9 @@ void MappingModule::processDepth(const sensor_msgs::PointCloud2& cloud_msg)
   if (is_checking_symmetry_ && !is_integrating_prediction_)
   {
     timer.start("[MappingModule]callbackDepth-updatePrediction");
+    std::cout << cc.yellow << "[Mapping] " <<" HERE --->>>\n";fflush(stdout);
     updatePrediction(octree_prediction_, *cloud_raw_ptr, origin, sensor_dir, max_rgbd_range_, true);
+    std::cout << cc.yellow << "[Mapping] " << " HERE <<<---\n";fflush(stdout);
     timer.stop("[MappingModule]callbackDepth-updatePrediction");
   }
 
@@ -790,7 +797,6 @@ bool MappingModule::commandProfileSave()
     pcl::io::savePCDFileASCII (filename_pcl_symmetry_, *cloud_ptr_profile_symmetry_);
   }
 
-
   // Octree
   if (is_filling_octomap_)
   {
@@ -895,7 +901,6 @@ void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const oc
    */
 
   sensor_dir.normalize();
-
   bool lazy_eval = false;
   bool use_ray_skipping = false;
   if (camera_width_px_*camera_height_px_ == scan.size() &&
@@ -904,26 +909,38 @@ void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const oc
     use_ray_skipping = true;
     std::cout << "[Mapping] " << "Ray skipping\n";
   }
-
+  std::cout <<cc.red << "[Mapping] computeTreeUpdatePlanar 1\n";fflush(stdout);
   // create as many KeyRays as there are OMP_THREADS defined,
   // one buffer for each thread
   std::vector<octomap::KeyRay> keyrays;
+  /*
+  std::cout << "[Mapping] computeTreeUpdatePlanar 3 KeyRays:"<<keyrays.size()<< cc.red<<"\n";fflush(stdout);
   #ifdef _OPENMP
+    std::cout << "[Mapping] USING OPENMP\n"<<cc.red;fflush(stdout);
     #pragma omp parallel
     #pragma omp critical
+    std::cout << "[Mapping] USING OPENMP 2\n"<<cc.red;fflush(stdout);
     {
       if (omp_get_thread_num() == 0){
+        std::cout << "[Mapping] USING OPENMP 3\n"<<cc.red;fflush(stdout);
         keyrays.resize(omp_get_num_threads());
+        std::cout << "[Mapping] USING OPENMP 4\n"<<cc.red;fflush(stdout);
       }
 
     } // end critical
   #else
+    std::cout << "[Mapping] NOT USING OPENMP\n"<<cc.red;fflush(stdout);
     keyrays.resize(1);
   #endif
+  */
+  keyrays.resize(omp_get_max_threads());
+  std::cout <<cc.red << "[Mapping] computeTreeUpdatePlanar 2c\n";fflush(stdout);
 
+  //std::cout << "[Mapping] computeTreeUpdatePlanar Pre 4, scan size:"<<cc.red<< scan.size() <<" camera width px:"<<camera_width_px_<<" octree size:"<<octree_in->size()<<" keyRays:"<<keyrays.size()<<"\n";fflush(stdout);
   int num_threads = keyrays.size();
   std::vector<octomap::KeySet> free_cells_threaded(num_threads);
   std::vector<octomap::KeySet> occupied_cells_threaded(num_threads);
+  std::cout <<cc.red << "[Mapping] computeTreeUpdatePlanar 3 Max Number of threads:"<<omp_get_max_threads()<<"\n";fflush(stdout);
 
   #ifdef _OPENMP
   omp_set_num_threads(num_threads);
@@ -976,14 +993,12 @@ void MappingModule::computeTreeUpdatePlanar(octomap::OcTree* octree_in, const oc
     } // end if maxrange
   } // end for all points, end of parallel OMP loop
 
-
   // Merge threaded vectors
   for (int i=0; i<num_threads; i++)
   {
     free_cells.insert(free_cells_threaded[i].begin(), free_cells_threaded[i].end());
     occupied_cells.insert(occupied_cells_threaded[i].begin(), occupied_cells_threaded[i].end());
   }
-
 
   // prefer occupied cells over free ones (and make sets disjunct)
   for(octomap::KeySet::iterator it = free_cells.begin(), end=free_cells.end(); it!= end; )
@@ -1009,8 +1024,6 @@ double MappingModule::getAveragePointDensity()
 
   return double(cloud_ptr_rgbd_->points.size())/num_occ;
 }
-
-
 
 bool MappingModule::isNodeFree(octomap::OcTreeNode node)
 {
@@ -1194,12 +1207,23 @@ void MappingModule::updatePrediction(octomap::OcTree* octree_in, PointCloudXYZ c
 
   // == Insert point cloud based on planar (camera) or spherical (laser) scan data
   octomap::KeySet free_cells, occupied_cells;
-
+  std::cout << "[Mapping] " << cc.yellow<<" --- D ---\n";fflush(stdout);
   if (isPlanar)
-    computeTreeUpdatePlanar(octree_in, ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
+  {
+   try
+    {
+      computeTreeUpdatePlanar(octree_in, ocCloud, sensor_origin, sensor_dir, free_cells, occupied_cells, range);
+    }
+    catch(...)
+    {
+      std::cout << boost::current_exception_diagnostic_information() << std::endl;
+    }
+  }
   else
+  {
     octree_in->computeUpdate(ocCloud, sensor_origin, free_cells, occupied_cells, range);
-
+  }
+  std::cout << "[Mapping] " << cc.yellow<<" --- E ---\n";fflush(stdout);
   // Clear all predicted values
   for (octomap::KeySet::iterator it = free_cells.begin(); it != free_cells.end(); ++it)
     octree_in->updateNode(*it, -5.0f);
@@ -1233,6 +1257,8 @@ void MappingModule::updateVoxelDensities()
   // ============
   // Create KD tree to find nearest neighbors
   // ============
+  if(cloud_ptr_rgbd_->points.size()<=0)
+    return;
   pcl::KdTreeFLANN<PointXYZ> kdtree;
   kdtree.setInputCloud (cloud_ptr_rgbd_);
   double search_radius = octree_->getResolution()/sqrt(2); //Encapsulates a voxel
@@ -1278,7 +1304,8 @@ void MappingModule::updateVoxelDensities(const PointCloudXYZ::Ptr& cloud)
 {
   std::map<octomap::OcTreeKey, VoxelDensity>::iterator it;
   octomap::OcTreeKey key;
-
+  if(cloud_ptr_rgbd_->empty())
+    return;
   //=======
   // Clear old values around newly collected points
   //=======
@@ -1347,6 +1374,9 @@ void MappingModule::updateVoxelNormals()
   // Fill a map with point count at each octreekey
   //=======
   voxel_normals_.clear(); // Clear old densities
+
+  if(cloud_ptr_rgbd_->points.size()<=0)
+    return;
 
   // ============
   // Compute normals

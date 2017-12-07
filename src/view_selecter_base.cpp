@@ -463,19 +463,20 @@ void ViewSelecterBase::getCameraRotationMtxs()
         break; // Success, break out of the loop
       }
       catch (tf2::LookupException ex){
-        ROS_ERROR("[ViewSelecterBase] %s",ex.what());
+        ROS_INFO_THROTTLE(1,"[ViewSelecterBase] Waiting for Transformation %s",ex.what());
         ros::Duration(0.1).sleep();
       }
       catch (tf2::ExtrapolationException ex){
-        ROS_ERROR("[ViewSelecterBase] %s",ex.what());
+        ROS_INFO_THROTTLE(1,"[ViewSelecterBase] Waiting for Transformation %s",ex.what());
+        ros::Duration(0.1).sleep();
+      }
+      catch (tf2::ConnectivityException ex){
+        ROS_INFO_THROTTLE(1,"[ViewSelecterBase] Waiting for Transformation %s",ex.what());
         ros::Duration(0.1).sleep();
       }
     }
-
     camera_rotation_mtx_.push_back( pose_conversion::getRotationMatrix(transform) );
   }
-
-
 }
 
 std::string ViewSelecterBase::getMethodName()

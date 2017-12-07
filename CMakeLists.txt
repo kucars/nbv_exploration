@@ -1,13 +1,33 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(nbv_exploration)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
 #PCL fails in debug mode with c++11. Set to release mode
 set(CMAKE_BUILD_TYPE Release)
+include(CheckCCompilerFlag)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+function(create_custom_compiler_flags name)
+   foreach (flag ${ARGN})
+      check_c_compiler_flag(${flag} ok)
+      if (ok)
+         if (cflags)
+            set(cflags "${cflags} ${flag}")
+         else ()
+            set(cflags "${flag}")
+         endif ()
+      endif ()
+   endforeach ()
+
+   string(TOUPPER ${name} upper)
+   set(CMAKE_C_FLAGS_${upper} "${cflags}" CACHE STRING "${name} C flags" FORCE)
+   set(CMAKE_CXX_FLAGS_${upper} "${cflags}" CACHE STRING "${name} CXX flags" FORCE)
+   mark_as_advanced(CMAKE_CXX_FLAGS_${upper} CMAKE_C_FLAGS_${upper})
+endfunction ()
+
 add_definitions(-D__PX4_ROS)
 add_definitions(-D__EXPORT=)
 add_definitions(-DMAVLINK_DIALECT=common)
+
+create_custom_compiler_flags(-g -O2 -fstack-protector-strong --param ssp-buffer-size=4 -fstack-check -flto)
 
 find_package(catkin REQUIRED COMPONENTS
   cmake_modules

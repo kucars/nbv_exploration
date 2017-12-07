@@ -57,7 +57,6 @@ bool ModelProfilerBase::skipProfiling(bool skip_map_loading)
     }
   }
 
-
   return true;
 }
 

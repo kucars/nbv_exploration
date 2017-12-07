@@ -139,10 +139,12 @@ void ModelProfilerBoundedBox::scan()
 {
   // Make sure sensor is stationary/at target location
   // Helps with floating sensor when it's teleporting
+  ros::Rate loopRate(30);
   while (ros::ok() && !vehicle_->isStationary(1) )
   {
     ROS_INFO_THROTTLE(1,"Stabalizing Vehicle");
     ros::spinOnce();
+    loopRate.sleep();
   }
 
   // Stop scanning
@@ -159,6 +161,7 @@ void ModelProfilerBoundedBox::scan()
       vehicle_->setWaypointIncrement(0, 0, bounds.z_max - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25);
       ros::spinOnce();
+      loopRate.sleep();
     }
   }
   else
@@ -171,6 +174,7 @@ void ModelProfilerBoundedBox::scan()
       vehicle_->setWaypointIncrement(0, 0, bounds.z_min - vehicle_->getPosition().z, 0);
       vehicle_->moveVehicle(0.25);
       ros::spinOnce();
+      loopRate.sleep();
     }
   }
 

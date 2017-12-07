@@ -12,6 +12,8 @@ import os
 from matplotlib import pyplot
 
 f, ax_plot = pyplot.subplots(5,2)
+figManager = pyplot.get_current_fig_manager()
+figManager.resize(*figManager.window.maxsize())
 
 # Define as dict so we can support values from multiple methods
 file_prefix = time.strftime("%Y-%m-%d_%H-%M-%S_", time.localtime())
@@ -37,7 +39,7 @@ selected_utility_occupied_voxels = {}
 def main():
   global file_prefix
   if ( len(sys.argv) > 1):
-    file_prefix = sys.argv[1] + "_" + file_prefix
+    file_prefix = sys.argv[1] + "/" + sys.argv[1] + "_" + file_prefix
 
   rospy.init_node('plot_iteration_info', anonymous=True)
   rospy.Subscriber("nbv_exploration/iteration_info", IterationInfo, callback)

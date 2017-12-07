@@ -118,7 +118,7 @@ public:
   NBVLoop(const ros::NodeHandle& nh_, const ros::NodeHandle& nh_private_);
   NBVLoop(){}
   void initAllModules(bool loaded_state);
-  void runStateMachine();
+  void runStateMachine(bool is_load_state);
   void sigIntHandler(int sig);
 
 private:

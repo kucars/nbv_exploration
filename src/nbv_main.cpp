@@ -59,12 +59,15 @@ int main(int argc, char **argv)
   // >>>>>>>>>
   // Run NBV loop
   // >>>>>>>>>
-  n->initAllModules(is_load_state);
+  //n->initAllModules(is_load_state);
 
-  PointCloudXYZ::Ptr cloud (new PointCloudXYZ);
-  cloud = n->mapping_module_->getPointCloud();
-  std::cout << "Point cloud size: " << cloud->points.size() << "\n\n";
-  n->runStateMachine();
+  if(!n)
+  {
+    ROS_ERROR("Something is wrong");
+    return 0;
+  }
+
+  n->runStateMachine(is_load_state);
 
   // >>>>>>>>>
   // Save NBV state

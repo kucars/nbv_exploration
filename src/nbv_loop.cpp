@@ -241,10 +241,10 @@ void NBVLoop::initParameters()
   // >>>>>>>>>>>>>>>>>
   // Read params
   // >>>>>>>>>>>>>>>>>
+
   // DEBUG
   ros::param::param("~debug_nbv_main_states", is_debug_states, false);
   ros::param::param("~view_selecter_compare", is_view_selecter_compare, false);
-
 
   // STATES
   ros::param::param("~profiling_skip", skip_profiling, false);
@@ -398,7 +398,6 @@ void NBVLoop::positionVehicleAfterProfiling()
   vehicle_->setSpeed(-1); //Allow instant teleportation if using the floating sensor. Ignored by other vehicles
   vehicle_->moveVehicle();
 
-
   // Process the termination condition
   terminationCheck();
 
@@ -408,7 +407,8 @@ void NBVLoop::positionVehicleAfterProfiling()
   mapping_module_->updateVoxelDensities();
 }
 
-void NBVLoop::profilingProcessing(){
+void NBVLoop::profilingProcessing()
+{
   if (state != NBVState::PROFILING_PROCESSING)
   {
     std::cout << "[NBVLoop] " << cc.red << "ERROR: Attempt to start profiling out of order\n" << cc.reset;
@@ -428,10 +428,15 @@ void NBVLoop::profilingProcessing(){
   }
 }
 
-void NBVLoop::runStateMachine()
+void NBVLoop::runStateMachine(bool is_load_state)
 {
   ROS_INFO("nbv_loop: Starting vehicle. Waiting for current position information.");
   state = NBVState::STARTING_ROBOT;
+
+  //Wait for simulation and other systems to startup
+  //ros::Duration(5.0).sleep();
+
+  initAllModules(is_load_state);
 
   // >>>>>>>>>>>>
   // Run mapping module in a new thread
@@ -442,6 +447,7 @@ void NBVLoop::runStateMachine()
   // Main NBV Loop
   // >>>>>>>>>>>>
   ros::Rate loop_rate(30);
+  timer.start("[NBVLoop]OverallTime");
   while (ros::ok() && !is_terminating)
   {
     switch(state)
@@ -467,7 +473,6 @@ void NBVLoop::runStateMachine()
         if (!is_done_profiling)
         {
           state = NBVState::PROFILING_PROCESSING;
-          profilingProcessing();
         }
         else
         {
@@ -537,7 +542,7 @@ void NBVLoop::runStateMachine()
     ros::spinOnce();
     loop_rate.sleep();
   }
-
+  timer.stop("[NBVLoop]OverallTime");
   // >>>>>>>>>>>>>>>>>
   // Node achieved termination condition, spin to continue publishing visualization data
   // >>>>>>>>>>>>>>>>>
