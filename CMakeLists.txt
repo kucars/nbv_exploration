@@ -45,6 +45,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
+  sspp
   tf_conversions
 )
 
@@ -53,6 +54,7 @@ find_package(Eigen REQUIRED)
 find_package(gazebo REQUIRED)
 find_package(octomap REQUIRED)
 find_package(PCL REQUIRED)
+find_package(CGAL QUIET COMPONENTS)
 
 set( ROS_DISTRO $ENV{ROS_DISTRO} )
 if(${ROS_DISTRO} STREQUAL "indigo" )
@@ -102,6 +104,7 @@ include_directories(
     ${GAZEBO_INCLUDE_DIRS}
     ${OCTOMAP_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
+    ${sspp_INCLUDE_DIRS}
     include #Adds my own custom class headers
     include/nbv_exploration
     include/control
@@ -182,11 +185,13 @@ add_dependencies(nbv_main
 target_link_libraries(nbv_main
     ${Boost_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY} ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} 
     ${catkin_LIBRARIES} -lgmp -lmpfr
+    ${CGAL_LIBRARY}
     ${Eigen_LIBRARIES}
     ${fcl_LIBRARIES}
     ${OCTOMAP_LIBRARIES}
     ${PCL_LIBRARIES}
     ${LIBFCL_LIBRARIES}
+    SSPathPlanner
     )
 
 add_executable(correct_laser_scan_and_depth src/correct_laser_scan_and_depth.cpp)

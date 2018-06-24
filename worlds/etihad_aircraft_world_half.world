@@ -70,7 +70,7 @@
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://etihad_aircraft/etihad.dae</uri>
+              <uri>model://etihad_aircraft/Etihad340.dae</uri>
 	      <scale>0.5 0.5 0.5</scale>
             </mesh>
           </geometry>
@@ -79,7 +79,7 @@
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <mesh>
-              <uri>model://etihad_aircraft/etihad.dae</uri>
+              <uri>model://etihad_aircraft/Etihad340.dae</uri>
 	      <scale>0.5 0.5 0.5</scale>
             </mesh>
           </geometry>

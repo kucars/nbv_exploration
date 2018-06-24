@@ -81,7 +81,7 @@
     </include>
     
     <!-- Start RVIZ -->
-    <!--node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/config/nbv_rtabmap.rviz" required="false" /-->
+    <node pkg="rviz" name="rviz" type="rviz" args="-d $(find nbv_exploration)/config/nbv_rtabmap.rviz" required="false" />
      
     <!-- Set up RTAB -->
     <group ns="$(arg rtab_ns)" if="$(arg enable_rtab)">

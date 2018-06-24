@@ -35,7 +35,7 @@ def cumsum(it):
         yield total
 
 
-dir = '/home/abdullah/NBV_Results'
+dir = '/home/randa/NBV_results'
 methods = {}
 skip_coverage = False
 

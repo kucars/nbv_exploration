@@ -166,7 +166,7 @@ int main (int argc, char** argv)
 {
   bool is_batch = false;
 
-  std::string filename_reference = "/home/abdullah/catkin_ws/src/nbv_exploration/models/pcd/etihad/etihad_clean.pcd";
+  std::string filename_reference = "/home/randa/workspace/generic_catkin_ws/src/nbv_exploration/models/pcd/etihad/etihad_clean.pcd";
   std::string filename_final = "/home/abdullah/.ros/final_cloud.pcd";
 
   PointCloudXYZ::Ptr cloud_ref (new PointCloudXYZ);

@@ -11,11 +11,11 @@ debug_load_state: false
 ############
 ## Scenario settings
 ############
-nav_bounds_x_max: 5
-nav_bounds_x_min: -5
-nav_bounds_y_max: 5
-nav_bounds_y_min: -5
-nav_bounds_z_max: 5
+nav_bounds_x_max: 20
+nav_bounds_x_min: -20
+nav_bounds_y_max: 20
+nav_bounds_y_min: -20
+nav_bounds_z_max: 20
 nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may collide with the floor
 
 object_bounds_x_max: 20
@@ -79,7 +79,7 @@ mapping_voxel_grid_res_rgbd: 0.02
 ## Profiling settings
 ############
 profiling_skip: true
-profiling_skip_load_map: false #if profiling was skipped, load a preexisting map?
+profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
@@ -95,7 +95,7 @@ profiling_circular_waypoints: 5
 # UAV starting pose after profiling
 ############
 # Select pose after completing profile
-profiling_complete_pose_number: 1
+profiling_complete_pose_number: 3
 
 ############
 ## Termination settings
@@ -109,7 +109,7 @@ termination_ros_spin_afterwards: false
 termination_window_size: 5
 termination_repeat_window_size: 10
 
-termination_iterations_max: 5
+termination_iterations_max: 1
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05
@@ -121,7 +121,7 @@ termination_utility_min_threshold: 0.05
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 0
+view_generator_type: 2
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0

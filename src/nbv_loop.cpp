@@ -377,6 +377,8 @@ void NBVLoop::positionVehicleAfterProfiling()
     // Move to last recorded position
     geometry_msgs::Pose p = history_->selected_poses.back();
     vehicle_->setWaypoint(p);
+    std::cout << "[NBVLoop] " << cc.yellow << "vehicle position: (" <<p.position.x<<", "<<p.position.y<<", "<<p.position.z<<") \n" << cc.reset;
+
   }
   else
   {
@@ -390,7 +392,7 @@ void NBVLoop::positionVehicleAfterProfiling()
     ros::param::param<double>("~uav_pose_y_" + pose_number_str, y, 0);
     ros::param::param<double>("~uav_pose_z_" + pose_number_str, z, 10);
     ros::param::param<double>("~uav_pose_yaw_" + pose_number_str, yaw, 0);
-
+    std::cout << "[NBVLoop] " << cc.yellow << "vehicle position: (" <<x<<", "<<y<<", "<<z<<", "<<yaw <<") \n" << cc.reset;
     vehicle_->setWaypoint(x, y, z, yaw);
   }
 
