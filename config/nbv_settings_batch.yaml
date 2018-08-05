@@ -7,7 +7,6 @@ debug_view_generator: false
 debug_view_selecter: false
 debug_save_state: false
 debug_load_state: true
-
 ############
 ## Scenario settings
 ############
@@ -77,7 +76,7 @@ mapping_voxel_grid_res_rgbd: 0.02
 ## Profiling settings
 ############
 profiling_skip: true
-profiling_skip_load_map: false #if profiling was skipped, load a preexisting map?
+profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
@@ -88,6 +87,12 @@ profiling_scan_speed: 1.0
 # 1: bounded box
 profiling_method: 0
 profiling_circular_waypoints: 5
+
+############
+# UAV starting pose after profiling
+############
+# Select pose after completing profile
+profiling_complete_pose_number: 3
 
 ############
 ## Termination settings
@@ -101,7 +106,7 @@ termination_ros_spin_afterwards: false
 termination_window_size: 5
 termination_repeat_window_size: 10 #Number of permissible repetitions before the UAV is considered stuck in a local minima
 
-termination_iterations_max: 100
+termination_iterations_max: 500
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05

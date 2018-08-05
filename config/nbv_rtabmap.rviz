@@ -5,9 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Floating Sensor1
-        - /Trajectory1
-        - /Centroids 1
-        - /normals1
+        - /Frontier Cells1
       Splitter Ratio: 0.5
     Tree Height: 795
   - Class: rviz/Selection
@@ -182,7 +180,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -199,7 +197,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 0.200000003
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -464,7 +462,7 @@ Visualization Manager:
           Marker Topic: /visualization_marker
           Name: Evaluation Rays
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
           Value: true
         - Alpha: 1
@@ -550,7 +548,7 @@ Visualization Manager:
       Color: 255; 255; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -567,14 +565,14 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Arrow Length: 0.300000012
       Axes Length: 0.300000012
       Axes Radius: 0.00999999978
       Class: rviz/PoseArray
       Color: 0; 255; 127
-      Enabled: true
+      Enabled: false
       Head Length: 0.0700000003
       Head Radius: 0.0299999993
       Name: normals
@@ -583,6 +581,90 @@ Visualization Manager:
       Shape: Arrow (Flat)
       Topic: /nbv_exploration/generation/normals
       Unreliable: false
+      Value: false
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: nbv_exploration/generation/planes
+      Name: planes
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: fov
+      Name: fov
+      Namespaces:
+        link_marker: true
+      Queue Size: 1000000
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: lines
+      Name: lines_ray
+      Namespaces:
+        link_marker: true
+      Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 85; 255; 127
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: visible_points
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.100000001
+      Style: Spheres
+      Topic: nbv_exploration/generation/visible_points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: occupancy_grid
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.300000012
+      Style: Spheres
+      Topic: occupancy_cloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
   Enabled: true
   Global Options:
@@ -609,25 +691,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 9.72403908
+      Distance: 33.5634193
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.0212631524
-        Y: -0.143810272
-        Z: 5.84625741e-06
+        X: 10.5559273
+        Y: 7.68520546
+        Z: 2.08883539e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.0747971833
+      Pitch: 0.0452018492
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz)
-      Yaw: 1.32994556
+      Yaw: 5.12999201
     Saved: ~
 Window Geometry:
   Displays:

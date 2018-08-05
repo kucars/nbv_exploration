@@ -28,19 +28,21 @@ void ViewGeneratorNNFrontier::generateViews()
 {
   if (ViewGeneratorNNFrontier::isStuckInLocalMinima())
   {
+    method_name_="Frontier";
     std::cout << "[ViewGeneratorNNFrontier]: " << cc.yellow << "Local minima detected. Using frontiers\n" << cc.reset;
     generator_frontier_.generateViews();
     generated_poses = generator_frontier_.generated_poses;
   }
   else
   {
+    method_name_="Adaptive NN before Frontier";
     ViewGeneratorNNAdaptive::generateViews();
   }
 }
 
 std::string ViewGeneratorNNFrontier::getMethodName()
 {
-  return "Frontier after Adaptive NN";
+  return method_name_;
 }
 
 void ViewGeneratorNNFrontier::setCollisionRadius(double r)

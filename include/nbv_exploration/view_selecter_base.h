@@ -41,11 +41,20 @@ public:
   float temp_utility_prediction_;
   int   temp_occupied_voxels_;
 
+  std::vector<Eigen::Matrix3d> camera_rotation_mtx_; // Cameras rotation mtx
+  std::vector<Eigen::Vector3d> camera_translation_;//Cameras translation
+  int camera_count_;
+  double fov_horizontal_;
+  double fov_vertical_;
+  double range_max_;
+  double range_min_;
+
   ViewSelecterBase();
 
   void evaluate();
   virtual std::string getMethodName();
   geometry_msgs::Pose  getTargetPose();
+  void   getCameraRotationMtxs();
   void setCameraSettings(double fov_h, double fov_v, double r_max, double r_min);
   void setViewGenerator(ViewGeneratorBase* v);
   void setMappingModule(MappingModule* m);
@@ -61,14 +70,14 @@ protected:
   geometry_msgs::Pose current_pose_;
   geometry_msgs::Pose selected_pose_;
 
-  int camera_count_;
-  std::vector<Eigen::Matrix3d> camera_rotation_mtx_; // Camera rotation mtx
+//  int camera_count_;
+//  std::vector<Eigen::Matrix3d> camera_rotation_mtx_; // Camera rotation mtx
   int vehicle_type_;
   
-  double fov_horizontal_;
-  double fov_vertical_;
-  double range_max_;
-  double range_min_;
+//  double fov_horizontal_;
+//  double fov_vertical_;
+//  double range_max_;
+//  double range_min_;
   double tree_resolution_;
 
   bool is_debug_;
@@ -94,7 +103,7 @@ protected:
   bool isNodeUnknown(octomap::OcTreeNode node);
   bool isPointInBounds(octomap::point3d &p);
 
-  void   getCameraRotationMtxs();
+//  void   getCameraRotationMtxs();
   double getNodeOccupancy(octomap::OcTreeNode* node);
   double getNodeEntropy(octomap::OcTreeNode* node);
   int    getPointCountAtOcTreeKey(octomap::OcTreeKey key);

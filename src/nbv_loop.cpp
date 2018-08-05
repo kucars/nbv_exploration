@@ -96,6 +96,7 @@ void NBVLoop::evaluateViewpoints()
     std::cout << "[NBVLoop] " << cc.green << "Evaluating viewpoints\n" << cc.reset;
   }
 
+  // check if view generator makes use of frontier, skip the use of viewpoints evaluation
   // Evaluate viewpoints
   timer.start("[NBVLoop]Evaluate");
   view_selecter_->evaluate();
@@ -119,8 +120,8 @@ void NBVLoop::evaluateViewpoints()
   vehicle_->setWaypoint(p);
 
 
-  std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
-  state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
+//  std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
+//  state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
 }
 
 void NBVLoop::generateViewpoints()
@@ -401,6 +402,7 @@ void NBVLoop::positionVehicleAfterProfiling()
   vehicle_->moveVehicle();
 
   // Process the termination condition
+//  updateHistory();
   terminationCheck();
 
   //=======
@@ -520,8 +522,24 @@ void NBVLoop::runStateMachine(bool is_load_state)
 
       case NBVState::VIEWPOINT_GENERATION_COMPLETE:
         state = NBVState::VIEWPOINT_EVALUATION;
-        evaluateViewpoints();
-
+        //added to explore the entire frontier (single frontier)
+        if(view_generator_->getMethodName()=="Frontier")
+        {
+            std::cout<<cc.magenta <<"frontiers evaluation"<<cc.reset<<std::endl;
+            for(int i = view_generator_->generated_poses.size()-1; i>=0 ; i--)
+            {
+//                std::cout<<"size before the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
+                evaluateViewpoints();
+                view_generator_->generated_poses.pop_back();
+//                std::cout<<"size after the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
+            }
+        } else
+        {
+            std::cout<<cc.magenta <<"other generators evaluation"<<cc.reset<<std::endl;
+            evaluateViewpoints();
+        }
+        std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
+        state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
         break;
 
       case NBVState::VIEWPOINT_EVALUATION_COMPLETE:

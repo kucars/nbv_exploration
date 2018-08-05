@@ -18,16 +18,23 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
 {
 
     ros::param::param<int>("~view_generator_frontier_minimum_size", minimum_frontier_size_, 10);
-    ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 10);
+    ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 1);
     ros::param::param<double>("~view_generator_frontier_cylinder_radius", cylinder_radius_, 3.0);
     ros::param::param<double>("~view_generator_frontier_cylinder_height", cylinder_height_, 1.0);
     ros::param::param<double>("~view_generator_frontier_density_threshold", density_threshold_, 10);
 
-    ros::NodeHandle ros_node;
+//    ros::NodeHandle ros_node;
     pub_vis_frontier_points_ = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/frontier_points", 10);
+    pub_vis_points_ = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/visible_points", 10);
     pub_vis_centroid_points_ = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/centroid_points", 10);
 //    pub_marker_normals_      = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/normals", 10);
     pub_marker_normals_      = ros_node.advertise<geometry_msgs::PoseArray>("nbv_exploration/generation/normals", 10);
+    pub_marker_planes_      = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/planes", 10);
+    viewBase = new ViewSelecterBase();     // to get the rotation matrix
+    std::cout<<"size : "<<viewBase->camera_rotation_mtx_.size()<<std::endl;
+    //later take the pitch angle from the rotation matrix from the tf
+    setCameraParams({-20,20},{viewBase->fov_horizontal_,viewBase->fov_horizontal_},{viewBase->fov_vertical_,viewBase->fov_vertical_},viewBase->range_max_);
+    std::cout<<cc.green<<"camera parameters set : ["<<viewBase->fov_horizontal_<<", "<<viewBase->fov_vertical_<<"] , max range:  "<<viewBase->range_max_ <<cc.reset <<std::endl;
 
 }
 
@@ -182,9 +189,9 @@ void ViewGeneratorFrontier::findFrontiersPCL(std::vector<pcl::PointCloud<pcl::Po
 
     std::vector<pcl::PointIndices> cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance (0.8); // 30cm
+    ec.setClusterTolerance (0.2); // 30cm
     ec.setMinClusterSize (5);
-    ec.setMaxClusterSize (50000);//10000
+    ec.setMaxClusterSize (1000);//10000
     ec.setSearchMethod (Kdtree);
     ec.setInputCloud (point_cloud);
     ec.extract (cluster_indices);
@@ -244,6 +251,77 @@ std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findLowDensityCells()
     return density_keys;
 }
 
+//cameras bounds (from rrt explorrer)
+void ViewGeneratorFrontier::setCameraParams(std::vector<double> cameraPitch,
+                                    std::vector<double> cameraHorizontalFoV,
+                                    std::vector<double> cameraVerticalFoV, double maxDist)
+{
+
+  // Precompute the normals of the separating hyperplanes that constrain the field of view.
+  cameraPitch_ = cameraPitch;
+  cameraHorizontalFoV_ = cameraHorizontalFoV;
+  cameraVerticalFoV_ = cameraVerticalFoV;
+  maxDist_ = maxDist;
+  camBoundNormals_.clear();
+  for (int i = 0; i < cameraPitch_.size(); i++) {
+    double pitch = M_PI * cameraPitch_[i] / 180.0;
+    double camTop = (pitch - M_PI * cameraVerticalFoV_[i] / 360.0) + M_PI / 2.0;
+    double camBottom = (pitch + M_PI * cameraVerticalFoV_[i] / 360.0) - M_PI / 2.0;
+    double side = M_PI * (cameraHorizontalFoV_[i]) / 360.0 - M_PI / 2.0;
+    Eigen::Vector3d bottom(cos(camBottom), 0.0, -sin(camBottom));
+    Eigen::Vector3d top(cos(camTop), 0.0, -sin(camTop));
+    Eigen::Vector3d right(cos(side), sin(side), 0.0);
+    Eigen::Vector3d left(cos(side), -sin(side), 0.0);
+    Eigen::AngleAxisd m = Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY());
+    Eigen::Vector3d rightR = m * right;
+    Eigen::Vector3d leftR = m * left;
+    rightR.normalize();
+    leftR.normalize();
+    std::vector<Eigen::Vector3d> camBoundNormals;
+    camBoundNormals.push_back(Eigen::Vector3d(bottom.x(), bottom.y(), bottom.z()));
+    camBoundNormals.push_back(Eigen::Vector3d(top.x(), top.y(), top.z()));
+    camBoundNormals.push_back(Eigen::Vector3d(rightR.x(), rightR.y(), rightR.z()));
+    camBoundNormals.push_back(Eigen::Vector3d(leftR.x(), leftR.y(), leftR.z()));
+    camBoundNormals_.push_back(camBoundNormals);
+  }
+}
+
+//from rrt explorer
+bool ViewGeneratorFrontier::pointInFOV(Eigen::Vector4d state, pcl::PointXYZ pt)
+{
+
+    visualization_msgs::Marker p;
+    const double disc = 1;
+    Eigen::Vector3d origin(state[0], state[1], state[2]);
+    Eigen::Vector3d vec(pt.x,pt.y,pt.z);
+
+    Eigen::Vector3d dir = vec - origin;
+    bool insideAFieldOfView = false;
+    // Check that voxel center is inside one of the fields of view.
+    for (typename std::vector<std::vector<Eigen::Vector3d>>::iterator itCBN = camBoundNormals_.begin(); itCBN != camBoundNormals_.end(); itCBN++) {
+        bool inThisFieldOfView = true;
+        for (typename std::vector<Eigen::Vector3d>::iterator itSingleCBN = itCBN->begin();
+             itSingleCBN != itCBN->end(); itSingleCBN++) {
+            //angle in state[3] in radians
+            Eigen::Vector3d normal = Eigen::AngleAxisd(state[3], Eigen::Vector3d::UnitZ())
+                    * (*itSingleCBN);
+            double val = dir.dot(normal.normalized());
+            if (val < SQRT2 * disc) {
+                inThisFieldOfView = false;
+                break;
+            }
+        }
+        if (inThisFieldOfView) {
+            insideAFieldOfView = true;
+            return true;
+        }
+    }
+    return false;
+
+}
+
+
+//FOV and orientation evaluation
 void ViewGeneratorFrontier::generateViews()
 {
     generated_poses.clear();
@@ -286,8 +364,6 @@ void ViewGeneratorFrontier::generateViews()
     for (int i_c=0; i_c<clusters_pointcloud_vec.size(); i_c++)
     {
         pcl::CentroidPoint<pcl::PointXYZ> centroid;
-        //      centroid.add( PointXYZ(clustersPointCloudVec[i_c].points[i_p].data[0],clustersPointCloudVec[i_c].points[i_p].data[1], clustersPointCloudVec[i_c].points[i_p].data[2]) );
-
         for(int i_p=0; i_p<clusters_pointcloud_vec[i_c].points.size(); i_p++)
             centroid.add(clusters_pointcloud_vec[i_c].points[i_p]);
         pcl::PointXYZ computed_centroid;
@@ -315,110 +391,210 @@ void ViewGeneratorFrontier::generateViews()
     pub_vis_centroid_points_.publish(cloud_msg2);
 
     // ============
-    // Pose Generation
+    // Get nearest frontiers
     // ============
-    //going through frontier clusters
-    timer.start("[ViewGeneratorFrontier]viewGeneration");
+    timer.start("[ViewGeneratorFrontier]getNearestFrontier");
+    pcl::KdTreeFLANN<PointXYZ> kdtree;
+    kdtree.setInputCloud (centroid_cloud);
+    std::vector<int> pointIdxNKNSearch(nearest_frontiers_count_);
+    std::vector<float> pointNKNSquaredDistance(nearest_frontiers_count_);
 
-    for(int j =0 ; j<clusters_pointcloud_vec.size(); j++)
+    PointXYZ current_pt (
+                current_pose_.position.x,
+                current_pose_.position.y,
+                current_pose_.position.z
+                );
+
+    if ( kdtree.nearestKSearch (current_pt, nearest_frontiers_count_, pointIdxNKNSearch, pointNKNSquaredDistance) == 0 )
+        return;
+
+    std::cout<<cc.yellow<<"number of near clusters "<<pointIdxNKNSearch.size()<<cc.reset<<std::endl;
+    PointCloudXYZ::Ptr global_ptr (new PointCloudXYZ);
+    pcl::PointCloud<pcl::PointXYZ> global;
+    OcclusionCulling* occ = new OcclusionCulling(ros_node,centroid_cloud);
+
+    for (int i=0; i<pointIdxNKNSearch.size(); i++)
     {
-        //normals
-//        pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
-//        ne.setInputCloud (clusters_pointcloud_ptr_vec[j]);
-//        pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree2 (new pcl::search::KdTree<pcl::PointXYZRGB> ());
-//        ne.setSearchMethod (tree2);
-//        pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);// Output datasets
-//        // Use all neighbors in a sphere of radius 3cm
-//        ne.setRadiusSearch (0.5); // Compute the features
-//        ne.compute (*cloud_normals);
+        int idx = pointIdxNKNSearch[i];
+//        std::cout<<cc.yellow<<"cluster processing start"<<idx<<cc.reset<<std::endl;
+        PointXYZ centroid = centroid_cloud->points[idx];
 
-//        std::cout<<cc.cyan<<"[ViewGeneratorFrontier] Normals size : " <<cloud_normals->points.size()<<std::endl<<cc.reset;
-//        geometry_msgs::PoseArray normal_poses ;
-//        visualizeNormals(cloud_normals,clusters_pointcloud_ptr_vec[j], normal_poses, false);
-
-        Eigen::Vector4f plane_params;
-        float curvature;
-        pcl::computePointNormal(clusters_pointcloud_vec[j],plane_params, curvature);
-        geometry_msgs::Vector3 grid_size;
-        geometry_msgs::Pose grid_start;
-        findClusterBB(clusters_pointcloud_vec[j], grid_size, grid_start);
-        double  grid_res = 1.0;
-        std::cout<<cc.white<<"grid size: "<< grid_size.x<<" "<<grid_size.y<< " " <<grid_size.z << cc.reset <<std::endl;
-        std::cout<<cc.white<<"grid_start: "<< grid_start.position.x<<" "<<grid_start.position.y<< " " <<grid_start.position.z << cc.reset <<std::endl;
-
-        double orientation_res=45;
-        //intersection cannot be performed using point (used segment)
-        Segment centroid_seg(Point(centroid_cloud->points[j].x,centroid_cloud->points[j].y,centroid_cloud->points[j].z),Point(centroid_cloud->points[j].x,centroid_cloud->points[j].y,centroid_cloud->points[j].z));
-        //or use the cluster estimated plane normal for intersection
-        Plane3 cluster_plane(plane_params[0],plane_params[1],plane_params[2],plane_params[3]);
-
-        //        Direction d(centroid_seg);
-        //        std::cout<<"direction of centroid segment: "<<d.dx()<<" "<<d.dy()<<" "<<d.dz()<<std::endl;
-        for(double z = (grid_start.position.z ); z<=(grid_start.position.z + grid_size.z); z+=grid_res)
+        // Generate poses around the centroid
+        PointCloudXYZ::Ptr frontier_cluster (new PointCloudXYZ);
+        frontier_cluster->points = clusters_pointcloud_vec[idx].points;
+        double coverage_percent =0;
+        for (double theta=0; theta<=2*M_PI && coverage_percent<80; theta+=M_PI_4)
         {
-            for(double x = (grid_start.position.x ); x<=(grid_start.position.x + grid_size.x); x+=grid_res)
+            //decrement to up
+            int max=0,index=0;
+            occ->initConfig(frontier_cluster);
+            PointCloudXYZ::Ptr visible_ptr (new PointCloudXYZ);
+
+//            std::vector<geometry_msgs::Pose> waypoints;
+            for (int z_inc=-1; z_inc<=1; z_inc+=1)
             {
-                for(double y = (grid_start.position.y ); y<=(grid_start.position.y + grid_size.y); y+=grid_res)
+
+                geometry_msgs::Pose pose;
+                pose.position.x = centroid.x + cylinder_radius_*cos(theta);
+                pose.position.y = centroid.y + cylinder_radius_*sin(theta);
+                pose.position.z = centroid.z + z_inc*cylinder_height_;
+                pose.orientation = pose_conversion::getQuaternionFromYaw(M_PI+theta); // Point to center of cylinder
+                Eigen::Vector3d T(pose.position.x,pose.position.y,pose.position.z);
+
+                //get the position
+                Eigen::Matrix3d r_pose=pose_conversion::getRotationMatrix( pose );
+                Eigen::Matrix4d robotPoseMat;
+                robotPoseMat.setZero ();
+                robotPoseMat.block (0, 0, 3, 3) = r_pose;
+                robotPoseMat.block (0, 3, 3, 1) = T;
+                robotPoseMat (3, 3) = 1;
+
+                //check if the centroid inside the FOVs of this pose (according to the rrt implementation without taking into consideration of the camera translation)
+                Eigen::Vector4d point(pose.position.x,pose.position.y,pose.position.z,M_PI+theta);
+
+                if(pointInFOV(point,centroid) && isValidViewpoint(pose))
                 {
-                    geometry_msgs::Pose pose;
-                    pose.position.x = x;
-                    pose.position.y = y;
-                    pose.position.z = z;
+//                    std::cout<<cc.red<<"is valid and inside FOV : "<<isValidViewpoint(pose)<<" "<<pointInFOV(point,centroid) <<cc.reset<<std::endl;
 
-                    int orientationsNum= 360.0f/orientation_res;
-                    // in radians
-                    double yaw=0.0;
-                    tf::Quaternion tf ;
-                    for(int i=0; i<orientationsNum;i++)
+                    pcl::PointCloud<pcl::PointXYZ> visible;
+                    for (int c=0; c<viewBase->camera_count_; c++)
                     {
-                        tf = tf::createQuaternionFromYaw(yaw);
-                        pose.orientation.x = tf.getX();
-                        pose.orientation.y = tf.getY();
-                        pose.orientation.z = tf.getZ();
-                        pose.orientation.w = tf.getW();
-
-                        if ( isValidViewpoint(pose) ) // using the isValid of viewgenerator base
-                        {
-                            //check intersection with the centroid small segment (need to check if I need to generate the sensor poses with respect to the robot or not needed in this case)
-                            Ray r(Point(x,y,z),Direction(round(cos(yaw)),round(sin(yaw)),0));
-//                            Direction d_line(r);
-//                            std::cout<<"cos: "<<cos(yaw)<<" "<<(int)cos(yaw)<<" "<<round(cos(yaw))<<" yaw "<<yaw<<std::endl;
-//                            std::cout<<"direction of line: "<<d_ray.dx()<<" "<<d_ray.dy()<<" "<<d_ray.dz()<<std::endl;
-                            if(CGAL::do_intersect(cluster_plane,r))
-                            {
-                                generated_poses.push_back(pose);
-
-                            }
-                            else
-                            {
-                              rejected_poses.push_back(pose);
-                            }
-
-                        }
-
-                        else
-                        {
-                           rejected_poses.push_back(pose);
-                        }
-                        yaw+=(orientation_res*M_PI/180.0f);
+                        Eigen::Matrix4d robot2sensorMat, sensorPoseMat,sensor2sensorMat;
+                        robot2sensorMat.setZero ();
+                        robot2sensorMat.block (0, 0, 3, 3) = viewBase->camera_rotation_mtx_[c];
+                        robot2sensorMat.block (0, 3, 3, 1) = viewBase->camera_translation_[c];
+                        robot2sensorMat (3, 3) = 1;
+                        sensorPoseMat = robotPoseMat * robot2sensorMat;
 
 
-                    }//orientation discretization
+                        //extract the visible points
+                        //the frustum culling sensor needs this
+                        //the transofrmation is rotation by +90 around x axis of the sensor
+                        sensor2sensorMat << 1, 0, 0, 0,
+                                            0, 0,-1, 0,
+                                            0, 1, 0, 0,
+                                            0, 0, 0, 1;
+                        Eigen::Matrix4d newSensorPoseMat = sensorPoseMat * sensor2sensorMat;
 
-                }//position discretization
+                        Eigen::Vector3d T_Eigen;Eigen::Matrix3d R_Eigen; tf::Matrix3x3 R_TF;tf::Quaternion qt;
+                        R_Eigen = newSensorPoseMat.block (0, 0, 3, 3);
+                        tf::matrixEigenToTF(R_Eigen,R_TF);
+                        R_TF.getRotation(qt);
+                        T_Eigen = newSensorPoseMat.block (0, 3, 3, 1);
+                        geometry_msgs::Pose p;
+                        p.position.x=T_Eigen[0];p.position.y=T_Eigen[1];p.position.z=T_Eigen[2];
+                        p.orientation.x = qt.getX(); p.orientation.y = qt.getY();p.orientation.z = qt.getZ();p.orientation.w = qt.getW();
+                        visible += occ->extractVisibleSurface(p);
+                        global += visible;
+                        occ->visualizeFOV(p);
+
+//                        std::cout<<cc.blue<<"frustum cluster size: "<<frontier_cluster->points.size()<<" visible: "<<visible.points.size()<<cc.reset<<std::endl;
+                    }//end of loop through the sensors
+                    if(max==0)
+                    {
+                        max = visible.points.size();
+                        generated_poses.push_back(pose);
+                        visible_ptr->points = visible.points;
+                    }else if (visible.points.size()>max)
+                    {
+                        max = visible.points.size();
+                        generated_poses.pop_back();
+                        generated_poses.push_back(pose);
+                        visible_ptr->points = visible.points;
+
+                    }
+
+
+                }else//end of if inside FOVs and if the waypoint is  valid
+                {
+//                    std::cout<<cc.blue<<"rejected"<<cc.reset<<std::endl;
+                    rejected_poses.push_back(pose);
+                }
+
+
+            }//end of loop through the viewpoint z discretization
+
+            if(visible_ptr->points.size()!=0)
+            {
+                coverage_percent = occ->calcCoveragePercent(visible_ptr);
+//                std::cout<<cc.red<<"coverage : "<<coverage_percent<<cc.reset<<std::endl;
+            }else {
+                coverage_percent=0;
             }
-        }
+//            std::cout<<cc.blue<<"frustum cluster size before: "<<frontier_cluster->points.size()<<cc.reset<<std::endl;
+            frontier_cluster->points = (occ->pointsDifference(*visible_ptr)).points;
+//            std::cout<<cc.blue<<"frustum cluster size after: "<<frontier_cluster->points.size()<<cc.reset<<std::endl;
 
 
-    }//clusters loop
-    timer.stop("[ViewGeneratorFrontier]viewGeneration");
+        }// end of loop through the different orientations
+
+//        std::cout<<cc.yellow<<"cluster processing ends "<<idx<<cc.reset<<std::endl;
+
+    }// end of loop through the frontier clusters
+
+    // Visualize
+    global_ptr->points = global.points;
+    sensor_msgs::PointCloud2 cloud_msg3;
+    pcl::toROSMsg(*global_ptr, cloud_msg3);
+    cloud_msg3.header.frame_id = "world";
+    cloud_msg3.header.stamp = ros::Time::now();
+    pub_vis_points_.publish(cloud_msg3);
+    timer.stop("[ViewGeneratorFrontier]getNearestFrontier");
+
 
     // Visualize
     std::cout << "[ViewGeneratorFrontier] Generated " << generated_poses.size() << " poses (" << rejected_poses.size() << " rejected)" << std::endl;
     ViewGeneratorBase::visualize(generated_poses, rejected_poses);
 }
 
-
+visualization_msgs::Marker ViewGeneratorFrontier::drawLines(std::vector<geometry_msgs::Point> links, int id, int inColor, int duration, double scale)
+{
+    visualization_msgs::Marker linksMarkerMsg;
+    linksMarkerMsg.header.frame_id="world";
+    linksMarkerMsg.header.stamp=ros::Time::now();
+    linksMarkerMsg.ns = "link_marker";
+    linksMarkerMsg.id = id;
+    linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
+    linksMarkerMsg.scale.x = scale;
+    linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
+    linksMarkerMsg.lifetime  = ros::Duration(duration);
+    std_msgs::ColorRGBA color;
+    if(inColor == 1)
+    {
+        color.r = 1.0;
+        color.g = 0.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else if(inColor == 2)
+    {
+        color.r = 0.0;
+        color.g = 1.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else if(inColor == 3)
+    {
+        color.r = 0.0;
+        color.g = 0.0;
+        color.b = 1.0;
+        color.a = 1.0;
+    }
+    else
+    {
+        color.r = 0.9;
+        color.g = 0.9;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    std::vector<geometry_msgs::Point>::iterator linksIterator;
+    for(linksIterator = links.begin();linksIterator != links.end();linksIterator++)
+    {
+        linksMarkerMsg.points.push_back(*linksIterator);
+        linksMarkerMsg.colors.push_back(color);
+    }
+    return linksMarkerMsg;
+}
 
 std::string ViewGeneratorFrontier::getMethodName()
 {

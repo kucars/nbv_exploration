@@ -11,11 +11,11 @@ debug_load_state: false
 ############
 ## Scenario settings
 ############
-nav_bounds_x_max: 5
-nav_bounds_x_min: -5
-nav_bounds_y_max: 5
-nav_bounds_y_min: -5
-nav_bounds_z_max: 5
+nav_bounds_x_max: 20
+nav_bounds_x_min: -20
+nav_bounds_y_max: 20
+nav_bounds_y_min: -20
+nav_bounds_z_max: 20
 nav_bounds_z_min: 0.7 ## Do not allow the UAV to go below this height, as it may collide with the floor
 
 object_bounds_x_max: 20
@@ -70,7 +70,7 @@ mapping_integrate_prediction: false #if true, put prediction in final map. If fa
 mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
 mapping_octree_resolution: 0.2
 mapping_occupancy_threshold: 0.6
-mapping_save_map_iterations: 10 #save map every "x" iterations in case of crash
+mapping_save_map_iterations: 200 #save map every "x" iterations in case of crash
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
 mapping_voxel_grid_res_profile: 0.1
 mapping_voxel_grid_res_rgbd: 0.02
@@ -78,7 +78,7 @@ mapping_voxel_grid_res_rgbd: 0.02
 ############
 ## Profiling settings
 ############
-profiling_skip: false
+profiling_skip: true
 profiling_skip_load_map: false #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
@@ -109,7 +109,7 @@ termination_ros_spin_afterwards: false
 termination_window_size: 5
 termination_repeat_window_size: 10
 
-termination_iterations_max: 5
+termination_iterations_max: 1000
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05
@@ -121,7 +121,7 @@ termination_utility_min_threshold: 0.05
 # 1: Adaptive NN
 # 2: Frontier
 # 3: Adaptive NN followed by Frontier at local minima
-view_generator_type: 0
+view_generator_type: 3
 view_generator_nn_pos_res_x: 1.0
 view_generator_nn_pos_res_y: 1.0
 view_generator_nn_pos_res_z: 1.0
@@ -133,7 +133,7 @@ view_generator_frontier_density_threshold: 100
 view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
 view_generator_frontier_minimum_size: 5
-view_generator_frontier_nearest_count: 50
+view_generator_frontier_nearest_count: 1#50
 view_generator_frontier_cylinder_radius: 3.5
 view_generator_frontier_cylinder_height: 1
 
@@ -147,7 +147,7 @@ view_generator_frontier_cylinder_height: 1
 # 10: Proposed
 # 11: Proposed (ray length)
 view_selecter_type: 11
-view_selecter_compare: true
+view_selecter_compare: false
 view_selecter_compare_type: 1
 
 view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility
@@ -157,5 +157,5 @@ view_selecter_weight_distance: 0.5
 view_selecter_proposed_weight_entropy:    0
 view_selecter_proposed_weight_density:    0.5
 view_selecter_proposed_weight_prediction: 0
-view_selecter_proposed_weight_distance:   0.00
+view_selecter_proposed_weight_distance:   0
 view_selecter_proposed_use_node_count: false

@@ -4,7 +4,7 @@
     <arg name="useValgrind" default="true" />
     <arg name="batch"       default="false"/>
 
-<!--     <include file="$(find nbv_exploration)/launch/nbv_setup.launch"/> -->
+    <include file="$(find nbv_exploration)/launch/nbv_setup.launch"/>
 
     <arg name="nbv_settings_file" default="$(find nbv_exploration)/config/nbv_settings.yaml"/>
 

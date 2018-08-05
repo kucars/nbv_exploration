@@ -17,7 +17,7 @@ private:
   int frontier_minima_iterations_;
   double frontier_minima_threshold_;
   bool isStuckInLocalMinima();
-
+  std::string method_name_;
 protected:
   ViewGeneratorFrontier generator_frontier_;
 

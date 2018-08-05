@@ -79,7 +79,7 @@ mapping_voxel_grid_res_rgbd: 0.02
 ## Profiling settings
 ############
 profiling_skip: true
-profiling_skip_load_map: true #if profiling was skipped, load a preexisting map?
+profiling_skip_load_map: false #if profiling was skipped, load a preexisting map?
 profiling_check_symmetry: true
 profiling_fill_octomap: true  #Create an octomap in the initial scans?
 profiling_fill_octomap_continuously: false
@@ -109,7 +109,7 @@ termination_ros_spin_afterwards: false
 termination_window_size: 5
 termination_repeat_window_size: 10
 
-termination_iterations_max: 1
+termination_iterations_max: 20
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05
@@ -133,7 +133,7 @@ view_generator_frontier_density_threshold: 100
 view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
 view_generator_frontier_minimum_size: 5
-view_generator_frontier_nearest_count: 50
+view_generator_frontier_nearest_count: 5#50
 view_generator_frontier_cylinder_radius: 3.5
 view_generator_frontier_cylinder_height: 1
 
@@ -147,7 +147,7 @@ view_generator_frontier_cylinder_height: 1
 # 10: Proposed
 # 11: Proposed (ray length)
 view_selecter_type: 11
-view_selecter_compare: true
+view_selecter_compare: false
 view_selecter_compare_type: 1
 
 view_selecter_must_see_occupied: true #if true, views without a single occupied cell are given no utility

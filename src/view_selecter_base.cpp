@@ -363,20 +363,18 @@ void ViewSelecterBase::evaluate()
   info_utilities_.clear();
   selected_pose_.position.x = std::numeric_limits<double>::quiet_NaN();
 
-
-  for (int i=0; i<view_gen_->generated_poses.size() && ros::ok(); i++)
+  if(view_gen_->getMethodName() == "Frontier")
   {
-    geometry_msgs::Pose p = view_gen_->generated_poses[i];
-    computeRaysAtPose(p);
+      geometry_msgs::Pose p = view_gen_->generated_poses[view_gen_->generated_poses.size()-1];
+//      std::cout<<"size at the selector: " <<view_gen_->generated_poses.size()-1<<std::endl;
+      computeRaysAtPose(p);
 
-    double utility = calculateUtility(p);
+      double utility = calculateUtility(p);
 
-    // Ignore invalid utility values (may arise if we rejected pose based on IG requirements)
-    if (utility>=0)
-      info_utilities_.push_back(utility);
+      // Ignore invalid utility values (may arise if we rejected pose based on IG requirements)
+      if (utility>=0)
+          info_utilities_.push_back(utility);
 
-    if (utility > info_selected_utility_)
-    {
       info_selected_utility_            = utility;
       info_selected_utility_density_    = temp_utility_density_;
       info_selected_utility_distance_   = temp_utility_distance_;
@@ -385,17 +383,47 @@ void ViewSelecterBase::evaluate()
       info_selected_occupied_voxels_    = temp_occupied_voxels_;
 
       selected_pose_ = p;
-    }
 
-    if (is_debug_)
-    {
-      std::cout << "Utility of pose[" << i << "]: " << utility << "\n";
+      if (is_debug_)
+      {
+          std::cout << "Utility of pose[" << view_gen_->generated_poses.size()-1 << "]: " << utility << "\n";
+      }
+  }
+  else
+  {
+      for (int i=0; i<view_gen_->generated_poses.size() && ros::ok(); i++)
+      {
+          geometry_msgs::Pose p = view_gen_->generated_poses[i];
+          computeRaysAtPose(p);
 
-      //std::cout << "[ViewSelecterBase::evaluate] Looking at pose[" << i << "]:\nx = " << p.position.x << "\ty = "  << p.position.y << "\tz = "  << p.position.z << "\n";
-      std::cout << "Press ENTER to continue\n";
-      std::cin.get();
-    }
-  } //end for
+          double utility = calculateUtility(p);
+
+          // Ignore invalid utility values (may arise if we rejected pose based on IG requirements)
+          if (utility>=0)
+              info_utilities_.push_back(utility);
+
+          if (utility > info_selected_utility_)
+          {
+              info_selected_utility_            = utility;
+              info_selected_utility_density_    = temp_utility_density_;
+              info_selected_utility_distance_   = temp_utility_distance_;
+              info_selected_utility_entropy_    = temp_utility_entropy_;
+              info_selected_utility_prediction_ = temp_utility_prediction_;
+              info_selected_occupied_voxels_    = temp_occupied_voxels_;
+
+              selected_pose_ = p;
+          }
+
+          if (is_debug_)
+          {
+              std::cout << "Utility of pose[" << i << "]: " << utility << "\n";
+
+              //std::cout << "[ViewSelecterBase::evaluate] Looking at pose[" << i << "]:\nx = " << p.position.x << "\ty = "  << p.position.y << "\tz = "  << p.position.z << "\n";
+              std::cout << "Press ENTER to continue\n";
+              std::cin.get();
+          }
+      } //end for
+  }
 
 
   // No valid poses found, end
@@ -475,6 +503,8 @@ void ViewSelecterBase::getCameraRotationMtxs()
         ros::Duration(0.1).sleep();
       }
     }
+    Eigen::Vector3d T((transform.getOrigin()).x(),(transform.getOrigin()).y(),(transform.getOrigin()).z());
+    camera_translation_.push_back(T);
     camera_rotation_mtx_.push_back( pose_conversion::getRotationMatrix(transform) );
   }
 }

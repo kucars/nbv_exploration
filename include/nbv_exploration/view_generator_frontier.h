@@ -15,9 +15,12 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
+
 #include "sspp/sensors.h"
+#include "culling/occlusion_culling.h"
 
 #include "nbv_exploration/view_generator_base.h"
+#include "nbv_exploration/view_selecter_base.h"
 #include "nbv_exploration/common.h"
 
 #include <CGAL/Simple_cartesian.h>
@@ -27,7 +30,9 @@
 #include <CGAL/Segment_3.h>
 #include <CGAL/AABB_triangle_primitive.h>
 
+#include <eigen3/Eigen/Dense>
 
+#define SQRT2 0.70711
 struct KeyIndex{
   octomap::OcTreeKey key;
   int index;
@@ -63,9 +68,19 @@ protected:
   double cylinder_radius_; //radius of sampling cylinder
   double cylinder_height_;
 
+  std::vector<double> cameraPitch_;
+  std::vector<double> cameraHorizontalFoV_;
+  std::vector<double> cameraVerticalFoV_;
+  double maxDist_ ;
+  std::vector<std::vector<Eigen::Vector3d> > camBoundNormals_;
+  ViewSelecterBase* viewBase;
+  ros::NodeHandle ros_node;
+
   ros::Publisher pub_vis_frontier_points_;
+  ros::Publisher pub_vis_points_;
   ros::Publisher pub_vis_centroid_points_;
   ros::Publisher pub_marker_normals_;
+  ros::Publisher pub_marker_planes_;
 
   std::vector<std::vector<octomap::OcTreeKey> > findFrontierAdjacencies(std::vector<octomap::OcTreeKey>& cells);
   std::vector<octomap::OcTreeKey> findFrontierCells();
@@ -74,6 +89,9 @@ protected:
   std::vector<octomap::OcTreeKey> findLowDensityCells();
   void visualizeNormals(pcl::PointCloud<pcl::Normal>::Ptr cloud_normals, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, geometry_msgs::PoseArray& normal_poses, bool pcl_visualize);
   void findClusterBB(pcl::PointCloud<pcl::PointXYZ> clusterPoints, geometry_msgs::Vector3& gridSize, geometry_msgs::Pose& gridStart);
+  visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int inColor, int duration, double scale);
+  void setCameraParams(std::vector<double> cameraPitch, std::vector<double> cameraHorizontalFoV, std::vector<double> cameraVerticalFoV, double maxDist);
+  bool pointInFOV(Eigen::Vector4d state, pcl::PointXYZ pt);
 
 
   bool isNear(octomap::OcTreeKey k1, octomap::OcTreeKey k2);

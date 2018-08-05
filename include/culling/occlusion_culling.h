@@ -1,3 +1,26 @@
+/***************************************************************************
+ *   Copyright (C) 2015 - 2018 by                                          *
+ *      Tarek Taha, KURI  <tataha@tarektaha.com>                           *
+ *      Randa Almadhoun   <randa.almadhoun@kustar.ac.ae>                   *
+ *      Abdullah Abdeldayem <abdullah.dayem@kustar.ac.ae>                  *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   51 Franklin Steet, Fifth Floor, Boston, MA  02111-1307, USA.          *
+ ***************************************************************************/
+//modified version from component_test package
+
 #ifndef OCCLUSION_H_
 #define OCCLUSION_H_
 
@@ -34,7 +57,7 @@
 class OcclusionCulling
 {
 public:
-	// >>>>>>>>
+    // >>>>>>>>
     // Attributes
     // >>>>>>>>
     ros::NodeHandle  nh;
@@ -42,10 +65,21 @@ public:
     //     ros::Publisher original_pub;
     //     ros::Publisher visible_pub;
     ros::Publisher fov_pub;
+    ros::Publisher occupancy_pub;
+    ros::Publisher ray_pub;
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr occupancyGrid;
+    std::vector<geometry_msgs::Point> lineSegments;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud;
     pcl::PointCloud<pcl::PointXYZ>::Ptr occlusionFreeCloud;//I can add it to accumulate cloud if I want to extract visible surface from multiple locations
     pcl::PointCloud<pcl::PointXYZ>::Ptr FrustumCloud;//frustum cull
+
+    float vert_fov;
+    float hor_fov;
+    float near_dist;
+    float far_dist;
+    std::string frame_id;
 
     pcl::PointCloud<pcl::PointXYZ> FreeCloud;
     float voxelRes, OriginalVoxelsSize;
@@ -65,22 +99,23 @@ public:
     //OcclusionCulling(ros::NodeHandle & n, std::string modelName);
     OcclusionCulling(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr);
     OcclusionCulling(pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloudPtr);
-    
+    OcclusionCulling(ros::NodeHandle & nodeHandle, pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr);
+
     ~OcclusionCulling(){};
     void initConfig(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr);
-    void initConfig(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr, ros::NodeHandle nodeHandle);
+    void initConfig(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloudPtr, ros::NodeHandle& nodeHandle);
     void visualizeRaycast(geometry_msgs::Pose location);
-    
+
     pcl::PointCloud<pcl::PointXYZ> extractVisibleSurface(geometry_msgs::Pose location);
     //    float calcCoveragePercent(geometry_msgs::Pose location);
     float calcCoveragePercent(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
-    double calcAvgAccuracy(pcl::PointCloud<pcl::PointXYZ> pointCloud);
     void visualizeFOV(geometry_msgs::Pose location);
-    
+
     visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color[]);
     visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int c_color[], float scale);
-
+    bool contains(pcl::PointCloud<pcl::PointXYZ> c, pcl::PointXYZ p);
+    pcl::PointCloud<pcl::PointXYZ> pointsDifference(pcl::PointCloud<pcl::PointXYZ> c2);
 
 };
 
-#endif 
+#endif
