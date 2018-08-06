@@ -41,7 +41,7 @@ public:
 protected:
   double density_threshold_;
   int minimum_frontier_size_;
-  int nearest_frontiers_count_; // number of frontiers to extract when finding the nearest frontiers
+//  int nearest_frontiers_count_; // number of frontiers to extract when finding the nearest frontiers
   double cylinder_radius_; //radius of sampling cylinder
   double cylinder_height_;
 
@@ -58,7 +58,7 @@ protected:
   ros::Publisher pub_vis_centroid_points_;
   ros::Publisher pub_marker_normals_;
   ros::Publisher pub_marker_planes_;
-  ros::Publisher pub_marker_lines_;
+//  ros::Publisher pub_marker_lines_;
 
   std::vector<std::vector<octomap::OcTreeKey> > findFrontierAdjacencies(std::vector<octomap::OcTreeKey>& cells);
   std::vector<octomap::OcTreeKey> findFrontierCells();
@@ -66,8 +66,6 @@ protected:
   void findFrontiersPCL(std::vector<pcl::PointCloud<pcl::PointXYZ> >& clusters_frontiers_vec,  std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr >& clusters_frontiers_ptr_vec,  pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud);
   std::vector<octomap::OcTreeKey> findLowDensityCells();
   void visualizeNormals(pcl::PointCloud<pcl::Normal>::Ptr cloud_normals, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, geometry_msgs::PoseArray& normal_poses, bool pcl_visualize);
-  void findClusterBB(pcl::PointCloud<pcl::PointXYZ> clusterPoints, geometry_msgs::Vector3& gridSize, geometry_msgs::Pose& gridStart);
-  visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int inColor, int duration, double scale);
   void setCameraParams(std::vector<double> cameraPitch, std::vector<double> cameraHorizontalFoV, std::vector<double> cameraVerticalFoV, double maxDist);
   bool pointInFOV(Eigen::Vector4d state, pcl::PointXYZ pt);
 

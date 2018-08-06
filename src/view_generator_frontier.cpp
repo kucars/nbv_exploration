@@ -18,9 +18,9 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
 {
 
     ros::param::param<int>("~view_generator_frontier_minimum_size", minimum_frontier_size_, 10);
-    ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 3);
-    ros::param::param<double>("~view_generator_frontier_cylinder_radius", cylinder_radius_, 3.0);
-    ros::param::param<double>("~view_generator_frontier_cylinder_height", cylinder_height_, 1.0);
+//    ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 3);
+    ros::param::param<double>("~view_generator_frontier_cylinder_radius", cylinder_radius_, 2.5);
+    ros::param::param<double>("~view_generator_frontier_cylinder_height", cylinder_height_, 1);
     ros::param::param<double>("~view_generator_frontier_density_threshold", density_threshold_, 10);
 
 //    ros::NodeHandle ros_node;
@@ -30,7 +30,7 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
 //    pub_marker_normals_      = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/normals", 10);
     pub_marker_normals_      = ros_node.advertise<geometry_msgs::PoseArray>("nbv_exploration/generation/normals", 10);
     pub_marker_planes_       = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/planes", 10);
-    pub_marker_lines_        = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/lines", 10);
+//    pub_marker_lines_        = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/lines", 10);
     viewBase = new ViewSelecterBase();     // to get the rotation matrix
     std::cout<<"size : "<<viewBase->camera_rotation_mtx_.size()<<std::endl;
     //later take the pitch angle from the rotation matrix from the tf
@@ -453,14 +453,6 @@ void ViewGeneratorFrontier::generateViews()
                 //check if the centroid inside the FOVs of this pose (according to the rrt implementation without taking into consideration of the camera translation)
                 Eigen::Vector4d point(pose.position.x,pose.position.y,pose.position.z,M_PI+theta);
 
-                std::vector<geometry_msgs::Point> pts;
-                geometry_msgs::Point pt1,pt2;
-                pt1.x=current_pt.x;pt1.y=current_pt.y; pt1.z=current_pt.z;
-                pt2.x=pose.position.x;pt2.y=pose.position.y;pt2.z=pose.position.z;
-                pts.push_back(pt1);
-                pts.push_back(pt2);
-                visualization_msgs::Marker intersections_lines = drawLines(pts,98989,3,10000,0.2);
-                pub_marker_lines_.publish(intersections_lines);
                 if(pointInFOV(point,centroid) && isValidViewpoint(pose))
                 {
 //                    std::cout<<cc.red<<"is valid and inside FOV : "<<isValidViewpoint(pose)<<" "<<pointInFOV(point,centroid) <<cc.reset<<std::endl;
@@ -554,55 +546,6 @@ void ViewGeneratorFrontier::generateViews()
     // Visualize
     std::cout << "[ViewGeneratorFrontier] Generated " << generated_poses.size() << " poses (" << rejected_poses.size() << " rejected)" << std::endl;
     ViewGeneratorBase::visualize(generated_poses, rejected_poses);
-}
-
-visualization_msgs::Marker ViewGeneratorFrontier::drawLines(std::vector<geometry_msgs::Point> links, int id, int inColor, int duration, double scale)
-{
-    visualization_msgs::Marker linksMarkerMsg;
-    linksMarkerMsg.header.frame_id="world";
-    linksMarkerMsg.header.stamp=ros::Time::now();
-    linksMarkerMsg.ns = "link_marker";
-    linksMarkerMsg.id = id;
-    linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
-    linksMarkerMsg.scale.x = scale;
-    linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
-    linksMarkerMsg.lifetime  = ros::Duration(duration);
-    std_msgs::ColorRGBA color;
-    if(inColor == 1)
-    {
-        color.r = 1.0;
-        color.g = 0.0;
-        color.b = 0.0;
-        color.a = 1.0;
-    }
-    else if(inColor == 2)
-    {
-        color.r = 0.0;
-        color.g = 1.0;
-        color.b = 0.0;
-        color.a = 1.0;
-    }
-    else if(inColor == 3)
-    {
-        color.r = 0.0;
-        color.g = 0.0;
-        color.b = 1.0;
-        color.a = 1.0;
-    }
-    else
-    {
-        color.r = 0.9;
-        color.g = 0.9;
-        color.b = 0.0;
-        color.a = 1.0;
-    }
-    std::vector<geometry_msgs::Point>::iterator linksIterator;
-    for(linksIterator = links.begin();linksIterator != links.end();linksIterator++)
-    {
-        linksMarkerMsg.points.push_back(*linksIterator);
-        linksMarkerMsg.colors.push_back(color);
-    }
-    return linksMarkerMsg;
 }
 
 std::string ViewGeneratorFrontier::getMethodName()
@@ -711,33 +654,4 @@ void ViewGeneratorFrontier::visualizeNormals(pcl::PointCloud<pcl::Normal>::Ptr c
 
 }
 
-//taken from the ASSPP (coverage heuristic of sspp package)
-void ViewGeneratorFrontier::findClusterBB(pcl::PointCloud<pcl::PointXYZ> clusterPoints, geometry_msgs::Vector3& gridSize, geometry_msgs::Pose& gridStart)
-{
-    //finding bounding box of cluster
-    pcl::PointCloud<pcl::PointXYZ>::Ptr clusterPointsPtr (new pcl::PointCloud<pcl::PointXYZ>);
-    clusterPointsPtr->points = clusterPoints.points;
-    pcl::PointCloud<pcl::PointXYZ> tempClusterPoints;
-    pcl::VoxelGridOcclusionEstimation<pcl::PointXYZ> grid;
-    grid.setInputCloud (clusterPointsPtr);
-    grid.setLeafSize (0.5, 0.5, 0.5);
-    grid.initializeVoxelGrid();
-    grid.filter(tempClusterPoints);
 
-    //getting grid size and start
-    Eigen::Vector4f min_b = grid.getCentroidCoordinate (grid.getMinBoxCoordinates());
-    Eigen::Vector4f max_b = grid.getCentroidCoordinate (grid.getMaxBoxCoordinates ());
-
-    // 3 and 5 is used to making the BB bigger not exactly on the boundry of the cluster
-    // (sometimes it is very small set of samples and the descritization sample will not fit)
-    double maximizeSizeXY = 3;
-    double maximizeSizeZ = 1;
-    gridSize.x = std::abs(max_b[0]-min_b[0]) + maximizeSizeXY;//5
-    gridSize.y = std::abs(max_b[1]-min_b[1]) + maximizeSizeXY;//5
-    gridSize.z = std::abs(max_b[2]-min_b[2]) + maximizeSizeZ;//3
-
-    gridStart.position.x = min_b[0] - double(maximizeSizeXY/2);//5
-    gridStart.position.y = min_b[1] - double(maximizeSizeXY/2);//5
-    gridStart.position.z = min_b[2];//to avoid going under 0, UAVs can't fly under 0
-
-}

@@ -26,7 +26,8 @@ ViewGeneratorBase::ViewGeneratorBase():
 	ros::NodeHandle n;
   pub_view_marker_array_ = n.advertise<visualization_msgs::MarkerArray>("generated_pose_marker_array", 10);
   pub_collision_marker_ = n.advertise<visualization_msgs::Marker>("collision_marker", 10);
-
+  pub_intersections_marker_ = n.advertise<visualization_msgs::Marker>("intersections", 10);
+  marker_id_ = 0;
   // Read parameters
   ros::param::param("~debug_view_generator", is_debug_, false);
 
@@ -41,6 +42,7 @@ ViewGeneratorBase::ViewGeneratorBase():
   std::string object_mesh_f;
   ros::param::param<std::string>("~object_mesh_file", object_mesh_f, "etihad.obj");
   ros::param::param("~object_collision_check", collision_check_mesh_, true);
+  ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 3);
 
   double nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max;
   ros::param::param("~nav_bounds_x_min", nav_x_min,-5.0);
@@ -194,6 +196,16 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
     intersectionsCount = cgal_tree_->number_of_intersected_primitives(seg_query);
     std::cout<<" intersection count:  "<<intersectionsCount<<std::endl;
 
+    //visualize
+    std::vector<geometry_msgs::Point> pts;
+    geometry_msgs::Point pt1,pt2;
+    pt1.x=current_pose_.position.x;pt1.y=current_pose_.position.y; pt1.z=current_pose_.position.z;
+    pt2.x=pt.position.x;pt2.y=pt.position.y;pt2.z=pt.position.z;
+    pts.push_back(pt1);
+    pts.push_back(pt2);
+    visualization_msgs::Marker intersections_lines = drawLines(pts,marker_id_++,2,10000,0.3);
+    pub_intersections_marker_.publish(intersections_lines);
+
     if(intersectionsCount==0)
         return true;
     else
@@ -300,7 +312,54 @@ void ViewGeneratorBase::updateCollisionBoxesFromOctomap()
     collision_boxes_.push_back(obj);
   }
 }
-
+visualization_msgs::Marker ViewGeneratorBase::drawLines(std::vector<geometry_msgs::Point> links, int id, int inColor, int duration, double scale)
+{
+    visualization_msgs::Marker linksMarkerMsg;
+    linksMarkerMsg.header.frame_id="world";
+    linksMarkerMsg.header.stamp=ros::Time::now();
+    linksMarkerMsg.ns = "link_marker";
+    linksMarkerMsg.id = id;
+    linksMarkerMsg.type = visualization_msgs::Marker::LINE_LIST;
+    linksMarkerMsg.scale.x = scale;
+    linksMarkerMsg.action  = visualization_msgs::Marker::ADD;
+    linksMarkerMsg.lifetime  = ros::Duration(duration);
+    std_msgs::ColorRGBA color;
+    if(inColor == 1)
+    {
+        color.r = 1.0;
+        color.g = 0.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else if(inColor == 2)
+    {
+        color.r = 0.0;
+        color.g = 1.0;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    else if(inColor == 3)
+    {
+        color.r = 0.0;
+        color.g = 0.0;
+        color.b = 1.0;
+        color.a = 1.0;
+    }
+    else
+    {
+        color.r = 0.9;
+        color.g = 0.9;
+        color.b = 0.0;
+        color.a = 1.0;
+    }
+    std::vector<geometry_msgs::Point>::iterator linksIterator;
+    for(linksIterator = links.begin();linksIterator != links.end();linksIterator++)
+    {
+        linksMarkerMsg.points.push_back(*linksIterator);
+        linksMarkerMsg.colors.push_back(color);
+    }
+    return linksMarkerMsg;
+}
 void ViewGeneratorBase::visualize(std::vector<geometry_msgs::Pose> valid_poses, std::vector<geometry_msgs::Pose> invalid_poses)
 {
   if (pub_view_marker_array_.getNumSubscribers() == 0)

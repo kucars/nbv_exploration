@@ -74,12 +74,15 @@ public:
   std::vector<fcl::Vec3f> model_points_;
   Tree1* cgal_tree_;
   bool collision_check_mesh_;
+  int nearest_frontiers_count_; // number of frontiers to extract when finding the nearest frontiers
 
   // Visualizer
   int vis_marker_array_prev_size_;
   int vis_sphere_counter_;
   ros::Publisher pub_view_marker_array_;
   ros::Publisher pub_collision_marker_;
+  ros::Publisher pub_intersections_marker_;
+  int marker_id_;
 
   // ==========
   // == Methods
@@ -100,6 +103,7 @@ public:
   bool isInFreeSpace(geometry_msgs::Pose p);
   void loadOBJFile(const char* filename, std::vector<fcl::Vec3f>& points, std::list<CGALTriangle>& triangles);
   bool isConnectionConditionSatisfied(geometry_msgs::Pose pt);
+  visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int inColor, int duration, double scale);
 
   virtual void setCollisionRadius(double r);
   virtual void setCurrentPose(geometry_msgs::Pose p);

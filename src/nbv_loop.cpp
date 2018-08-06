@@ -143,8 +143,18 @@ void NBVLoop::generateViewpoints()
 
   if (view_generator_->generated_poses.size() == 0)
   {
-    std::cout << "[NBVLoop] " << cc.red << "View generator created no poses. Terminating.\n" << cc.reset;
-    state = NBVState::TERMINATION_MET;
+      if(view_generator_->getMethodName()=="Frontier" && view_generator_->nearest_frontiers_count_< 8)
+      {
+          std::cout << "[NBVLoop] " << cc.red << "Frontier View generator created no poses. Increased the nearest frontiers and Continue to nest clusters.\n" << cc.reset;
+          view_generator_->nearest_frontiers_count_ += 2;
+          state = NBVState::TERMINATION_NOT_MET;
+      }
+      else
+      {
+          std::cout << "[NBVLoop] " << cc.red << "View generator created no poses. Terminating.\n" << cc.reset;
+          state = NBVState::TERMINATION_MET;
+      }
+
   }
   else
   {
@@ -438,6 +448,18 @@ void NBVLoop::exploreFrontierCluster()
     for(int i = view_generator_->generated_poses.size()-1; i>=0 ; i--)
     {
         //                std::cout<<"size before the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
+
+        //IMP NOTE:
+        //check for collision is required here cause the connection between the views that completely covers the frontier could have collision with the model.
+        //checking collision again here also corrupt the idea of complete exploration of the frontier cause the current position gets updated
+        if (view_generator_->collision_check_mesh_)
+        {
+            if(!(view_generator_->isConnectionConditionSatisfied(view_generator_->generated_poses[view_generator_->generated_poses.size()-1])))
+            {
+                view_generator_->generated_poses.pop_back();
+                continue;
+            }
+        }
         evaluateViewpoints();
 
         timer.start("[NBVLoop]Moving");
@@ -458,7 +480,8 @@ void NBVLoop::exploreFrontierCluster()
         //        terminationCheck();
         //        timer.stop("[NBVLoop]TerminationCheck");
         //        timer.stop("[NBVLoop]Iteration");
-        //            }
+
+
         view_generator_->generated_poses.pop_back();
 
         //                std::cout<<"size after the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
