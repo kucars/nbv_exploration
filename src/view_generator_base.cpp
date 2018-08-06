@@ -38,6 +38,10 @@ ViewGeneratorBase::ViewGeneratorBase():
   ros::param::param("~object_bounds_z_min", obj_z_min, 0.0);
   ros::param::param("~object_bounds_z_max", obj_z_max, 1.0);
 
+  std::string object_mesh_f;
+  ros::param::param<std::string>("~object_mesh_file", object_mesh_f, "etihad.obj");
+  ros::param::param("~object_collision_check", collision_check_mesh_, true);
+
   double nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max;
   ros::param::param("~nav_bounds_x_min", nav_x_min,-5.0);
   ros::param::param("~nav_bounds_x_max", nav_x_max, 5.0);
@@ -52,6 +56,15 @@ ViewGeneratorBase::ViewGeneratorBase():
   setObjectBounds(obj_x_min, obj_x_max, obj_y_min, obj_y_max, obj_z_min, obj_z_max);
   setNavigationBounds(nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max);
   setCollisionRadius(collision_radius);
+
+  if(collision_check_mesh_)
+  {
+      std::cout<<"********************************************* collision_check ********************************"<<std::endl;
+      std::string mesh_name = ros::package::getPath("nbv_exploration")+"/models/"+object_mesh_f;
+      loadOBJFile(mesh_name.c_str(), model_points_, triangles_);
+      std::cout<<"*************triangles: "<<triangles_.size()<<std::endl;
+      cgal_tree_ = new Tree1(triangles_.begin(),triangles_.end());
+  }
 }
 
 std::string ViewGeneratorBase::getMethodName()
@@ -167,6 +180,26 @@ bool ViewGeneratorBase::isInsideBounds(geometry_msgs::Pose p)
   return true;
 }
 
+//taken from coverage_path_planning_heuristic.cpp of sscpp / asscpp
+bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
+{
+    //collision check
+    std::cout<<" collision_check "<<std::endl;
+    int intersectionsCount=0;
+    //parent
+    Point a(current_pose_.position.x, current_pose_.position.y ,current_pose_.position.z );
+    //child
+    Point b(pt.position.x, pt.position.y, pt.position.z);
+    Segment seg_query(a,b);
+    intersectionsCount = cgal_tree_->number_of_intersected_primitives(seg_query);
+    std::cout<<" intersection count:  "<<intersectionsCount<<std::endl;
+
+    if(intersectionsCount==0)
+        return true;
+    else
+        return false;
+}
+
 bool ViewGeneratorBase::isValidViewpoint(geometry_msgs::Pose p)
 {
   if (!isInsideBounds(p) )
@@ -180,6 +213,12 @@ bool ViewGeneratorBase::isValidViewpoint(geometry_msgs::Pose p)
 
   if (isRecentPose(p))
     return false;
+
+  if(collision_check_mesh_)
+  {
+      if(!isConnectionConditionSatisfied(p))
+          return false;
+  }
 
   return true;
 }
@@ -388,4 +427,103 @@ void ViewGeneratorBase::visualizeDrawSphere(geometry_msgs::Pose p, double r)
   pub_collision_marker_.publish( marker );
 
   vis_sphere_counter_++;
+}
+
+//taken from coverage_path_planning_heuristic.cpp of sscpp / asscpp
+void ViewGeneratorBase::loadOBJFile(const char* filename, std::vector<fcl::Vec3f>& points, std::list<CGALTriangle>& triangles)
+{
+    FILE* file = fopen(filename, "rb");
+    if(!file)
+    {
+        std::cerr << "file not exist" << std::endl;
+        return;
+    }
+
+    bool has_normal = false;
+    bool has_texture = false;
+    char line_buffer[2000];
+    while(fgets(line_buffer, 2000, file))
+    {
+        char* first_token = strtok(line_buffer, "\r\n\t ");
+        if(!first_token || first_token[0] == '#' || first_token[0] == 0)
+            continue;
+
+        switch(first_token[0])
+        {
+        case 'v':
+        {
+            if(first_token[1] == 'n')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_normal = true;
+            }
+            else if(first_token[1] == 't')
+            {
+                strtok(NULL, "\t ");
+                strtok(NULL, "\t ");
+                has_texture = true;
+            }
+            else
+            {
+                fcl::FCL_REAL x = (fcl::FCL_REAL)atof(strtok(NULL, "\t "));
+                fcl::FCL_REAL y = (fcl::FCL_REAL)atof(strtok(NULL, "\t "));
+                fcl::FCL_REAL z = (fcl::FCL_REAL)atof(strtok(NULL, "\t "));
+                fcl::Vec3f p(x, y, z);
+                points.push_back(p);
+            }
+        }
+            break;
+        case 'f':
+        {
+            CGALTriangle tri;
+            char* data[30];
+            int n = 0;
+            while((data[n] = strtok(NULL, "\t \r\n")) != NULL)
+            {
+                if(strlen(data[n]))
+                    n++;
+            }
+
+            for(int t = 0; t < (n - 2); ++t)
+            {
+                if((!has_texture) && (!has_normal))
+                {
+                    Point p1(points[atoi(data[0]) - 1][0],points[atoi(data[0]) - 1][1],points[atoi(data[0]) - 1][2]);
+                    Point p2(points[atoi(data[1]) - 1][0],points[atoi(data[1]) - 1][1],points[atoi(data[1]) - 1][2]);
+                    Point p3(points[atoi(data[2]) - 1][0],points[atoi(data[2]) - 1][1],points[atoi(data[2]) - 1][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+                else
+                {
+                    const char *v1;
+                    uint indxs[3];
+                    for(int i = 0; i < 3; i++)
+                    {
+                        // vertex ID
+                        if(i == 0)
+                            v1 = data[0];
+                        else
+                            v1 = data[t + i];
+
+                        indxs[i] = atoi(v1) - 1;
+                    }
+                    Point p1(points[indxs[0]][0],points[indxs[0]][1],points[indxs[0]][2]);
+                    Point p2(points[indxs[1]][0],points[indxs[1]][1],points[indxs[1]][2]);
+                    Point p3(points[indxs[2]][0],points[indxs[2]][1],points[indxs[2]][2]);
+                    tri = CGALTriangle(p1,p2,p3);
+                    if(!CGAL::collinear(p1,p2,p3))
+                    {
+                        triangles.push_back(tri);
+                    }
+                }
+            }
+        }
+        }
+    }
 }

@@ -19,7 +19,6 @@
 #include "nbv_exploration/view_generator_base.h"
 #include "nbv_exploration/mapping_module.h"
 
-
 class ViewSelecterBase
 {
 public:

@@ -117,6 +117,7 @@ void NBVLoop::evaluateViewpoints()
     state = NBVState::TERMINATION_MET;
     return;
   }
+
   vehicle_->setWaypoint(p);
 
 
@@ -344,7 +345,7 @@ void NBVLoop::initViewGenerator()
     view_generator_ = new ViewGeneratorNNFrontier();
     break;
   }
-
+  method_n_= view_generator_->getMethodName();
   view_generator_->setHistory(history_);
 
 }
@@ -431,7 +432,43 @@ void NBVLoop::profilingProcessing()
     state = NBVState::PROFILING_COMPLETE;
   }
 }
+void NBVLoop::exploreFrontierCluster()
+{
 
+    for(int i = view_generator_->generated_poses.size()-1; i>=0 ; i--)
+    {
+        //                std::cout<<"size before the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
+        evaluateViewpoints();
+
+        timer.start("[NBVLoop]Moving");
+        vehicle_->moveVehicle(0.25); //Make sure we go to the exact position
+        timer.stop("[NBVLoop]Moving");
+
+        timer.start("[NBVLoop]commandGetCameraData");
+        std::cout << "[NBVLoop] " << cc.magenta << "Requesting camera data\n" << cc.reset;
+        //ros::Duration(0.3).sleep(); // Sleep momentarily to allow tf to catch up for teleporting sensor
+        //ros::Duration(2.0).sleep(); // 2 cameras
+        mapping_module_->commandGetCameraData();
+        timer.stop("[NBVLoop]commandGetCameraData");
+
+        // Update history
+        updateHistory();
+
+        //        timer.start("[NBVLoop]TerminationCheck");
+        //        terminationCheck();
+        //        timer.stop("[NBVLoop]TerminationCheck");
+        //        timer.stop("[NBVLoop]Iteration");
+        //            }
+        view_generator_->generated_poses.pop_back();
+
+        //                std::cout<<"size after the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
+    }
+
+    timer.start("[NBVLoop]TerminationCheck");
+    terminationCheck();
+    timer.stop("[NBVLoop]TerminationCheck");
+    timer.stop("[NBVLoop]Iteration");
+}
 void NBVLoop::runStateMachine(bool is_load_state)
 {
   ROS_INFO("nbv_loop: Starting vehicle. Waiting for current position information.");
@@ -526,20 +563,14 @@ void NBVLoop::runStateMachine(bool is_load_state)
         if(view_generator_->getMethodName()=="Frontier")
         {
             std::cout<<cc.magenta <<"frontiers evaluation"<<cc.reset<<std::endl;
-            for(int i = view_generator_->generated_poses.size()-1; i>=0 ; i--)
-            {
-//                std::cout<<"size before the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
-                evaluateViewpoints();
-                view_generator_->generated_poses.pop_back();
-//                std::cout<<"size after the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
-            }
+            exploreFrontierCluster();
         } else
         {
             std::cout<<cc.magenta <<"other generators evaluation"<<cc.reset<<std::endl;
             evaluateViewpoints();
+            std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
+            state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
         }
-        std::cout << "[NBVLoop] " << cc.green << "Done evaluating viewpoints\n" << cc.reset;
-        state = NBVState::VIEWPOINT_EVALUATION_COMPLETE;
         break;
 
       case NBVState::VIEWPOINT_EVALUATION_COMPLETE:
@@ -626,7 +657,7 @@ void NBVLoop::updateHistory()
     iteration_msg.distance_total   = view_selecter_->info_distance_total_;
     iteration_msg.entropy_total    = view_selecter_->info_entropy_total_;
     iteration_msg.point_density_avg= history_->avg_point_density.back();
-    iteration_msg.method_generation= view_generator_->getMethodName();
+    iteration_msg.method_generation= method_n_;
     iteration_msg.method_selection = view_selecter_->getMethodName();
     iteration_msg.selected_pose    = view_selecter_->getTargetPose();
     iteration_msg.selected_utility                 = view_selecter_->info_selected_utility_;

@@ -17,6 +17,31 @@
 #include "nbv_exploration/nbv_history.h"
 #include "nbv_exploration/mapping_module.h"
 
+#include "fcl/math/vec_3f.h"
+#include "fcl/math/transform.h"
+
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/AABB_tree.h>
+#include <CGAL/AABB_traits.h>
+#include <CGAL/Segment_3.h>
+#include <CGAL/AABB_triangle_primitive.h>
+
+typedef CGAL::Simple_cartesian<double> K;
+typedef CGAL::Exact_predicates_exact_constructions_kernel exactKernel;
+typedef K::FT FT;
+typedef K::Ray_3 Ray;
+typedef K::Plane_3 Plane3;
+typedef K::Line_3 Line1;
+typedef K::Point_3 Point;
+typedef K::Segment_3 Segment;
+typedef K::Direction_3 Direction;
+typedef K::Triangle_3 CGALTriangle;
+typedef std::list<CGALTriangle>::iterator Iterator;
+typedef CGAL::AABB_triangle_primitive<K, Iterator> Primitive;
+typedef CGAL::AABB_traits<K, Primitive> AABB_triangle_traits;
+typedef CGAL::AABB_tree<AABB_triangle_traits> Tree1;
+typedef CGAL::Cartesian_converter<K,exactKernel > SimpleToExactConverter;
 
 class ViewGeneratorBase
 {
@@ -45,6 +70,11 @@ public:
   geometry_msgs::Pose current_pose_;
   std::vector<geometry_msgs::Pose> generated_poses;
 
+  std::list<CGALTriangle> triangles_;
+  std::vector<fcl::Vec3f> model_points_;
+  Tree1* cgal_tree_;
+  bool collision_check_mesh_;
+
   // Visualizer
   int vis_marker_array_prev_size_;
   int vis_sphere_counter_;
@@ -68,6 +98,8 @@ public:
   virtual bool isInsideBounds(geometry_msgs::Pose p);
   virtual bool isValidViewpoint(geometry_msgs::Pose p);
   bool isInFreeSpace(geometry_msgs::Pose p);
+  void loadOBJFile(const char* filename, std::vector<fcl::Vec3f>& points, std::list<CGALTriangle>& triangles);
+  bool isConnectionConditionSatisfied(geometry_msgs::Pose pt);
 
   virtual void setCollisionRadius(double r);
   virtual void setCurrentPose(geometry_msgs::Pose p);

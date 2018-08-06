@@ -18,7 +18,7 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
 {
 
     ros::param::param<int>("~view_generator_frontier_minimum_size", minimum_frontier_size_, 10);
-    ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 1);
+    ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 3);
     ros::param::param<double>("~view_generator_frontier_cylinder_radius", cylinder_radius_, 3.0);
     ros::param::param<double>("~view_generator_frontier_cylinder_height", cylinder_height_, 1.0);
     ros::param::param<double>("~view_generator_frontier_density_threshold", density_threshold_, 10);
@@ -29,7 +29,8 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
     pub_vis_centroid_points_ = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/centroid_points", 10);
 //    pub_marker_normals_      = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/normals", 10);
     pub_marker_normals_      = ros_node.advertise<geometry_msgs::PoseArray>("nbv_exploration/generation/normals", 10);
-    pub_marker_planes_      = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/planes", 10);
+    pub_marker_planes_       = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/planes", 10);
+    pub_marker_lines_        = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/lines", 10);
     viewBase = new ViewSelecterBase();     // to get the rotation matrix
     std::cout<<"size : "<<viewBase->camera_rotation_mtx_.size()<<std::endl;
     //later take the pitch angle from the rotation matrix from the tf
@@ -452,6 +453,14 @@ void ViewGeneratorFrontier::generateViews()
                 //check if the centroid inside the FOVs of this pose (according to the rrt implementation without taking into consideration of the camera translation)
                 Eigen::Vector4d point(pose.position.x,pose.position.y,pose.position.z,M_PI+theta);
 
+                std::vector<geometry_msgs::Point> pts;
+                geometry_msgs::Point pt1,pt2;
+                pt1.x=current_pt.x;pt1.y=current_pt.y; pt1.z=current_pt.z;
+                pt2.x=pose.position.x;pt2.y=pose.position.y;pt2.z=pose.position.z;
+                pts.push_back(pt1);
+                pts.push_back(pt2);
+                visualization_msgs::Marker intersections_lines = drawLines(pts,98989,3,10000,0.2);
+                pub_marker_lines_.publish(intersections_lines);
                 if(pointInFOV(point,centroid) && isValidViewpoint(pose))
                 {
 //                    std::cout<<cc.red<<"is valid and inside FOV : "<<isValidViewpoint(pose)<<" "<<pointInFOV(point,centroid) <<cc.reset<<std::endl;

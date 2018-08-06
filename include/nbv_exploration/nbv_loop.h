@@ -89,6 +89,7 @@ public:
 
   // STATE VARIABLES
   NBVState::State state;
+  std::string method_n_;
 
   bool is_done_profiling;
   bool is_scan_empty;
@@ -139,6 +140,7 @@ private:
   void positionVehicleAfterProfiling();
   void profilingProcessing();
   void updateHistory();
+  void exploreFrontierCluster();
 
   double getDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
   double getAngularDistance(geometry_msgs::Pose p1, geometry_msgs::Pose p2);

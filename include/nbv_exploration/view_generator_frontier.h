@@ -23,13 +23,6 @@
 #include "nbv_exploration/view_selecter_base.h"
 #include "nbv_exploration/common.h"
 
-#include <CGAL/Simple_cartesian.h>
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/AABB_tree.h>
-#include <CGAL/AABB_traits.h>
-#include <CGAL/Segment_3.h>
-#include <CGAL/AABB_triangle_primitive.h>
-
 #include <eigen3/Eigen/Dense>
 
 #define SQRT2 0.70711
@@ -37,22 +30,6 @@ struct KeyIndex{
   octomap::OcTreeKey key;
   int index;
 };
-
-typedef CGAL::Simple_cartesian<double> K;
-typedef CGAL::Exact_predicates_exact_constructions_kernel exactKernel;
-typedef K::FT FT;
-typedef K::Ray_3 Ray;
-typedef K::Plane_3 Plane3;
-typedef K::Line_3 Line1;
-typedef K::Point_3 Point;
-typedef K::Segment_3 Segment;
-typedef K::Direction_3 Direction;
-typedef K::Triangle_3 CGALTriangle;
-typedef std::list<CGALTriangle>::iterator Iterator;
-typedef CGAL::AABB_triangle_primitive<K, Iterator> Primitive;
-typedef CGAL::AABB_traits<K, Primitive> AABB_triangle_traits;
-typedef CGAL::AABB_tree<AABB_triangle_traits> Tree1;
-typedef CGAL::Cartesian_converter<K,exactKernel > SimpleToExactConverter;
 
 class ViewGeneratorFrontier : public ViewGeneratorBase
 {
@@ -81,6 +58,7 @@ protected:
   ros::Publisher pub_vis_centroid_points_;
   ros::Publisher pub_marker_normals_;
   ros::Publisher pub_marker_planes_;
+  ros::Publisher pub_marker_lines_;
 
   std::vector<std::vector<octomap::OcTreeKey> > findFrontierAdjacencies(std::vector<octomap::OcTreeKey>& cells);
   std::vector<octomap::OcTreeKey> findFrontierCells();

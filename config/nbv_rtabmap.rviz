@@ -5,7 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Floating Sensor1
-        - /Frontier Cells1
+        - /Viewpoints1
       Splitter Ratio: 0.5
     Tree Height: 795
   - Class: rviz/Selection
@@ -458,13 +458,13 @@ Visualization Manager:
     - Class: rviz/Group
       Displays:
         - Class: rviz/Marker
-          Enabled: true
+          Enabled: false
           Marker Topic: /visualization_marker
           Name: Evaluation Rays
           Namespaces:
             {}
           Queue Size: 100
-          Value: true
+          Value: false
         - Alpha: 1
           Axes Length: 1
           Axes Radius: 0.100000001
@@ -481,13 +481,13 @@ Visualization Manager:
           Unreliable: false
           Value: true
         - Class: rviz/MarkerArray
-          Enabled: true
+          Enabled: false
           Marker Topic: generated_pose_marker_array
           Name: Viewpoint Array
           Namespaces:
-            "": true
+            {}
           Queue Size: 100
-          Value: true
+          Value: false
         - Class: rviz/Marker
           Enabled: false
           Marker Topic: collision_marker
@@ -510,7 +510,7 @@ Visualization Manager:
       Color: 182; 45; 159
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -527,7 +527,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /nbv_exploration/trajectory
@@ -591,21 +591,21 @@ Visualization Manager:
       Queue Size: 100
       Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: fov
       Name: fov
       Namespaces:
-        link_marker: true
+        {}
       Queue Size: 1000000
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: lines
       Name: lines_ray
       Namespaces:
-        link_marker: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -618,7 +618,7 @@ Visualization Manager:
       Color: 85; 255; 127
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -635,7 +635,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -648,7 +648,7 @@ Visualization Manager:
       Color: 255; 255; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -665,7 +665,15 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: nbv_exploration/generation/lines
+      Name: intersections
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 217; 255; 253
@@ -691,25 +699,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 33.5634193
+      Distance: 66.2482376
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 10.5559273
-        Y: 7.68520546
-        Z: 2.08883539e-05
+        X: 8.74946594
+        Y: -0.162862778
+        Z: 1.89810053e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.0452018492
+      Pitch: 0.190201849
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz)
-      Yaw: 5.12999201
+      Yaw: 5.62999249
     Saved: ~
 Window Geometry:
   Displays:
