@@ -25,15 +25,15 @@ ViewGeneratorFrontier::ViewGeneratorFrontier():
 
 //    ros::NodeHandle ros_node;
     pub_vis_frontier_points_ = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/frontier_points", 10);
-    pub_vis_points_ = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/visible_points", 10);
+    pub_vis_points_          = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/visible_points", 10);
     pub_vis_centroid_points_ = ros_node.advertise<sensor_msgs::PointCloud2>("nbv_exploration/generation/centroid_points", 10);
 //    pub_marker_normals_      = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/normals", 10);
     pub_marker_normals_      = ros_node.advertise<geometry_msgs::PoseArray>("nbv_exploration/generation/normals", 10);
     pub_marker_planes_       = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/planes", 10);
 //    pub_marker_lines_        = ros_node.advertise<visualization_msgs::Marker>("nbv_exploration/generation/lines", 10);
     viewBase = new ViewSelecterBase();     // to get the rotation matrix
-    std::cout<<"size : "<<viewBase->camera_rotation_mtx_.size()<<std::endl;
-    //later take the pitch angle from the rotation matrix from the tf
+    std::cout<<"cameras number : "<<viewBase->camera_rotation_mtx_.size()<<std::endl;
+    //@todo: later take the pitch angle from the rotation matrix from the tf and add the arrays according to the number of cameras
     setCameraParams({-20,20},{viewBase->fov_horizontal_,viewBase->fov_horizontal_},{viewBase->fov_vertical_,viewBase->fov_vertical_},viewBase->range_max_);
     std::cout<<cc.green<<"camera parameters set : ["<<viewBase->fov_horizontal_<<", "<<viewBase->fov_vertical_<<"] , max range:  "<<viewBase->range_max_ <<cc.reset <<std::endl;
 
@@ -422,7 +422,24 @@ void ViewGeneratorFrontier::generateViews()
 
         // Generate poses around the centroid
         PointCloudXYZ::Ptr frontier_cluster (new PointCloudXYZ);
-        frontier_cluster->points = clusters_pointcloud_vec[idx].points;
+        PointCloudXYZ::Ptr mapped_cloud (new PointCloudXYZ);
+        //method 1: problem is that it only considers the cloud, it doesn't consider the covered surroundings
+        //        frontier_cluster->points = clusters_pointcloud_vec[idx].points;
+
+        //method 2: consider the surroundings using Kdtree
+        pcl::KdTreeFLANN<PointXYZ> kdtree_frontier;
+        mapped_cloud = mapping_module_->getPointCloud();
+        kdtree_frontier.setInputCloud (mapped_cloud);
+        std::vector<int> pointIdxRadiusSearch;
+        std::vector<float> pointRadiusSquaredDistance;
+        if ( kdtree_frontier.radiusSearch (centroid, (cylinder_radius_-1), pointIdxRadiusSearch, pointRadiusSquaredDistance) == 0 )
+            return;
+        else
+        {
+            for (size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
+                     frontier_cluster->points.push_back(mapped_cloud->points[ pointIdxRadiusSearch[i] ]);
+        }
+
         double coverage_percent =0;
         for (double theta=0; theta<=2*M_PI && coverage_percent<80; theta+=M_PI_4)
         {
@@ -455,6 +472,7 @@ void ViewGeneratorFrontier::generateViews()
 
                 if(pointInFOV(point,centroid) && isValidViewpoint(pose))
                 {
+
 //                    std::cout<<cc.red<<"is valid and inside FOV : "<<isValidViewpoint(pose)<<" "<<pointInFOV(point,centroid) <<cc.reset<<std::endl;
 
                     pcl::PointCloud<pcl::PointXYZ> visible;

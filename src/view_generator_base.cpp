@@ -190,11 +190,13 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
     int intersectionsCount=0;
     //parent
     Point a(current_pose_.position.x, current_pose_.position.y ,current_pose_.position.z );
+    std::cout<<cc.magenta<<"[VIEWGENERATORBASE] CURRENT POSITION ("<<a.x()<<", "<<a.y()<<", "<<a.z()<<cc.reset<<std::endl;
+
     //child
     Point b(pt.position.x, pt.position.y, pt.position.z);
     Segment seg_query(a,b);
     intersectionsCount = cgal_tree_->number_of_intersected_primitives(seg_query);
-    std::cout<<" intersection count:  "<<intersectionsCount<<std::endl;
+    std::cout<<" intersections count:  "<<intersectionsCount<<std::endl;
 
     //visualize
     std::vector<geometry_msgs::Point> pts;
@@ -212,6 +214,35 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
         return false;
 }
 
+bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
+{
+    //collision check
+    int intersectionsCount=0;
+    //parent
+    Point a(p1.position.x, p1.position.y ,p1.position.z );
+
+    //child
+    Point b(p2.position.x, p2.position.y, p2.position.z);
+    Segment seg_query(a,b);
+    intersectionsCount = cgal_tree_->number_of_intersected_primitives(seg_query);
+
+    //visualize
+    std::vector<geometry_msgs::Point> pts;
+    geometry_msgs::Point pt1,pt2;
+    pt1.x=p1.position.x;pt1.y=p1.position.y; pt1.z=p1.position.z;
+    pt2.x=p2.position.x;pt2.y=p2.position.y;pt2.z=p2.position.z;
+    pts.push_back(pt1);
+    pts.push_back(pt2);
+    visualization_msgs::Marker intersections_lines = drawLines(pts,marker_id_++,2,10000,0.3);
+    pub_intersections_marker_.publish(intersections_lines);
+
+    if(intersectionsCount==0)
+        return true;
+    else
+        return false;
+}
+
+
 bool ViewGeneratorBase::isValidViewpoint(geometry_msgs::Pose p)
 {
   if (!isInsideBounds(p) )
@@ -228,8 +259,11 @@ bool ViewGeneratorBase::isValidViewpoint(geometry_msgs::Pose p)
 
   if(collision_check_mesh_)
   {
-      if(!isConnectionConditionSatisfied(p))
-          return false;
+      if(!(getMethodName()=="Frontier"))
+      {
+          if(!isConnectionConditionSatisfied(p))
+              return false;
+      }
   }
 
   return true;

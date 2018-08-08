@@ -143,6 +143,8 @@ void NBVLoop::generateViewpoints()
 
   if (view_generator_->generated_poses.size() == 0)
   {
+      //when all the views collides with the model, no views gets generated
+      // to avoid this, we increase the number of nearest frontiers clusters to check
       if(view_generator_->getMethodName()=="Frontier" && view_generator_->nearest_frontiers_count_< 8)
       {
           std::cout << "[NBVLoop] " << cc.red << "Frontier View generator created no poses. Increased the nearest frontiers and Continue to nest clusters.\n" << cc.reset;
@@ -451,7 +453,7 @@ void NBVLoop::exploreFrontierCluster()
 
         //IMP NOTE:
         //check for collision is required here cause the connection between the views that completely covers the frontier could have collision with the model.
-        //checking collision again here also corrupt the idea of complete exploration of the frontier cause the current position gets updated
+        //checking collision here also corrupt the idea of complete exploration of the frontier cuz the current position gets updated
         if (view_generator_->collision_check_mesh_)
         {
             if(!(view_generator_->isConnectionConditionSatisfied(view_generator_->generated_poses[view_generator_->generated_poses.size()-1])))
@@ -484,6 +486,8 @@ void NBVLoop::exploreFrontierCluster()
 
         view_generator_->generated_poses.pop_back();
 
+        view_generator_->setMappingModule(mapping_module_);
+        view_generator_->setCurrentPose(vehicle_->getPose());
         //                std::cout<<"size after the evaluator: " <<view_generator_->generated_poses.size()-1<<std::endl;
     }
 
