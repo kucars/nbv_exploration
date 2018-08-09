@@ -242,6 +242,7 @@ std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findLowDensityCells()
         // Ignore high density cells and invalid keys
 
         int density = mapping_module_->getDensityAtOcTreeKey(key);
+//        std::cout<<cc.blue<<"density: "<<density_threshold_<<cc.reset<<std::endl;
         if (density <= 0 || density >= density_threshold_)
             continue;
 
@@ -413,6 +414,7 @@ void ViewGeneratorFrontier::generateViews()
     PointCloudXYZ::Ptr global_ptr (new PointCloudXYZ);
     pcl::PointCloud<pcl::PointXYZ> global;
     OcclusionCulling* occ = new OcclusionCulling(ros_node,centroid_cloud);
+    std::vector<geometry_msgs::Pose> generated_poses_copy;
 
     for (int i=0; i<pointIdxNKNSearch.size(); i++)
     {
@@ -423,6 +425,7 @@ void ViewGeneratorFrontier::generateViews()
         // Generate poses around the centroid
         PointCloudXYZ::Ptr frontier_cluster (new PointCloudXYZ);
         PointCloudXYZ::Ptr mapped_cloud (new PointCloudXYZ);
+
         //method 1: problem is that it only considers the cloud, it doesn't consider the covered surroundings
         //        frontier_cluster->points = clusters_pointcloud_vec[idx].points;
 
@@ -451,7 +454,6 @@ void ViewGeneratorFrontier::generateViews()
 //            std::vector<geometry_msgs::Pose> waypoints;
             for (int z_inc=-1; z_inc<=1; z_inc+=1)
             {
-
                 geometry_msgs::Pose pose;
                 pose.position.x = centroid.x + cylinder_radius_*cos(theta);
                 pose.position.y = centroid.y + cylinder_radius_*sin(theta);
@@ -472,8 +474,25 @@ void ViewGeneratorFrontier::generateViews()
 
                 if(pointInFOV(point,centroid) && isValidViewpoint(pose))
                 {
-
 //                    std::cout<<cc.red<<"is valid and inside FOV : "<<isValidViewpoint(pose)<<" "<<pointInFOV(point,centroid) <<cc.reset<<std::endl;
+                    if(collision_check_mesh_)
+                    {
+                        if(generated_poses_copy.size()>0)
+                        {
+                            if( !(isConnectionConditionSatisfied(generated_poses_copy[generated_poses_copy.size()-1],pose)) )
+                            {
+                               rejected_poses.push_back(pose);
+                               continue;
+                            }
+                        }else
+                        {
+                            if( !(isConnectionConditionSatisfied(pose)) )
+                            {
+                                rejected_poses.push_back(pose);
+                                continue;
+                            }
+                        }
+                    }
 
                     pcl::PointCloud<pcl::PointXYZ> visible;
                     for (int c=0; c<viewBase->camera_count_; c++)
@@ -512,13 +531,13 @@ void ViewGeneratorFrontier::generateViews()
                     if(max==0)
                     {
                         max = visible.points.size();
-                        generated_poses.push_back(pose);
+                        generated_poses_copy.push_back(pose);
                         visible_ptr->points = visible.points;
                     }else if (visible.points.size()>max)
                     {
                         max = visible.points.size();
-                        generated_poses.pop_back();
-                        generated_poses.push_back(pose);
+                        generated_poses_copy.pop_back();
+                        generated_poses_copy.push_back(pose);
                         visible_ptr->points = visible.points;
 
                     }
@@ -550,6 +569,12 @@ void ViewGeneratorFrontier::generateViews()
 //        std::cout<<cc.yellow<<"cluster processing ends "<<idx<<cc.reset<<std::endl;
 
     }// end of loop through the frontier clusters
+
+
+    for(int i=generated_poses_copy.size()-1; i>=0; i--)
+    {
+        generated_poses.push_back(generated_poses_copy[i]);
+    }
 
     // Visualize
     global_ptr->points = global.points;

@@ -1331,6 +1331,7 @@ void MappingModule::updateVoxelDensities(const PointCloudXYZ::Ptr& cloud)
   pcl::KdTreeFLANN<PointXYZ> kdtree;
   kdtree.setInputCloud (cloud_ptr_rgbd_);
   double search_radius = octree_->getResolution()/sqrt(2); //Encapsulates a voxel
+//  std::cout<<cc.blue<<"octre resolution :"<< octree_->getResolution()<<" search radius: "<<search_radius<<cc.reset<<std::endl;
 
   // ============
   // Update voxel densities obtained from camera reading

@@ -45,7 +45,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
-  sspp
+#  sspp
   tf_conversions
 )
 
@@ -104,7 +104,7 @@ include_directories(
     ${GAZEBO_INCLUDE_DIRS}
     ${OCTOMAP_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
-    ${sspp_INCLUDE_DIRS}
+#    ${sspp_INCLUDE_DIRS}
     include #Adds my own custom class headers
     include/nbv_exploration
     include/control

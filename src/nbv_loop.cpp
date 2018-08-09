@@ -454,14 +454,14 @@ void NBVLoop::exploreFrontierCluster()
         //IMP NOTE:
         //check for collision is required here cause the connection between the views that completely covers the frontier could have collision with the model.
         //checking collision here also corrupt the idea of complete exploration of the frontier cuz the current position gets updated
-        if (view_generator_->collision_check_mesh_)
-        {
-            if(!(view_generator_->isConnectionConditionSatisfied(view_generator_->generated_poses[view_generator_->generated_poses.size()-1])))
-            {
-                view_generator_->generated_poses.pop_back();
-                continue;
-            }
-        }
+//        if (view_generator_->collision_check_mesh_)
+//        {
+//            if(!(view_generator_->isConnectionConditionSatisfied(view_generator_->generated_poses[view_generator_->generated_poses.size()-1])))
+//            {
+//                view_generator_->generated_poses.pop_back();
+//                continue;
+//            }
+//        }
         evaluateViewpoints();
 
         timer.start("[NBVLoop]Moving");

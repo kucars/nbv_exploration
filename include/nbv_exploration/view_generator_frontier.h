@@ -16,7 +16,6 @@
 #include <pcl/common/centroid.h>
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 
-#include "sspp/sensors.h"
 #include "culling/occlusion_culling.h"
 
 #include "nbv_exploration/view_generator_base.h"

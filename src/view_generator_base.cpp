@@ -42,7 +42,7 @@ ViewGeneratorBase::ViewGeneratorBase():
   std::string object_mesh_f;
   ros::param::param<std::string>("~object_mesh_file", object_mesh_f, "etihad.obj");
   ros::param::param("~object_collision_check", collision_check_mesh_, true);
-  ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 3);
+  ros::param::param<int>("~view_generator_frontier_nearest_count", nearest_frontiers_count_, 1);
 
   double nav_x_min, nav_x_max, nav_y_min, nav_y_max, nav_z_min, nav_z_max;
   ros::param::param("~nav_bounds_x_min", nav_x_min,-5.0);
@@ -190,7 +190,7 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
     int intersectionsCount=0;
     //parent
     Point a(current_pose_.position.x, current_pose_.position.y ,current_pose_.position.z );
-    std::cout<<cc.magenta<<"[VIEWGENERATORBASE] CURRENT POSITION ("<<a.x()<<", "<<a.y()<<", "<<a.z()<<cc.reset<<std::endl;
+//    std::cout<<cc.magenta<<"[VIEWGENERATORBASE] CURRENT POSITION ("<<a.x()<<", "<<a.y()<<", "<<a.z()<<cc.reset<<std::endl;
 
     //child
     Point b(pt.position.x, pt.position.y, pt.position.z);
@@ -217,6 +217,7 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
 bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
 {
     //collision check
+    std::cout<<" collision_check "<<std::endl;
     int intersectionsCount=0;
     //parent
     Point a(p1.position.x, p1.position.y ,p1.position.z );
@@ -225,6 +226,7 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose p1, g
     Point b(p2.position.x, p2.position.y, p2.position.z);
     Segment seg_query(a,b);
     intersectionsCount = cgal_tree_->number_of_intersected_primitives(seg_query);
+    std::cout<<" intersections count:  "<<intersectionsCount<<std::endl;
 
     //visualize
     std::vector<geometry_msgs::Point> pts;
