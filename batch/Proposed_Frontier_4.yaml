@@ -55,7 +55,7 @@ uav_pose_z_1: 2
 uav_pose_yaw_1: 1.571
 
 uav_pose_x_2: -3
-uav_pose_y_2: 0
+uav_pose_y_2: -12
 uav_pose_z_2: 5
 uav_pose_yaw_2: 0
 
@@ -71,9 +71,9 @@ mapping_integrate_prediction: false #if true, put prediction in final map. If fa
 mapping_integrate_occupancy: 0.7 # Occupancy value for predicted cells
 mapping_octree_resolution: 0.2
 mapping_occupancy_threshold: 0.6
-mapping_save_map_iterations: 400 #save map every "x" iterations in case of crash
+mapping_save_map_iterations: 500 #save map every "x" iterations in case of crash
 mapping_sensor_data_min_height_: 0.3 #Min height from floor in order to register points
-mapping_voxel_grid_res_profile: 0.1
+mapping_voxel_grid_res_profile: 0.2#0.1
 mapping_voxel_grid_res_rgbd: 0.02
 
 ############
@@ -96,7 +96,7 @@ profiling_circular_waypoints: 5
 # UAV starting pose after profiling
 ############
 # Select pose after completing profile
-profiling_complete_pose_number: 1
+profiling_complete_pose_number: 2
 
 ############
 ## Termination settings
@@ -134,7 +134,7 @@ view_generator_frontier_density_threshold: 100
 view_generator_frontier_local_minima_threshold: 0.002
 view_generator_frontier_local_minima_iterations: 4
 view_generator_frontier_minimum_size: 5
-view_generator_frontier_nearest_count: 3#50
+view_generator_frontier_nearest_count: 1#50
 view_generator_frontier_cylinder_radius: 2.5 #3.5
 view_generator_frontier_cylinder_height: 1
 
@@ -158,5 +158,5 @@ view_selecter_weight_distance: 0.5
 view_selecter_proposed_weight_entropy:    0
 view_selecter_proposed_weight_density:    0.5
 view_selecter_proposed_weight_prediction: 0
-view_selecter_proposed_weight_distance:   0
+view_selecter_proposed_weight_distance:   0.3
 view_selecter_proposed_use_node_count: false

@@ -186,7 +186,7 @@ bool ViewGeneratorBase::isInsideBounds(geometry_msgs::Pose p)
 bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
 {
     //collision check
-    std::cout<<" collision_check "<<std::endl;
+//    std::cout<<" collision_check "<<std::endl;
     int intersectionsCount=0;
     //parent
     Point a(current_pose_.position.x, current_pose_.position.y ,current_pose_.position.z );
@@ -196,7 +196,7 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
     Point b(pt.position.x, pt.position.y, pt.position.z);
     Segment seg_query(a,b);
     intersectionsCount = cgal_tree_->number_of_intersected_primitives(seg_query);
-    std::cout<<" intersections count:  "<<intersectionsCount<<std::endl;
+//    std::cout<<" intersections count:  "<<intersectionsCount<<std::endl;
 
     //visualize
     std::vector<geometry_msgs::Point> pts;
@@ -214,10 +214,30 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose pt)
         return false;
 }
 
+//taken from aircraft inspection package filtering.cpp
+bool ViewGeneratorBase::isInsideModel(octomap::point3d pt)
+{
+    //collision check
+    int intersectionsCount=0;
+
+    Point a(pt.x(), pt.y() ,pt.z());
+    // Some Random point in arbitrary orientation
+    Point b(100.0, 10.0, 56.0);
+    Ray ray_query(a,b);
+    // counts #intersections
+
+    intersectionsCount = cgal_tree_->number_of_intersected_primitives(ray_query);
+
+    if(intersectionsCount%2 != 1)
+        return false;
+    else
+        return true;
+}
+
 bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
 {
     //collision check
-    std::cout<<" collision_check "<<std::endl;
+//    std::cout<<" collision_check "<<std::endl;
     int intersectionsCount=0;
     //parent
     Point a(p1.position.x, p1.position.y ,p1.position.z );
@@ -226,7 +246,7 @@ bool ViewGeneratorBase::isConnectionConditionSatisfied(geometry_msgs::Pose p1, g
     Point b(p2.position.x, p2.position.y, p2.position.z);
     Segment seg_query(a,b);
     intersectionsCount = cgal_tree_->number_of_intersected_primitives(seg_query);
-    std::cout<<" intersections count:  "<<intersectionsCount<<std::endl;
+//    std::cout<<" intersections count:  "<<intersectionsCount<<std::endl;
 
     //visualize
     std::vector<geometry_msgs::Point> pts;

@@ -120,6 +120,7 @@ public:
   void updateVoxelDensities();
   void updateVoxelDensities(const PointCloudXYZ::Ptr& cloud);
   void updateVoxelNormals();
+  void calculateVoxelsDensities();
 
 private:
   // =========

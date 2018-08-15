@@ -104,6 +104,7 @@ public:
   void loadOBJFile(const char* filename, std::vector<fcl::Vec3f>& points, std::list<CGALTriangle>& triangles);
   bool isConnectionConditionSatisfied(geometry_msgs::Pose pt);
   bool isConnectionConditionSatisfied(geometry_msgs::Pose p1, geometry_msgs::Pose p2);
+  bool isInsideModel(octomap::point3d pt);
   visualization_msgs::Marker drawLines(std::vector<geometry_msgs::Point> links, int id, int inColor, int duration, double scale);
 
   virtual void setCollisionRadius(double r);

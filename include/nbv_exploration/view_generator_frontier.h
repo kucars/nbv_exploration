@@ -33,9 +33,15 @@ struct KeyIndex{
 class ViewGeneratorFrontier : public ViewGeneratorBase
 {
 public:
-  ViewGeneratorFrontier();
-  void generateViews();
-  std::string getMethodName();
+
+    struct VoxelPt{
+        int count;
+        double total;
+    };
+
+    ViewGeneratorFrontier();
+    void generateViews();
+    std::string getMethodName();
 
 protected:
   double density_threshold_;
@@ -50,6 +56,7 @@ protected:
   double maxDist_ ;
   std::vector<std::vector<Eigen::Vector3d> > camBoundNormals_;
   ViewSelecterBase* viewBase;
+
   ros::NodeHandle ros_node;
 
   ros::Publisher pub_vis_frontier_points_;
@@ -58,6 +65,9 @@ protected:
   ros::Publisher pub_marker_normals_;
   ros::Publisher pub_marker_planes_;
 //  ros::Publisher pub_marker_lines_;
+
+  std::map<octomap::OcTreeKey, VoxelPt, OctomapKeyCompare> voxels_ignored_;
+  std::map<octomap::OcTreeKey, VoxelPt, OctomapKeyCompare> voxels_visited_;
 
   std::vector<std::vector<octomap::OcTreeKey> > findFrontierAdjacencies(std::vector<octomap::OcTreeKey>& cells);
   std::vector<octomap::OcTreeKey> findFrontierCells();

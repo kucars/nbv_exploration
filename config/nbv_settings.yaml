@@ -55,7 +55,7 @@ uav_pose_z_1: 2
 uav_pose_yaw_1: 1.571
 
 uav_pose_x_2: -3
-uav_pose_y_2: 0
+uav_pose_y_2: -12
 uav_pose_z_2: 5
 uav_pose_yaw_2: 0
 
@@ -96,7 +96,7 @@ profiling_circular_waypoints: 5
 # UAV starting pose after profiling
 ############
 # Select pose after completing profile
-profiling_complete_pose_number: 3
+profiling_complete_pose_number: 2
 
 ############
 ## Termination settings
@@ -110,7 +110,7 @@ termination_ros_spin_afterwards: false
 termination_window_size: 5
 termination_repeat_window_size: 10
 
-termination_iterations_max: 1
+termination_iterations_max: 20
 termination_entropy_global_min_change_threshold: 0.0001
 termination_entropy_local_min_change_threshold: 0.001
 termination_utility_min_threshold: 0.05

@@ -1236,6 +1236,7 @@ int MappingModule::getDensityAtOcTreeKey(octomap::OcTreeKey key)
 {
   std::map<octomap::OcTreeKey, VoxelDensity>::iterator it;
   it = voxel_densities_.find(key);
+//  std::cout<<cc.red<<"density: "<<it->second.density<<cc.reset<<std::endl;
 
   if (it == voxel_densities_.end())
   {
@@ -1245,6 +1246,30 @@ int MappingModule::getDensityAtOcTreeKey(octomap::OcTreeKey key)
   }
 
   return it->second.density;
+}
+
+void MappingModule::calculateVoxelsDensities()
+{
+  // Get total number of occupied voxels
+  int num_occ = 0;
+  int treeDepth = 16;
+  // octomap::OcTreeKey key;
+  std::map<octomap::OcTreeKey, VoxelDensity>::iterator it1;
+
+  for (octomap::OcTree::iterator it = octree_->begin(treeDepth), end = octree_->end(); it != end; ++it)
+  {
+    if ( isNodeOccupied(*it) )
+    {
+        it1 = voxel_densities_.find(it.getKey());
+        double voxel_side = it.getSize();
+        it1->second.density= it1->second.count/std::pow(voxel_side,3);
+//        std::cout<<cc.cyan<<" Voxel Side: "<<voxel_side<<"\n, Volume: "<<std::pow(voxel_side,3)
+//                <<"\n, Voxel # of points: "<<it1->second.count<<"\n, density: "<<it1->second.density<<cc.reset<<std::endl;
+        num_occ++;
+    }
+
+  }
+
 }
 
 void MappingModule::updateVoxelDensities()
@@ -1273,6 +1298,7 @@ void MappingModule::updateVoxelDensities()
     if( !octree_->coordToKeyChecked(p.x, p.y, p.z, key) )
       continue;
 
+
     std::vector<int> pointIndicesOut;
     std::vector<float> pointRadiusSquaredDistance;
     kdtree.radiusSearch(p, search_radius, pointIndicesOut, pointRadiusSquaredDistance);
@@ -1285,6 +1311,9 @@ void MappingModule::updateVoxelDensities()
       it->second.count++;
       it->second.total += pointIndicesOut.size();
       it->second.density = double(it->second.total)/it->second.count;
+//      std::cout<<cc.blue<<"density: "<<it->second.density<<cc.reset<<std::endl;
+//      std::cout<<cc.yellow<<"( key: "<<octree_->keyToCoord(key,16)<<"    "<<cc.reset;
+//      std::cout<<cc.yellow<<"# of points: "<<it->second.count<<"     )"<<cc.reset;
     }
     else
     {
@@ -1297,6 +1326,8 @@ void MappingModule::updateVoxelDensities()
       voxel_densities_.insert(std::make_pair(key, v));
     }
   }
+  //Updates the density to be # points inside a voxel per cubic meter
+//  calculateVoxelsDensities();
 }
 
 
@@ -1367,6 +1398,8 @@ void MappingModule::updateVoxelDensities(const PointCloudXYZ::Ptr& cloud)
       voxel_densities_.insert(std::make_pair(key, v));
     }
   }
+  //Updates the density to be # points inside a voxel per cubic meter
+//  calculateVoxelsDensities();
 }
 
 void MappingModule::updateVoxelNormals()

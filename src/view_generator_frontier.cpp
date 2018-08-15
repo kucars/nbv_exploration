@@ -235,20 +235,32 @@ std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findLowDensityCells()
 {
     int treeDepth = 16;
     std::vector<octomap::OcTreeKey> density_keys;
+    std::map<octomap::OcTreeKey, VoxelPt>::iterator it2;
 
     for (octomap::OcTree::iterator it = tree_->begin(treeDepth), end = tree_->end(); it != end; ++it)
     {
         octomap::OcTreeKey key = it.getKey();
+
+
         // Ignore high density cells and invalid keys
-
         int density = mapping_module_->getDensityAtOcTreeKey(key);
-//        std::cout<<cc.blue<<"density: "<<density_threshold_<<cc.reset<<std::endl;
+//        std::cout<<cc.blue<<"density: "<<density<<cc.reset<<std::endl;
         if (density <= 0 || density >= density_threshold_)
+        {
+//            std::cout<<cc.red<<"density: "<<density<<cc.reset<<std::endl;
             continue;
+        }
 
-        //Store low density keys
-        density_keys.push_back( key );
+        it2 = voxels_ignored_.find(key);
+        if (it2 == voxels_ignored_.end())
+        {
+            //key doesn't exit in the voxel ignored list , then we consider it a frontier based on the low density threshhold
+            //Store low density keys
+            density_keys.push_back( key );
+        }
+
     } //end for
+    std::cout<<cc.red<<"Density keys : "<<density_keys.size()<<cc.reset<<std::endl;
 
     return density_keys;
 }
@@ -354,6 +366,10 @@ void ViewGeneratorFrontier::generateViews()
     {
         octomap::point3d pt = tree_->keyToCoord(low_density_cells[i_f]);
         visualization_cloud->points.push_back( PointXYZ(pt.x(), pt.y(), pt.z()) );
+//        if(!isInsideModel(pt))
+//        {
+//            visualization_cloud->points.push_back( PointXYZ(pt.x(), pt.y(), pt.z()) );
+//        }
     }
 
     //clustering the frontiers using PCL
@@ -361,6 +377,8 @@ void ViewGeneratorFrontier::generateViews()
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr > clusters_pointcloud_ptr_vec ;
     findFrontiersPCL(clusters_pointcloud_vec,clusters_pointcloud_ptr_vec, visualization_cloud);
 
+    if (clusters_pointcloud_vec.size() == 0)
+        return;
 
     //getting the centroids using PCL
     for (int i_c=0; i_c<clusters_pointcloud_vec.size(); i_c++)
@@ -413,6 +431,7 @@ void ViewGeneratorFrontier::generateViews()
     std::cout<<cc.yellow<<"number of near clusters "<<pointIdxNKNSearch.size()<<cc.reset<<std::endl;
     PointCloudXYZ::Ptr global_ptr (new PointCloudXYZ);
     pcl::PointCloud<pcl::PointXYZ> global;
+    pcl::PointCloud<pcl::PointXYZ> frontier_voxels;
     OcclusionCulling* occ = new OcclusionCulling(ros_node,centroid_cloud);
     std::vector<geometry_msgs::Pose> generated_poses_copy;
 
@@ -426,10 +445,11 @@ void ViewGeneratorFrontier::generateViews()
         PointCloudXYZ::Ptr frontier_cluster (new PointCloudXYZ);
         PointCloudXYZ::Ptr mapped_cloud (new PointCloudXYZ);
 
-        //method 1: problem is that it only considers the cloud, it doesn't consider the covered surroundings
+        //method 1: it only considers the cloud, it doesn't consider the covered surroundings
         //        frontier_cluster->points = clusters_pointcloud_vec[idx].points;
 
         //method 2: consider the surroundings using Kdtree
+        frontier_voxels += clusters_pointcloud_vec[idx];
         pcl::KdTreeFLANN<PointXYZ> kdtree_frontier;
         mapped_cloud = mapping_module_->getPointCloud();
         kdtree_frontier.setInputCloud (mapped_cloud);
@@ -540,6 +560,9 @@ void ViewGeneratorFrontier::generateViews()
                         generated_poses_copy.push_back(pose);
                         visible_ptr->points = visible.points;
 
+                    }else
+                    {
+                        rejected_poses.push_back(pose);
                     }
 
 
@@ -566,10 +589,59 @@ void ViewGeneratorFrontier::generateViews()
 
         }// end of loop through the different orientations
 
-//        std::cout<<cc.yellow<<"cluster processing ends "<<idx<<cc.reset<<std::endl;
-
     }// end of loop through the frontier clusters
 
+    //check unvisited frontiers (keys) and add them to ignored list
+    std::map<octomap::OcTreeKey, VoxelPt>::iterator it;
+    octomap::OcTreeKey key;
+    for (int i=0; i<global.points.size(); i++)
+    {
+      PointXYZ p = global.points[i];
+      if( !tree_->coordToKeyChecked(p.x, p.y, p.z, key) )
+        continue;
+
+      it = voxels_visited_.find(key);
+      if (it != voxels_visited_.end())
+      {
+        it->second.count++;
+        it->second.total = 0;
+      }
+      else
+      {
+          // Key not found, initialize it
+          VoxelPt v;
+          v.count = 1;
+          v.total = 0;
+          voxels_visited_.insert(std::make_pair(key, v));
+
+      }
+    }
+
+    for (int i=0; i<frontier_voxels.points.size(); i++)
+    {
+        PointXYZ p = frontier_voxels.points[i];
+        if( !tree_->coordToKeyChecked(p.x, p.y, p.z, key) )
+            continue;
+
+        it = voxels_ignored_.find(key);
+        if (it != voxels_ignored_.end())
+        {
+          it->second.count++;
+          it->second.total = 0;
+        }
+        else
+        {
+            // Key not found, initialize it
+            VoxelPt v;
+            v.count = 1;
+            v.total = 0;
+            voxels_ignored_.insert(std::make_pair(key, v));
+
+        }
+    }
+    std::cout<<cc.green<<" frontier voxels size: "<<frontier_voxels.size()<<cc.reset<<std::endl;
+    std::cout<<cc.green<<" visited voxels size: "<<voxels_ignored_.size()<<cc.reset<<std::endl;
+    std::cout<<cc.green<<" ignored size: "<<voxels_ignored_.size()<<cc.reset<<std::endl;
 
     for(int i=generated_poses_copy.size()-1; i>=0; i--)
     {
