@@ -260,7 +260,6 @@ std::vector<octomap::OcTreeKey> ViewGeneratorFrontier::findLowDensityCells()
         }
 
     } //end for
-    std::cout<<cc.red<<"Density keys : "<<density_keys.size()<<cc.reset<<std::endl;
 
     return density_keys;
 }
@@ -358,6 +357,7 @@ void ViewGeneratorFrontier::generateViews()
     timer.start("[ViewGeneratorFrontier]getCentroids");
     PointCloudXYZ::Ptr centroid_cloud (new PointCloudXYZ);
     PointCloudXYZ::Ptr visualization_cloud (new PointCloudXYZ);
+    PointCloudXYZ::Ptr visualization_cloud_copy (new PointCloudXYZ);
 
     //  PointCloudXYZ::Ptr clustering_cloud (new PointCloudXYZ);
 
@@ -366,19 +366,50 @@ void ViewGeneratorFrontier::generateViews()
     {
         octomap::point3d pt = tree_->keyToCoord(low_density_cells[i_f]);
         visualization_cloud->points.push_back( PointXYZ(pt.x(), pt.y(), pt.z()) );
-//        if(!isInsideModel(pt))
-//        {
-//            visualization_cloud->points.push_back( PointXYZ(pt.x(), pt.y(), pt.z()) );
-//        }
+
+        // eleminate frontier points inside the model (it eleminates a lot of points)
+        //        if(!isInsideModel(pt))
+        //        {
+        //            visualization_cloud->points.push_back( PointXYZ(pt.x(), pt.y(), pt.z()) );
+        //        }
     }
 
     //clustering the frontiers using PCL
     std::vector<pcl::PointCloud<pcl::PointXYZ> > clusters_pointcloud_vec ;
-    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr > clusters_pointcloud_ptr_vec ;
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr > clusters_pointcloud_ptr_vec;
     findFrontiersPCL(clusters_pointcloud_vec,clusters_pointcloud_ptr_vec, visualization_cloud);
+    visualization_cloud_copy->points = visualization_cloud->points;
 
+    //when there is no clusters, try to cluster the frontier points left (the frontier points are scatterd around the model)
+    //clusters are 0 when the number of frontiers is low, at high coverage percentages
     if (clusters_pointcloud_vec.size() == 0)
-        return;
+    {
+        for(int i =visualization_cloud->points.size()-1; i>=0; i--)
+        {
+            //trying to cluster the remaining points that cannot be clustered
+            pcl::KdTreeFLANN<PointXYZ> kdtree_clustering;
+            kdtree_clustering.setInputCloud (visualization_cloud);
+            int nearest_frontiers_num = 8;
+            std::vector<int> pointIdxNKNSearch(nearest_frontiers_num);
+            std::vector<float> pointNKNSquaredDistance(nearest_frontiers_num);
+
+            PointXYZ frontier_pt = visualization_cloud->points[i];
+
+            if ( kdtree_clustering.nearestKSearch (frontier_pt, nearest_frontiers_num, pointIdxNKNSearch, pointNKNSquaredDistance) == 0 )
+                return;
+            pcl::PointCloud<pcl::PointXYZ> cluster_cloud;
+            for (int i=0; i<pointIdxNKNSearch.size(); i++)
+            {
+                int idx = pointIdxNKNSearch[i];
+                cluster_cloud.push_back(visualization_cloud->points[idx]);
+            }
+            clusters_pointcloud_vec.push_back(cluster_cloud);
+            visualization_cloud->points.pop_back();
+            //        return;
+        }
+        if(clusters_pointcloud_vec.size() == 0)
+            return;
+    }
 
     //getting the centroids using PCL
     for (int i_c=0; i_c<clusters_pointcloud_vec.size(); i_c++)
@@ -387,19 +418,18 @@ void ViewGeneratorFrontier::generateViews()
         for(int i_p=0; i_p<clusters_pointcloud_vec[i_c].points.size(); i_p++)
             centroid.add(clusters_pointcloud_vec[i_c].points[i_p]);
         pcl::PointXYZ computed_centroid;
-//        Eigen::Vector4f centroid;
+        //        Eigen::Vector4f centroid;
         centroid.get(computed_centroid);
-//        pcl::compute3DCentroid (clusters_pointcloud_vec[i_c], centroid);
-//        computed_centroid.x = centroid[0];computed_centroid.y = centroid[1]; computed_centroid.z = centroid[2];
+        //        pcl::compute3DCentroid (clusters_pointcloud_vec[i_c], centroid);
+        //        computed_centroid.x = centroid[0];computed_centroid.y = centroid[1]; computed_centroid.z = centroid[2];
         centroid_cloud->points.push_back(computed_centroid);
     }
-
     timer.stop("[ViewGeneratorFrontier]getCentroids");
 
 
     // Visualize
     sensor_msgs::PointCloud2 cloud_msg;
-    pcl::toROSMsg(*visualization_cloud, cloud_msg);
+    pcl::toROSMsg(*visualization_cloud_copy, cloud_msg);
     cloud_msg.header.frame_id = "world";
     cloud_msg.header.stamp = ros::Time::now();
     pub_vis_frontier_points_.publish(cloud_msg);
@@ -594,29 +624,8 @@ void ViewGeneratorFrontier::generateViews()
     //check unvisited frontiers (keys) and add them to ignored list
     std::map<octomap::OcTreeKey, VoxelPt>::iterator it;
     octomap::OcTreeKey key;
-    for (int i=0; i<global.points.size(); i++)
-    {
-      PointXYZ p = global.points[i];
-      if( !tree_->coordToKeyChecked(p.x, p.y, p.z, key) )
-        continue;
 
-      it = voxels_visited_.find(key);
-      if (it != voxels_visited_.end())
-      {
-        it->second.count++;
-        it->second.total = 0;
-      }
-      else
-      {
-          // Key not found, initialize it
-          VoxelPt v;
-          v.count = 1;
-          v.total = 0;
-          voxels_visited_.insert(std::make_pair(key, v));
-
-      }
-    }
-
+    //track visited frontier keys
     for (int i=0; i<frontier_voxels.points.size(); i++)
     {
         PointXYZ p = frontier_voxels.points[i];
@@ -640,7 +649,6 @@ void ViewGeneratorFrontier::generateViews()
         }
     }
     std::cout<<cc.green<<" frontier voxels size: "<<frontier_voxels.size()<<cc.reset<<std::endl;
-    std::cout<<cc.green<<" visited voxels size: "<<voxels_ignored_.size()<<cc.reset<<std::endl;
     std::cout<<cc.green<<" ignored size: "<<voxels_ignored_.size()<<cc.reset<<std::endl;
 
     for(int i=generated_poses_copy.size()-1; i>=0; i--)

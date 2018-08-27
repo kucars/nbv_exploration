@@ -46,7 +46,7 @@ public:
 protected:
   double density_threshold_;
   int minimum_frontier_size_;
-//  int nearest_frontiers_count_; // number of frontiers to extract when finding the nearest frontiers
+//  int nearest_frontiers_count_; // number of frontiers to extract when finding the nearest frontiers (note: moved to view generator base to use it in nbv loop)
   double cylinder_radius_; //radius of sampling cylinder
   double cylinder_height_;
 
@@ -67,7 +67,6 @@ protected:
 //  ros::Publisher pub_marker_lines_;
 
   std::map<octomap::OcTreeKey, VoxelPt, OctomapKeyCompare> voxels_ignored_;
-  std::map<octomap::OcTreeKey, VoxelPt, OctomapKeyCompare> voxels_visited_;
 
   std::vector<std::vector<octomap::OcTreeKey> > findFrontierAdjacencies(std::vector<octomap::OcTreeKey>& cells);
   std::vector<octomap::OcTreeKey> findFrontierCells();
