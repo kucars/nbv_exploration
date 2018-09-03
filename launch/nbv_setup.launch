@@ -11,6 +11,7 @@
 
     <arg name="rtab_ns" default="rtabmap"/>
     <env name="GAZEBO_MODEL_PATH" value="$(find rotors_gazebo)/models"/>
+    <arg name="vehicle" default="floating_sensor"/>
 
     <!-- Starting position -->
     <!-- Debug box UAV start location -->
@@ -66,11 +67,14 @@
     </include>
 
     <!-- Spawn vehicle -->
+    <group ns="floating_sensor">
     <include if="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_floating_sensor.launch">
       <arg name="vehicle_starting_x" value="$(arg vehicle_starting_x)"/>
       <arg name="vehicle_starting_y" value="$(arg vehicle_starting_y)"/>
       <arg name="vehicle_starting_z" value="$(arg vehicle_starting_z)"/>
       <arg name="vehicle_starting_Y" value="$(arg vehicle_starting_Y)"/>
+      <arg name="name" value="$(arg vehicle)" />
+      <arg name="tf_prefix" value="$(arg vehicle)"/>
     </include>
 
     <include unless="$(arg use_floating_sensor)" file="$(find nbv_exploration)/launch/spawn_vehicle_uav.launch">
@@ -140,11 +144,11 @@
     <node if="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
       <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
 	  <remap from="scan_in"    to="/floating_sensor/scan"/>
-	  <remap from="scan_out"   to="$(arg scan_topic)"/>
+	  <remap from="scan_out"   to="/floating_sensor/$(arg scan_topic)"/>
 	  <remap from="depth_in"   to="/floating_sensor/camera/depth/points"/>
-	  <remap from="depth_out"  to="$(arg depth_topic)"/>
+	  <remap from="depth_out"  to="/floating_sensor/$(arg depth_topic)"/>
 	  <remap from="depth2_in"  to="/floating_sensor/camera2/depth/points"/>
-	  <remap from="depth2_out" to="$(arg depth2_topic)"/>
+	  <remap from="depth2_out" to="/floating_sensor/$(arg depth2_topic)"/>
     </node>
 
     <node unless="$(arg use_floating_sensor)" pkg="nbv_exploration" name="correct_laser_scan_and_depth" type="correct_laser_scan_and_depth" ns="nbv_exploration_ns" args="" required="true" output="screen">
@@ -156,4 +160,5 @@
 	  <remap from="depth2_in"  to="/iris/xtion_sensor/iris/xtion_sensor_camera2/depth/points"/>
 	  <remap from="depth2_out" to="$(arg depth2_topic)"/>
     </node>
+</group>
 </launch>

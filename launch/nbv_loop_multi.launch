@@ -1,0 +1,99 @@
+<?xml version="1.0" ?>
+<launch>
+    <arg name="debug"       default="false" />
+    <arg name="useValgrind" default="true" />
+    <arg name="batch"       default="false"/>
+
+<!--     <include file="$(find nbv_exploration)/launch/nbv_setup.launch"/> -->
+
+    <arg name="nbv_settings_file" default="$(find nbv_exploration)/config/nbv_settings.yaml"/>
+
+    <!-- Load Rviz -->
+<!--    <node name="$(anon rviz)" pkg="rviz" type="rviz" respawn="false"
+          args="-d $(find nbv_exploration)/config/nbv_rtabmap.rviz" output="screen">
+    </node>-->
+    
+        <!-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Robot 1  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< -->    
+    <group ns="robot_1" if="$(arg debug)">
+        <arg name="launch_prefix" value="gdb --ex run --args" unless="$(arg useValgrind)"  />
+        <arg name="launch_prefix" value="valgrind" if="$(arg useValgrind)"/>
+        <node pkg="nbv_exploration" name="nbv_main1" type="nbv_main" required="false" output="screen" launch-prefix="$(arg launch_prefix)">
+          <remap from="/nbv_exploration/scan"       to="/robot_1/nbv_exploration/scan"/>
+          <remap from="/nbv_exploration/depth"      to="/robot_1/nbv_exploration/depth"/>
+          <remap from="/nbv_exploration/depth2"     to="/robot_1/nbv_exploration/depth2"/>
+          
+          <remap from="/floating_sensor/pose"       to="/robot_1/pose"/> 
+          <remap from="/floating_sensor/set_twist"  to="/robot_1/set_twist"/> 
+          <remap from="/floating_sensor/set_pose"   to="/robot_1/set_pose"/> 
+          
+          <param name="ns" value="/robot_1"/>
+          
+          <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+          <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
+          <rosparam if="$(arg batch)" file="$(find nbv_exploration)/config/nbv_settings_batch.yaml" command="load" />
+          <rosparam file="$(arg nbv_settings_file)" command="load" />
+        </node>
+    </group>
+    <group ns="robot_1" unless="$(arg debug)">
+        <arg name="launch_prefix" value=""/>
+        <node pkg="nbv_exploration" name="nbv_main1" type="nbv_main" required="false" output="screen" launch-prefix="$(arg launch_prefix)">
+          <remap from="/nbv_exploration/scan"    to="/robot_1/nbv_exploration/scan"/>
+          <remap from="/nbv_exploration/depth"    to="/robot_1/nbv_exploration/depth"/>
+          <remap from="/nbv_exploration/depth2"    to="/robot_1/nbv_exploration/depth2"/>
+          
+          <remap from="/floating_sensor/pose"       to="/robot_1/pose"/> 
+          <remap from="/floating_sensor/set_twist"  to="/robot_1/set_twist"/> 
+          <remap from="/floating_sensor/set_pose"   to="/robot_1/set_pose"/> 
+
+          <param name="ns" value="/robot_1"/>
+          
+          <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+          <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
+          <rosparam if="$(arg batch)" file="$(find nbv_exploration)/config/nbv_settings_batch.yaml" command="load" />
+          <rosparam file="$(arg nbv_settings_file)" command="load" />
+          
+        </node>
+    </group>
+
+        <!-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Robot 2  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< -->    
+    <group ns="robot_2" if="$(arg debug)">
+        <arg name="launch_prefix" value="gdb --ex run --args" unless="$(arg useValgrind)"  />
+        <arg name="launch_prefix" value="valgrind" if="$(arg useValgrind)"/>
+        <node pkg="nbv_exploration" name="nbv_main2" type="nbv_main" required="false" output="screen" launch-prefix="$(arg launch_prefix)">
+          <remap from="/nbv_exploration/scan"    to="/robot_2/nbv_exploration/scan"/>
+          <remap from="/nbv_exploration/depth"    to="/robot_2/nbv_exploration/depth"/>
+          <remap from="/nbv_exploration/depth2"    to="/robot_2/nbv_exploration/depth2"/>  
+          
+          <remap from="/floating_sensor/pose"       to="/robot_2/pose"/> 
+          <remap from="/floating_sensor/set_twist"  to="/robot_2/set_twist"/> 
+          <remap from="/floating_sensor/set_pose"   to="/robot_2/set_pose"/>  
+
+          <param name="ns" value="/robot_2"/>
+          
+          <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+          <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
+          <rosparam if="$(arg batch)" file="$(find nbv_exploration)/config/nbv_settings_batch.yaml" command="load" />
+          <rosparam file="$(arg nbv_settings_file)" command="load" />
+        </node>
+    </group>
+    <group ns="robot_2" unless="$(arg debug)">
+        <arg name="launch_prefix" value=""/>
+        <node pkg="nbv_exploration" name="nbv_main2" type="nbv_main" required="false" output="screen" launch-prefix="$(arg launch_prefix)">
+          <remap from="/nbv_exploration/scan"    to="/robot_2/nbv_exploration/scan"/>
+          <remap from="/nbv_exploration/depth"    to="/robot_2/nbv_exploration/depth"/>
+          <remap from="/nbv_exploration/depth2"    to="/robot_2/nbv_exploration/depth2"/> 
+          
+          <remap from="/floating_sensor/pose"       to="/robot_2/pose"/> 
+          <remap from="/floating_sensor/set_twist"  to="/robot_2/set_twist"/> 
+          <remap from="/floating_sensor/set_pose"   to="/robot_2/set_pose"/>
+
+          <param name="ns" value="/robot_2"/>
+          
+          <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
+          <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
+          <rosparam if="$(arg batch)" file="$(find nbv_exploration)/config/nbv_settings_batch.yaml" command="load" />
+          <rosparam file="$(arg nbv_settings_file)" command="load" />
+        </node>
+    </group>    
+
+</launch>

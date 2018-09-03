@@ -4,7 +4,7 @@
     <arg name="useValgrind" default="true" />
     <arg name="batch"       default="false"/>
 
-    <include file="$(find nbv_exploration)/launch/nbv_setup.launch"/>
+<!--     <include file="$(find nbv_exploration)/launch/nbv_setup.launch"/> -->
 
     <arg name="nbv_settings_file" default="$(find nbv_exploration)/config/nbv_settings.yaml"/>
 
@@ -17,19 +17,31 @@
         <arg name="launch_prefix" value="gdb --ex run --args" unless="$(arg useValgrind)"  />
         <arg name="launch_prefix" value="valgrind" if="$(arg useValgrind)"/>
         <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="false" output="screen" launch-prefix="$(arg launch_prefix)">
+          <remap from="/nbv_exploration/scan"    to="/floating_sensor/nbv_exploration/scan"/>
+          <remap from="/nbv_exploration/depth"    to="/floating_sensor/nbv_exploration/depth"/>
+          <remap from="/nbv_exploration/depth2"    to="/floating_sensor/nbv_exploration/depth2"/>
+          <param name="ns" value="/floating_sensor"/>
+          
           <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
           <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
           <rosparam if="$(arg batch)" file="$(find nbv_exploration)/config/nbv_settings_batch.yaml" command="load" />
           <rosparam file="$(arg nbv_settings_file)" command="load" />
+          
         </node>
     </group>
     <group unless="$(arg debug)">
         <arg name="launch_prefix" value=""/>
         <node pkg="nbv_exploration" name="nbv_main" type="nbv_main" required="false" output="screen" launch-prefix="$(arg launch_prefix)">
+          <remap from="/nbv_exploration/scan"    to="/floating_sensor/nbv_exploration/scan"/>
+          <remap from="/nbv_exploration/depth"    to="/floating_sensor/nbv_exploration/depth"/>
+          <remap from="/nbv_exploration/depth2"    to="/floating_sensor/nbv_exploration/depth2"/>
+          <param name="ns" value="/floating_sensor"/>
+          
           <rosparam file="$(find nbv_exploration)/config/sensor_settings.yaml" command="load" />
           <rosparam file="$(find nbv_exploration)/config/symmetry_detection_settings.yaml" command="load" />
           <rosparam if="$(arg batch)" file="$(find nbv_exploration)/config/nbv_settings_batch.yaml" command="load" />
           <rosparam file="$(arg nbv_settings_file)" command="load" />
+          
         </node>
     </group>
 

@@ -242,7 +242,7 @@ void FloatingSensorPosition::UpdatePosition()
   tf::Transform transform;
   transform.setOrigin( tf::Vector3(current_pos_x_, current_pos_y_, current_pos_z_) );
   transform.setRotation(q);
-  tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "floating_sensor/base_link"));
+  tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", topic_base_+"/base_link"));
 
   // Publish current pose
   if (pub_pose_.getNumSubscribers() > 0)

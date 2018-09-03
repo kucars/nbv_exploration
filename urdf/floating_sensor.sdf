@@ -3,7 +3,7 @@
 
 <model name="floating_sensor">
   <plugin name="floating_sensor_position_plugin" filename="libfloating_sensor_position_plugin.so">
-    <namespace>floating_sensor</namespace>
+<!--     <namespace>floating_sensor</namespace> -->
   </plugin>
 
   <pose>0 0 0 0 0 0</pose>
@@ -71,8 +71,8 @@
       <plugin name="gazebo_ros_laser_scanner" filename="libgazebo_ros_gpu_laser.so">
         <gaussianNoise>0.005</gaussianNoise>
         <alwaysOn>true</alwaysOn>
-        <topicName>floating_sensor/scan</topicName>
-        <frameName>floating_sensor/laser_frame</frameName>
+        <topicName>scan</topicName>
+        <frameName>laser_frame</frameName>
       </plugin>
     </sensor>
   </link>
@@ -120,7 +120,7 @@
       </camera>
 
       <plugin name="floating_sensor_camera" filename="libgazebo_ros_openni_kinect.so">
-        <robotNamespace>floating_sensor</robotNamespace>
+<!--         <robotNamespace>floating_sensor</robotNamespace> -->
         <cameraName>camera</cameraName>
         <alwaysOn>true</alwaysOn>
         <updateRate>10</updateRate>
@@ -184,7 +184,7 @@
       </camera>
 
       <plugin name="floating_sensor_camera2" filename="libgazebo_ros_openni_kinect.so">
-        <robotNamespace>floating_sensor</robotNamespace>
+<!--         <robotNamespace>floating_sensor</robotNamespace> -->
         <cameraName>camera2</cameraName>
         <alwaysOn>true</alwaysOn>
         <updateRate>10</updateRate>

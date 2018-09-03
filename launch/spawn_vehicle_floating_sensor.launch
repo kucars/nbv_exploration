@@ -16,14 +16,21 @@
   <param name="tf_prefix" type="string" value="$(arg tf_prefix)" />
 
   <!-- push robot_description to factory and spawn robot in gazebo -->
-  <node name="spawn_floating_sensor" pkg="gazebo_ros" type="spawn_model"
+<!--  <param name="robot_description" command="
+    $(find xacro)/xacro.py '$(arg model)'
+    robotNamespace:=$(arg name)"
+  />-->
+<!--  -robot_namespace $(arg name)
+         -namespace $(arg name)-->
+  <node name="spawn_floating_sensor_$(arg tf_prefix)" pkg="gazebo_ros" type="spawn_model"
    args="-param robot_description
          -sdf
          -x $(arg vehicle_starting_x)
          -y $(arg vehicle_starting_y)
          -z $(arg vehicle_starting_z)
          -Y $(arg vehicle_starting_Y)
-         -model $(arg name)"
+         -model $(arg name)
+        "
    respawn="false" output="screen">
   </node>
 
@@ -31,8 +38,8 @@
   <node pkg="tf" type="static_transform_publisher" name="floating_sensor_laser_tf" args="
     0.10  0.0  0.0
     0 0.08716 0 0.99619
-    /floating_sensor/base_link
-    /floating_sensor/laser_frame
+    /$(arg name)/base_link
+    /$(arg name)/laser_frame
 	500"
   />
 
@@ -40,16 +47,16 @@
   <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbda_tf" args="
 	0.05  0.0 0.1
 	0.98481 0 0.17365 0
-	/floating_sensor/base_link
-	/floating_sensor/camera_frame
+	/$(arg name)/base_link
+	/$(arg name)/camera_frame
 	500"
   />
 
   <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbdb_tf" args="
 	0 0 0
 	0.5 0.5 0.5 0.5
-	/floating_sensor/camera_frame
-	/floating_sensor/camera_depth_optical_frame
+	/$(arg name)/camera_frame
+	/$(arg name)/camera_depth_optical_frame
 	500"
   />
 
@@ -58,16 +65,16 @@
   <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbd2a_tf" args="
 	0.05  0.0 -0.1
 	0.98481 0 -0.17365 0
-	/floating_sensor/base_link
-	/floating_sensor/camera2_frame
+	/$(arg name)/base_link
+	/$(arg name)/camera2_frame
 	500"
   />
 
   <node pkg="tf" type="static_transform_publisher" name="floating_sensor_rgbd2b_tf" args="
 	0 0 0
 	0.5 0.5 0.5 0.5
-	/floating_sensor/camera2_frame
-	/floating_sensor/camera2_depth_optical_frame
+	/$(arg name)/camera2_frame
+	/$(arg name)/camera2_depth_optical_frame
 	500"
   />
 </launch>

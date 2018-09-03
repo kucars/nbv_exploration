@@ -450,18 +450,20 @@ void ViewSelecterBase::getCameraRotationMtxs()
   {
     std::string camera_frame;
     std::string base_frame;
-
+    std::string ns;
+    ros::param::param<std::string>("~ns", ns, "/floating_sensor");
+    std::cout<<"ns: "<<ns<<std::endl;
     if (vehicle_type_ == 0)
     {
-      base_frame = "/floating_sensor/base_link";
-
+      base_frame = ns+"/base_link";
       if (c==0)
-        camera_frame = "/floating_sensor/camera_frame";
+        camera_frame = ns+"/camera_frame";
       else
       {
         char sb[ 100 ];
-        sprintf( sb, "/floating_sensor/camera%d_frame", c+1 );
+        sprintf( sb,"/camera%d_frame", c+1 );
         camera_frame = sb;
+        camera_frame = ns+camera_frame;
       }
     }
 
